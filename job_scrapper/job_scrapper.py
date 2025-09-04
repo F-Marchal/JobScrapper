@@ -2,9 +2,13 @@
 Skeleton for JobScrapperClass
 """
 
+import re
 import time
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
+from geopy.distance import geodesic  # type: ignore[import-untyped]
+from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
@@ -17,6 +21,9 @@ from .logger import CoreLogger
 # pylint: disable=R0913
 # pylint: disable=R0917
 # This is what I need to correctly set my attributes.
+# pylint: disable=R0904
+# At this time methods are too interconnected to be split
+# in multiple class
 class JobScrapperSkeleton(CoreLogger):
     """
     Skeleton for JobScrapperClass. Those class should be able to :
@@ -36,6 +43,9 @@ class JobScrapperSkeleton(CoreLogger):
     selenium_chrome_options.add_argument(
         "--headless"
     )  # Run chrome in headless mode (no window)
+
+    geolocator = Nominatim(user_agent="JobScrapperSkeleton")
+    geolocator_timeout = None
 
     def __init__(
         self,
@@ -113,6 +123,17 @@ class JobScrapperSkeleton(CoreLogger):
             return f"{str_header}\n{str_items}"
         return str_items
 
+    @classmethod
+    def quick_display_list_of_offers(
+        cls, job_list: list["JobScrapperSkeleton"]
+    ):
+        """Quickly display in terminal all jobs from a list of jobs."""
+        for i, job in enumerate(job_list):
+            if i == 0:
+                print(job.flat())
+            else:
+                print(job.flat(with_header=False))
+
     # --- --- --- --- Export managements --- --- --- ----
     # --- --- --- --- Job acquisition --- --- --- ----
     # --- --- Retrieve jobs  --- ---
@@ -122,9 +143,12 @@ class JobScrapperSkeleton(CoreLogger):
         Interrogate the website stored in <cls.website_url> to extract job offers.
         :return: All jobs offers founds in this website.
         """
+
         offers: list["JobScrapperSkeleton"] = []
         if cls.website_url == "":
             raise ValueError("<website_url> class variable is empty.")
+
+        cls.logger.info("Starting interrogation of %s", cls.website_url)
 
         if cls.across_multiple_pages:
             known_block = set()
@@ -220,6 +244,18 @@ class JobScrapperSkeleton(CoreLogger):
         """
         raise NotImplementedError("Should be reimplemented when inherited")
 
+    @staticmethod
+    def extract_baseurl(url: str):
+        """Extract the base url of a url."""
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        return base_url
+
+    @classmethod
+    def get_base_url(cls):
+        """Get class base url"""
+        return cls.extract_baseurl(cls.website_url)
+
     # --- --- Retrieve jobs  --- ---
     # --- --- Analyse jobs  --- ---
     @classmethod
@@ -237,7 +273,7 @@ class JobScrapperSkeleton(CoreLogger):
         :param dict[str, list[str]] keywords: A dictionary of keywords. Each
             keyword is searched inside the offer a counted.
         """
-
+        cls.logger.info("Starting Analysis of %s jobs", len(jobs))
         for job_object in jobs:
             if localisations:
                 job_object.compute_localisation(*localisations)
@@ -249,7 +285,37 @@ class JobScrapperSkeleton(CoreLogger):
         """Compute the distances between a number of location and
         this job offer.
         Results are stored inside <self._distances>"""
-        raise NotImplementedError("Should be reimplemented when inherited")
+        if not localisations:
+            return
+        if not self._localisation or not (
+            self_location := self.geolocator.geocode(
+                self.localisation, timeout=self.geolocator_timeout
+            )
+        ):
+            self.logger.debug(
+                "Can not find coordinates of '%s'", self._localisation
+            )
+            self._distances.update({key: -1 for key in localisations})
+            return
+
+        self.logger.debug(
+            "Seeking distances between '%s' (%s) and %s",
+            self._localisation,
+            self_location.address,
+            localisations,
+        )
+        self_coord = (self_location.latitude, self_location.longitude)
+        for positions in localisations:
+            current_position = self.geolocator.geocode(
+                positions, timeout=self.geolocator_timeout
+            )
+            coord_positions = (
+                current_position.latitude,
+                current_position.longitude,
+            )
+            distance = geodesic(coord_positions, self_coord).km
+
+            self._distances[positions] = distance
 
     def search_keywords(self, **keywords: list[str]):
         """
@@ -259,7 +325,20 @@ class JobScrapperSkeleton(CoreLogger):
         Results are stored inside <self.keywords>
         key=["key", "alias1", "alias2"]
         """
-        raise NotImplementedError("Should be reimplemented when inherited")
+        page_content = self.get_job_page_content()
+
+        for key, list_of_associated_keywords in keywords.items():
+            self._keywords[key] = 0
+
+            for patterns in list_of_associated_keywords:
+                count = len(re.findall(f"(?={patterns.lower()})", page_content))
+                self._keywords[key] += count
+
+    def get_job_page_content(self) -> str:
+        """Get offer's web page content"""
+        return str(
+            self.rough_page_parsing(self.url, only_block_of_interest=False)
+        ).lower()
 
     # --- --- Analyse jobs  --- ---
     # --- --- --- --- Job acquisition --- --- --- ----
@@ -320,7 +399,7 @@ class JobScrapperSkeleton(CoreLogger):
     @property
     def contract_type(self) -> str:
         """Returns the contract type (CDI, CDD, Internship...)"""
-        return str(self._contract_type)
+        return str(self._contract_type).upper()
 
     @contract_type.setter
     def contract_type(self, value: str | None):
@@ -353,11 +432,17 @@ class JobScrapperSkeleton(CoreLogger):
     # --- --- distances --- ----
     @property
     def distances(self) -> dict[str, float]:
+        """Returns a dictionary with places as key
+        and, as value, the distance that separate this job from
+        this places"""
         return self._distances.copy()
 
     # --- --- keywords --- ----
     @property
-    def keywords(self) -> dict[str, int] :
+    def keywords(self) -> dict[str, int]:
+        """A dictionary with keywords as ket and integers
+        as key. Each value is the number of occurrences inside
+        this offer of a key."""
         return self._keywords.copy()
 
     # --- --- --- --- Attributes managements --- --- --- ----
