@@ -1,9 +1,9 @@
 from bs4 import BeautifulSoup
 
-from job_scrapper.scrapper_skeleton import JobScrapperSkeleton
+import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
 
-class CiradScrapper(JobScrapperSkeleton):
+class CiradScrapper(srk.JobScrapperSkeleton):
     """
     Use JobScrapperSkeleton to extract jobs offers from Cirad's website
     """
@@ -18,7 +18,7 @@ class CiradScrapper(JobScrapperSkeleton):
     @classmethod
     def complete_job_page_parsing(
         cls,
-        offers: list["JobScrapperSkeleton"],
+        offers: list["srk.ScrapperRequestCore"],
         soup,
     ):
         # pylint: disable=R0914

@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup
+'''from bs4 import BeautifulSoup
 import re
 from job_scrapper.scrapper_skeleton import JobScrapperSkeleton
 
@@ -52,3 +52,4 @@ if __name__ == "__main__":
         localisations=["Montpellier, France", "Lyon, France"]
     )
     CHUMtpScrapper.quick_display_list_of_offers(result)
+'''
