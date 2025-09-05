@@ -9,12 +9,14 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from geopy.distance import geodesic  # type: ignore[import-untyped]
 from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
+from geopy.exc import GeocoderServiceError # type: ignore[import-untyped]
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 
 from .logger import CoreLogger
 
+# TODO: quand geo fait, essayer de split en sous ensemble
 
 # pylint: disable=R0902
 # This is what I need to correctly describe a job offer.
@@ -36,8 +38,12 @@ class JobScrapperSkeleton(CoreLogger):
     website_url = ""
     across_multiple_pages = False
     sleep_between_job_interrogation = 2
+    sleep_between_keyword_interrogation = 4
+    sleep_between_geo_interrogation = 2
+    sleep_before_geo_interrogation = 5
     sleep_during_loading_period = 2
     sleep_before_retry_job_interrogation = 5
+
 
     selenium_chrome_options = Options()
     selenium_chrome_options.add_argument(
@@ -184,13 +190,14 @@ class JobScrapperSkeleton(CoreLogger):
         return offers
 
     @classmethod
-    def rough_page_parsing(cls, url: str, only_block_of_interest: bool = True):
+    def rough_page_parsing(cls, url: str, only_block_of_interest: bool = True, sleep_time: int=None):
         """
         Parse web page's html and return a block of html
         that correspond to the <cls.block_of_interest>
         :param bool only_block_of_interest: Does this function only returns
             the "block_of_interest" ?
         :param url: url that lead to the page to parse
+        :param int sleep_time: How long the function sleep. If None cls.sleep_between_job_interrogation is used.
         :return: A html soup that represent the <cls.block_of_interest> extracted from the url
         """
 
@@ -204,7 +211,8 @@ class JobScrapperSkeleton(CoreLogger):
             browser.get(url)
 
         cls._rough_page_parsing_actions(browser)
-        time.sleep(cls.sleep_between_job_interrogation)
+        if sleep_time is None:
+            time.sleep(cls.sleep_between_job_interrogation)
 
         html = browser.page_source
         browser.close()
@@ -264,6 +272,7 @@ class JobScrapperSkeleton(CoreLogger):
         *jobs: "JobScrapperSkeleton",
         localisations: list[str] | None = None,
         keywords: dict[str, list[str]] | None = None,
+        known_localisations: dict[tuple[float, float], float] | None = None
     ):
         """
         Try to scrap a maximum of details from an offer.
@@ -272,20 +281,43 @@ class JobScrapperSkeleton(CoreLogger):
             those places and the offer will be estimated.
         :param dict[str, list[str]] keywords: A dictionary of keywords. Each
             keyword is searched inside the offer a counted.
+
         """
         cls.logger.info("Starting Analysis of %s jobs", len(jobs))
+        if not known_localisations:
+            known_localisations = {}
+
         for job_object in jobs:
 
             if localisations:
-                job_object.compute_localisation(*localisations)
+                job_object.compute_localisation(*localisations, known_tuple=known_localisations)
 
             if keywords:
                 job_object.search_keywords(**keywords)
 
-    def compute_localisation(self, *localisations: str):
+    @classmethod
+    def ask_for_localisation(cls, localisation: str, retry=2):
+        try:
+            return cls.geolocator.geocode(
+                    localisation, timeout=cls.geolocator_timeout
+                )
+        except GeocoderServiceError as geoerror:
+            cls.logger.warning("%s", geoerror)
+            time.sleep(cls.sleep_before_geo_interrogation)
+            if retry <= 0:
+                retry -= 1
+                return cls.ask_for_localisation(localisation, retry)
+
+
+
+
+    def compute_localisation(self, *localisations: str, known_tuple: dict[tuple[str, str], float] | None = None):
         """Compute the distances between a number of location and
         this job offer.
         Results are stored inside <self._distances>"""
+        # TODO: Encapsuler les requetes geo pour gerer erreurs le  geopy.exc.GeocoderServiceError: [Errno -3] Temporary failure in name resolution
+        # TODO: Utiliser known_tuple
+        #
         if not localisations:
             return
         if not self._localisation or not (
@@ -306,6 +338,7 @@ class JobScrapperSkeleton(CoreLogger):
             localisations,
         )
         self_coord = (self_location.latitude, self_location.longitude)
+
         for positions in localisations:
             current_position = self.geolocator.geocode(
                 positions, timeout=self.geolocator_timeout
@@ -317,6 +350,9 @@ class JobScrapperSkeleton(CoreLogger):
             distance = geodesic(coord_positions, self_coord).km
 
             self._distances[positions] = distance
+
+            time.sleep(self.sleep_between_geo_interrogation)
+        #
 
     def search_keywords(self, **keywords: list[str]):
         """
@@ -338,7 +374,9 @@ class JobScrapperSkeleton(CoreLogger):
     def get_job_page_content(self) -> str:
         """Get offer's web page content"""
         return str(
-            self.rough_page_parsing(self.url, only_block_of_interest=False)
+            self.rough_page_parsing(self.url,
+                                    only_block_of_interest=False,
+                                    sleep_time=self.sleep_between_keyword_interrogation)
         ).lower()
 
     # --- --- Analyse jobs  --- ---

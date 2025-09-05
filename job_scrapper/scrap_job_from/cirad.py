@@ -60,6 +60,6 @@ if __name__ == "__main__":
     CiradScrapper.analyse_jobs(
         *result,
         keywords={"Informatique": ["Informatique", "Informatic"]},
-        localisations=["Montpellier, France", "Lyon, France"]
+        localisations=["Montpellier, France", "Lyon, France"],
     )
     CiradScrapper.quick_display_list_of_offers(result)
