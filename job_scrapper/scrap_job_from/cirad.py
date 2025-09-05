@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-from job_scrapper.job_scrapper import JobScrapperSkeleton
+from job_scrapper.scrapper_skeleton import JobScrapperSkeleton
 
 
 class CiradScrapper(JobScrapperSkeleton):
@@ -58,6 +58,8 @@ class CiradScrapper(JobScrapperSkeleton):
 if __name__ == "__main__":
     result = CiradScrapper.interrogate_website()
     CiradScrapper.analyse_jobs(
-        *result, localisations=["Montpellier, France", "Lyon, France"]
+        *result,
+        keywords={"Informatique": ["Informatique", "Informatic"]},
+        localisations=["Montpellier, France", "Lyon, France"]
     )
     CiradScrapper.quick_display_list_of_offers(result)

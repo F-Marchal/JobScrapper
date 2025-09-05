@@ -109,7 +109,7 @@ class JobScrapperSkeleton(CoreLogger):
         header = [*self.default_header]
 
         for keywords, occurrences in self._keywords.items():
-            header.append(keywords + "(#)")
+            header.append(keywords + " (#)")
             items.append(str(occurrences))
 
         for places, distances in self._distances.items():
@@ -275,6 +275,7 @@ class JobScrapperSkeleton(CoreLogger):
         """
         cls.logger.info("Starting Analysis of %s jobs", len(jobs))
         for job_object in jobs:
+
             if localisations:
                 job_object.compute_localisation(*localisations)
 
@@ -326,7 +327,7 @@ class JobScrapperSkeleton(CoreLogger):
         key=["key", "alias1", "alias2"]
         """
         page_content = self.get_job_page_content()
-
+        self.logger.debug("Seeking keywords in %s", self.url)
         for key, list_of_associated_keywords in keywords.items():
             self._keywords[key] = 0
 
