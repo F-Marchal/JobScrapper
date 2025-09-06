@@ -216,6 +216,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         localisations: list[str] | None = None,
         keywords: dict[str, list[str]] | None = None,
         known_localisations: dict[str, tuple[float, float]] | None = None,
+        known_urls: set[str] | None = None,
     ):
         """
         Try to scrap a maximum of details from an offer.
@@ -226,17 +227,24 @@ class ScrapperRequestCore(ScrapperObjectCore):
             keyword is searched inside the offer a counted.
         :param dict[str, tuple[float, float]] known_localisations: A dictionary of
             known localisations : "localisation1": (latitude, longitude)
+        :param set[str] or None known_urls: A set of url that should not be parsed.
+            Each job object with its url in this set will be ignored.
         """
+
         if not known_localisations:
             known_localisations = {}
+        if not known_urls:
+            known_urls = set()
 
         cls.logger.info("Starting Analysis of %s jobs", len(jobs))
         if not known_localisations:
             known_localisations = {}
 
         for i, job_object in enumerate(jobs):
-            if i % 25:
-                cls.logger.info("%s / %s analysis done.", i + 1, len(jobs))
+            if job_object.url in known_urls:
+                cls.logger.info("%s / %s ignored. Its url is contained in <known_urls>.", i + 1, len(jobs))
+                continue
+            cls.logger.info("%s / %s analysis done.", i + 1, len(jobs))
 
             if localisations:
                 job_object.compute_localisation(
