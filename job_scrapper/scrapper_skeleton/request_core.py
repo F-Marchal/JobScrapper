@@ -2,6 +2,7 @@ import re
 import time
 from urllib.parse import urlparse
 
+import bs4
 from bs4 import BeautifulSoup
 from geopy.distance import geodesic  # type: ignore[import-untyped]
 from geopy.exc import GeocoderServiceError  # type: ignore[import-untyped]
@@ -94,7 +95,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         url: str,
         only_block_of_interest: bool = True,
         sleep_time: int | None = None,
-    ):
+    ) -> bs4.BeautifulSoup:
         """
         Parse web page's html and return a block of html
         that correspond to the <cls.block_of_interest>
@@ -214,7 +215,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
         if not known_localisations:
             known_localisations = {}
 
-        for job_object in jobs:
+        for i, job_object in enumerate(jobs):
+            if i % 25:
+                cls.logger.info("%s / %s analysis done.", i + 1, len(jobs))
 
             if localisations:
                 job_object.compute_localisation(
@@ -247,6 +250,11 @@ class ScrapperRequestCore(ScrapperObjectCore):
             known_localisations = {}
 
         if localisation in known_localisations:
+            # This part ensure we do not make the same
+            # request over and over
+            cls.logger.debug(
+                "'%s's coordinates are already known.", localisation
+            )
             return known_localisations[localisation]
 
         try:
@@ -320,7 +328,27 @@ class ScrapperRequestCore(ScrapperObjectCore):
         Results are stored inside <self.keywords>
         key=["key", "alias1", "alias2"]
         """
-        page_content = self.get_job_page_content()
+        page_content = self.rough_page_parsing(
+            self.url,
+            only_block_of_interest=False,
+            sleep_time=self.sleep_between_keyword_interrogation,
+        )
+        return self._job_page_content(page_content, **keywords)
+
+    def _job_page_content(
+        self, page_soup: bs4.BeautifulSoup, **keywords: list[str]
+    ):
+        """
+        Search a set of keywords with a number of aliases inside.
+        This research is not case-sensitive.
+        the page pointed by <self.url>.
+        Results are stored inside <self.keywords>
+        key=["key", "alias1", "alias2"]
+        :param bs4.BeautifulSoup page_soup: An html beautifull soup.
+        :param keywords: key=["key", "alias1", "alias2"]
+        """
+        page_content = page_soup.get_text().lower()
+
         self.logger.debug("Seeking keywords in %s", self.url)
         for key, list_of_associated_keywords in keywords.items():
             self._keywords[key] = 0
@@ -328,16 +356,6 @@ class ScrapperRequestCore(ScrapperObjectCore):
             for patterns in list_of_associated_keywords:
                 count = len(re.findall(f"(?={patterns.lower()})", page_content))
                 self._keywords[key] += count
-
-    def get_job_page_content(self) -> str:
-        """Get offer's web page content"""
-        return str(
-            self.rough_page_parsing(
-                self.url,
-                only_block_of_interest=False,
-                sleep_time=self.sleep_between_keyword_interrogation,
-            )
-        ).lower()
 
     # --- --- Analyse jobs  --- ---
     # --- --- --- --- Job acquisition --- --- --- ----

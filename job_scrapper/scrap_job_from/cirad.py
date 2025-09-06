@@ -9,7 +9,7 @@ class CiradScrapper(srk.JobScrapperSkeleton):
     """
 
     website_url = "https://recrutement.cirad.fr/offre-de-emploi/liste-toutes-offres.aspx?page={page}"
-    across_multiple_pages = True
+    job_across_multiple_pages = True
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
