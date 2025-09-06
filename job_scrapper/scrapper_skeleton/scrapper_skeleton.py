@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 
 from .request_core import ScrapperRequestCore
 
-
 class JobScrapperSkeleton(ScrapperRequestCore):
     """
     Skeleton for JobScrapperClass. Those class should be able to :

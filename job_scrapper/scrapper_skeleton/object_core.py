@@ -156,7 +156,7 @@ class ScrapperObjectCore(CoreLogger):
     @url.setter
     def url(self, value: str):
         """Set the url that contain more details on this offer"""
-        self._url = self.clean_string(value)
+        self._url = value.strip()
 
     # --- --- contract_type --- ----
     @property

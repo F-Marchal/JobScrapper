@@ -46,23 +46,24 @@ class CNRScrapper(srk.JobScrapperSkeleton):
             offers.append(CNRScrapper(field=None, url=url, **kwargs))
 
     def _job_page_content(
-        self, page_soup: BeautifulSoup, **keywords: list[str]
+        self, page: BeautifulSoup | str, **keywords: list[str]
     ):
-        # Extract values contains inside "OffreDetailMainInfosGenerales".
-        general_intel = page_soup.find(
-            name="div", class_="OffreDetailMainInfosGenerales"
-        )
+        if isinstance(page, BeautifulSoup):
+            # Extract values contains inside "OffreDetailMainInfosGenerales".
+            general_intel = page.find(
+                name="div", class_="OffreDetailMainInfosGenerales"
+            )
 
-        if general_intel:
-            for intel_pieces in general_intel.get_text().split("\n"):
-                metadata_name, *value = intel_pieces.split(":")
+            if general_intel:
+                for intel_pieces in general_intel.get_text().split("\n"):
+                    metadata_name, *value = intel_pieces.split(":")
 
-                if not metadata_name.strip():
-                    continue
+                    if not metadata_name.strip():
+                        continue
 
-                self._metadata[metadata_name.strip()] = ":".join(value).strip()
+                    self._metadata[metadata_name.strip()] = ":".join(value).strip()
 
-        return super()._job_page_content(page_soup, **keywords)
+        return super()._job_page_content(page, **keywords)
 
 
 if __name__ == "__main__":

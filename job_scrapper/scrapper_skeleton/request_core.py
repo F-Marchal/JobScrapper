@@ -1,6 +1,7 @@
+import os
 import re
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 import bs4
 from bs4 import BeautifulSoup
@@ -12,7 +13,8 @@ from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 
 from .object_core import ScrapperObjectCore
-
+import tempfile
+from PyPDF2 import PdfReader
 
 class ScrapperRequestCore(ScrapperObjectCore):
     """
@@ -35,6 +37,23 @@ class ScrapperRequestCore(ScrapperObjectCore):
     selenium_chrome_options.add_argument(
         "--headless"
     )  # Run chrome in headless mode (no window)
+
+    sleep_before_retry_downloading = 15
+    sleep_between_downloading = 4
+    download_temp_dir = tempfile.TemporaryDirectory()
+    selenium_download_file_with_chrome_options = webdriver.ChromeOptions()
+    selenium_download_file_with_chrome_options.add_argument(
+        "--headless"
+    )  # Run chrome in headless mode (no window)
+    selenium_download_file_with_chrome_options.add_experimental_option('prefs', {
+        # Change default directory for downloads
+        "download.default_directory": os.path.abspath(download_temp_dir.name),
+        # Auto download the file
+        "download.prompt_for_download": False,
+        "download.directory_upgrade": True,
+        # It will not show PDF directly in chrome
+        "plugins.always_open_pdf_externally": True
+    })
 
     sleep_between_geo_interrogation = 2
     sleep_before_geo_interrogation = 5
@@ -135,7 +154,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         try:
             browser.get(url)
         except WebDriverException as exception:
-            cls.logger.warning("%s\n%s left", exception, retry)
+            cls.logger.warning("%s\n%s retry left", exception, retry)
             if retry <= 0:
                 cls.logger.error(
                     "Multiple exception during interrogation of %s. \n%s",
@@ -336,7 +355,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         return self._job_page_content(page_content, **keywords)
 
     def _job_page_content(
-        self, page_soup: bs4.BeautifulSoup, **keywords: list[str]
+        self, page: bs4.BeautifulSoup | str, **keywords: list[str]
     ):
         """
         Search a set of keywords with a number of aliases inside.
@@ -347,7 +366,10 @@ class ScrapperRequestCore(ScrapperObjectCore):
         :param bs4.BeautifulSoup page_soup: An html beautifull soup.
         :param keywords: key=["key", "alias1", "alias2"]
         """
-        page_content = page_soup.get_text().lower()
+        if isinstance(page, bs4.BeautifulSoup):
+            page_content = page.get_text().lower()
+        else:
+            page_content = page.lower()
 
         self.logger.debug("Seeking keywords in %s", self.url)
         for key, list_of_associated_keywords in keywords.items():
@@ -358,4 +380,63 @@ class ScrapperRequestCore(ScrapperObjectCore):
                 self._keywords[key] += count
 
     # --- --- Analyse jobs  --- ---
+    # --- --- Download files  --- ---
+    @classmethod
+    def download_file(cls, url: str, retry: int=2, timeout: int=360) ->  str | None:
+        """
+        Download a file using selenium
+        :param str url: An url that point to a file
+        :param int retry: Number of time that this action can be retried when
+            an error occur
+        :param int timeout: How long the download can last
+        :return None or str: Path to the downloaded file when the download succeed. None otherise.
+        """
+        # https://stackoverflow.com/questions/43149534/selenium-webdriver-how-to-download-a-pdf-file-with-python
+
+        download_dir = cls.download_temp_dir.name
+        parsed_url = urlparse(url)
+        filename = os.path.basename(parsed_url.path)
+        filename = unquote(filename) # Avoid encoding errors
+        filepath = os.path.join(download_dir, filename)
+        
+        cls.logger.debug("Downloading file : %s\ntimeout=%s\tExpected path : %s", url, timeout, filepath)
+        driver = webdriver.Chrome(options=cls.selenium_download_file_with_chrome_options)
+        
+        try:
+            driver.get(url)
+            i = 0
+            while not os.path.exists(filepath) and i < timeout:
+                time.sleep(1)
+                i += 1
+    
+        except WebDriverException as exception:
+            cls.logger.warning("%s\n%s retry left", exception, retry)
+            if retry <= 0:
+                cls.logger.error(
+                    "Multiple exception during interrogation of %s. \n%s",
+                    url,
+                    exception,
+                )
+                return None
+            time.sleep(cls.sleep_before_retry_downloading)
+            return cls.download_file(url)
+
+        time.sleep(cls.sleep_between_downloading)
+
+        if not os.path.exists(filepath):
+            cls.logger.warning(f"Download failed : {filepath}")
+            return None
+        cls.logger.debug(f"Download completed : {filepath}")
+        return filepath
+
+    @staticmethod
+    def parse_pdf(path: str) -> str:
+        """Open a pdf in PdfReader"""
+        pdf = PdfReader(path)
+        output = []
+        for pages in pdf.pages:
+            output.append(pages.extract_text())
+
+        return "\n\n\n\n".join(output)
+    # --- --- Download files  --- ---
     # --- --- --- --- Job acquisition --- --- --- ----
