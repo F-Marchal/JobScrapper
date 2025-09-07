@@ -36,6 +36,8 @@ class CHUMtpScrapper(srk.JobScrapperSkeleton):
             localisation = "Montpellier"
             url = str(cells["href"])
 
+            # pylint: disable=R0801
+            # I do not see how to merge this part with other classes
             kwargs = {
                 "field": None,
                 "contract_type": contract_type,

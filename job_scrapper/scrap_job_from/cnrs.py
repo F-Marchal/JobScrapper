@@ -61,7 +61,9 @@ class CNRScrapper(srk.JobScrapperSkeleton):
                     if not metadata_name.strip():
                         continue
 
-                    self._metadata[metadata_name.strip()] = ":".join(value).strip()
+                    self._metadata[metadata_name.strip()] = ":".join(
+                        value
+                    ).strip()
 
         return super()._job_page_content(page, **keywords)
 

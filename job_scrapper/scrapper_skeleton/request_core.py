@@ -1,20 +1,21 @@
 import os
 import re
+import tempfile
 import time
-from urllib.parse import urlparse, unquote
+from urllib.parse import unquote, urlparse
 
 import bs4
 from bs4 import BeautifulSoup
 from geopy.distance import geodesic  # type: ignore[import-untyped]
 from geopy.exc import GeocoderServiceError  # type: ignore[import-untyped]
 from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
+from PyPDF2 import PdfReader
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 
 from .object_core import ScrapperObjectCore
-import tempfile
-from PyPDF2 import PdfReader
+
 
 class ScrapperRequestCore(ScrapperObjectCore):
     """
@@ -38,6 +39,8 @@ class ScrapperRequestCore(ScrapperObjectCore):
         "--headless"
     )  # Run chrome in headless mode (no window)
 
+    # pylint: disable=R1732
+    # This tempdir should always remain open
     sleep_before_retry_downloading = 15
     sleep_between_downloading = 4
     download_temp_dir = tempfile.TemporaryDirectory()
@@ -45,15 +48,20 @@ class ScrapperRequestCore(ScrapperObjectCore):
     selenium_download_file_with_chrome_options.add_argument(
         "--headless"
     )  # Run chrome in headless mode (no window)
-    selenium_download_file_with_chrome_options.add_experimental_option('prefs', {
-        # Change default directory for downloads
-        "download.default_directory": os.path.abspath(download_temp_dir.name),
-        # Auto download the file
-        "download.prompt_for_download": False,
-        "download.directory_upgrade": True,
-        # It will not show PDF directly in chrome
-        "plugins.always_open_pdf_externally": True
-    })
+    selenium_download_file_with_chrome_options.add_experimental_option(
+        "prefs",
+        {
+            # Change default directory for downloads
+            "download.default_directory": os.path.abspath(
+                download_temp_dir.name
+            ),
+            # Auto download the file
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            # It will not show PDF directly in chrome
+            "plugins.always_open_pdf_externally": True,
+        },
+    )
 
     sleep_between_geo_interrogation = 2
     sleep_before_geo_interrogation = 5
@@ -130,6 +138,8 @@ class ScrapperRequestCore(ScrapperObjectCore):
         cls._rough_page_parsing_actions(browser)
         if sleep_time is None:
             time.sleep(cls.sleep_between_job_interrogation)
+        else:
+            time.sleep(sleep_time)
 
         html = browser.page_source
         browser.close()
@@ -242,7 +252,11 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         for i, job_object in enumerate(jobs):
             if job_object.url in known_urls:
-                cls.logger.info("%s / %s ignored. Its url is contained in <known_urls>.", i + 1, len(jobs))
+                cls.logger.info(
+                    "%s / %s ignored. Its url is contained in <known_urls>.",
+                    i + 1,
+                    len(jobs),
+                )
                 continue
             cls.logger.info("%s / %s analysis done.", i + 1, len(jobs))
 
@@ -390,7 +404,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
     # --- --- Analyse jobs  --- ---
     # --- --- Download files  --- ---
     @classmethod
-    def download_file(cls, url: str, retry: int=2, timeout: int=360) ->  str | None:
+    def download_file(
+        cls, url: str, retry: int = 2, timeout: int = 360
+    ) -> str | None:
         """
         Download a file using selenium
         :param str url: An url that point to a file
@@ -404,19 +420,26 @@ class ScrapperRequestCore(ScrapperObjectCore):
         download_dir = cls.download_temp_dir.name
         parsed_url = urlparse(url)
         filename = os.path.basename(parsed_url.path)
-        filename = unquote(filename) # Avoid encoding errors
+        filename = unquote(filename)  # Avoid encoding errors
         filepath = os.path.join(download_dir, filename)
-        
-        cls.logger.debug("Downloading file : %s\ntimeout=%s\tExpected path : %s", url, timeout, filepath)
-        driver = webdriver.Chrome(options=cls.selenium_download_file_with_chrome_options)
-        
+
+        cls.logger.debug(
+            "Downloading file : %s\ntimeout=%s\tExpected path : %s",
+            url,
+            timeout,
+            filepath,
+        )
+        driver = webdriver.Chrome(
+            options=cls.selenium_download_file_with_chrome_options
+        )
+
         try:
             driver.get(url)
             i = 0
             while not os.path.exists(filepath) and i < timeout:
                 time.sleep(1)
                 i += 1
-    
+
         except WebDriverException as exception:
             cls.logger.warning("%s\n%s retry left", exception, retry)
             if retry <= 0:
@@ -432,9 +455,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
         time.sleep(cls.sleep_between_downloading)
 
         if not os.path.exists(filepath):
-            cls.logger.warning(f"Download failed : {filepath}")
+            cls.logger.warning("Download failed : %s", filepath)
             return None
-        cls.logger.debug(f"Download completed : {filepath}")
+        cls.logger.debug("Download completed : %s", filepath)
         return filepath
 
     @staticmethod
@@ -446,5 +469,6 @@ class ScrapperRequestCore(ScrapperObjectCore):
             output.append(pages.extract_text())
 
         return "\n\n\n\n".join(output)
+
     # --- --- Download files  --- ---
     # --- --- --- --- Job acquisition --- --- --- ----

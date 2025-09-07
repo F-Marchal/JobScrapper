@@ -14,8 +14,7 @@ class IRDScrapper(srk.JobScrapperSkeleton):
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
         return soup.find(
-            name="div",
-            class_="ts-related-offers__row text-center"
+            name="div", class_="ts-related-offers__row text-center"
         )
 
     @classmethod
@@ -24,6 +23,8 @@ class IRDScrapper(srk.JobScrapperSkeleton):
         offers: list["srk.ScrapperRequestCore"],
         soup,
     ):
+        # pylint: disable=R0914
+        # Locals variables are here to simplify page parsing logic
         for cells in soup.find_all("div", class_="ts-offer-card Layer"):
             # title ref field
             title_ref_field = soup.find("a")["title"]
@@ -43,6 +44,8 @@ class IRDScrapper(srk.JobScrapperSkeleton):
             title = items[1].get_text(strip=True)
             localisation = items[2].get_text(strip=True)
 
+            # pylint: disable=R0801
+            # I do not see how to merge this part with other classes
             kwargs = {
                 "field": field,
                 "contract_type": None,
@@ -53,7 +56,6 @@ class IRDScrapper(srk.JobScrapperSkeleton):
                 "team": team,
             }
             offers.append(IRDScrapper(**kwargs))
-
 
 
 if __name__ == "__main__":

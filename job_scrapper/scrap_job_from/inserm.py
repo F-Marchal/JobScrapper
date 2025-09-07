@@ -1,5 +1,8 @@
-from bs4 import BeautifulSoup
+import os.path
 import re
+
+from bs4 import BeautifulSoup
+
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
 
@@ -8,15 +11,14 @@ class InsermScrapper(srk.JobScrapperSkeleton):
     Use JobScrapperSkeleton to extract jobs offers from Inserm's website
     """
 
-    website_url = "https://rh.inserm.fr/nous-rejoindre/Pages/Offres-d-emploi.aspx"
+    website_url = (
+        "https://rh.inserm.fr/nous-rejoindre/Pages/Offres-d-emploi.aspx"
+    )
     job_across_multiple_pages = False
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
-        return soup.find(
-            name="div",
-            class_="list-container"
-        )
+        return soup.find(name="div", class_="list-container")
 
     @classmethod
     def complete_job_page_parsing(
@@ -27,11 +29,21 @@ class InsermScrapper(srk.JobScrapperSkeleton):
         for cells in soup.find_all("div", class_="offer-container"):
             url = str(cells.find("a")["href"])
             title = re.findall(r'<a href=.*"_blank">(.*)</a>', str(cells))[0]
-            post_date = cells.find("div", class_="publication-date").get_text(strip=True)
-            localisation = cells.find("span", class_="location").get_text(strip=True)
-            contract_type = cells.find("span", class_="contract-type").get_text(strip=True)
-            education_level = cells.find("span", class_="details").get_text(strip=True)
+            post_date = cells.find("div", class_="publication-date").get_text(
+                strip=True
+            )
+            localisation = cells.find("span", class_="location").get_text(
+                strip=True
+            )
+            contract_type = cells.find("span", class_="contract-type").get_text(
+                strip=True
+            )
+            education_level = cells.find("span", class_="details").get_text(
+                strip=True
+            )
 
+            # pylint: disable=R0801
+            # I do not see how to merge this part with other classes
             kwargs = {
                 "field": None,
                 "contract_type": contract_type,
@@ -45,8 +57,9 @@ class InsermScrapper(srk.JobScrapperSkeleton):
 
     def search_keywords(self, **keywords: list[str]):
         pdf_path = self.download_file(self.url)
-        content = self.parse_pdf(pdf_path)
-        self._job_page_content(content)
+        if pdf_path and os.path.isfile(pdf_path):
+            content = self.parse_pdf(pdf_path)
+            self._job_page_content(content)
 
 
 if __name__ == "__main__":

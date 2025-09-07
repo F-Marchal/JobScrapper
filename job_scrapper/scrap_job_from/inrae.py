@@ -1,6 +1,7 @@
+import re
+
 from bs4 import BeautifulSoup
 
-import re
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
 
@@ -14,10 +15,7 @@ class INRAEScrapper(srk.JobScrapperSkeleton):
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
-        return soup.find(
-            name="div",
-            id="infinite-hits"
-        )
+        return soup.find(name="div", id="infinite-hits")
 
     @classmethod
     def complete_job_page_parsing(
@@ -27,13 +25,17 @@ class INRAEScrapper(srk.JobScrapperSkeleton):
     ):
         for cells in soup.find_all("a", class_="Cardjob"):
             title = re.findall(r"<span>(.*)</span>", str(cells))[0]
-            localisation = soup.find("div", class_="Cardjob-location").text.strip()
-    
+            localisation = soup.find(
+                "div", class_="Cardjob-location"
+            ).text.strip()
+
             # contract_type
-            contract_type = soup.find("span", class_=re.compile(r"^Cardjob-contract")).text.strip()
-    
+            contract_type = soup.find(
+                "span", class_=re.compile(r"^Cardjob-contract")
+            ).text.strip()
+
             url = cells["href"]
-    
+
             kwargs = {
                 "field": None,
                 "contract_type": contract_type,
