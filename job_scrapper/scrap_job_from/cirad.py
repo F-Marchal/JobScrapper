@@ -52,7 +52,7 @@ class CiradScrapper(srk.JobScrapperSkeleton):
                 "reference": ref,
                 "post date": post_date,
             }
-            offers.append(CiradScrapper(**kwargs))
+            offers.append(cls(**kwargs))
 
 
 if __name__ == "__main__":

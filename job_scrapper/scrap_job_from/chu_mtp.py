@@ -47,7 +47,7 @@ class CHUMtpScrapper(srk.JobScrapperSkeleton):
                 "education_level": education_level,
                 "last_update": last_update,
             }
-            offers.append(CHUMtpScrapper(**kwargs))
+            offers.append(cls(**kwargs))
 
 
 if __name__ == "__main__":

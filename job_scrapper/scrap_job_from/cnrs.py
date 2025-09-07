@@ -43,7 +43,7 @@ class CNRScrapper(srk.JobScrapperSkeleton):
             url = cls.get_base_url() + str(tr.find("a")["href"])
 
             # Generate job
-            offers.append(CNRScrapper(field=None, url=url, **kwargs))
+            offers.append(cls(field=None, url=url, **kwargs))
 
     def _job_page_content(
         self, page: BeautifulSoup | str, **keywords: list[str]

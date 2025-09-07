@@ -43,7 +43,7 @@ class INRAEScrapper(srk.JobScrapperSkeleton):
                 "localisation": localisation,
                 "title": title,
             }
-            offers.append(INRAEScrapper(**kwargs))
+            offers.append(cls(**kwargs))
 
 
 if __name__ == "__main__":

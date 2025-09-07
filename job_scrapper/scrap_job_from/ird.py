@@ -55,7 +55,7 @@ class IRDScrapper(srk.JobScrapperSkeleton):
                 "reference": ref,
                 "team": team,
             }
-            offers.append(IRDScrapper(**kwargs))
+            offers.append(cls(**kwargs))
 
 
 if __name__ == "__main__":

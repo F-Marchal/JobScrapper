@@ -53,7 +53,7 @@ class InsermScrapper(srk.JobScrapperSkeleton):
                 "post_date": post_date,
                 "education_level": education_level,
             }
-            offers.append(InsermScrapper(**kwargs))
+            offers.append(cls(**kwargs))
 
     def search_keywords(self, **keywords: list[str]):
         pdf_path = self.download_file(self.url)

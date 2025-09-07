@@ -1,3 +1,5 @@
+import time
+
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
@@ -8,7 +10,7 @@ from selenium.common.exceptions import (
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-
+from typing import Callable
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
 
@@ -16,7 +18,6 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
     """
     Use JobScrapperSkeleton to extract jobs offers from Sanofi's website
     """
-
     job_across_multiple_pages = False
 
     @classmethod
@@ -50,39 +51,54 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
                 "title": title,
                 "reference": ref,
             }
-            offers.append(SanofiScrapper(**kwargs))
+            offers.append(cls(**kwargs))
 
     @classmethod
-    def _rough_page_parsing_actions(cls, browser, timeout=15):
+    def interrogate_website(cls, prepare_page: Callable = None) -> list[srk.ScrapperRequestCore]:
+        if prepare_page is None:
+            prepare_page = cls._job_rough_page_parsing_actions
+        return super().interrogate_website(prepare_page)
+
+    @classmethod
+    def _rough_page_parsing_actions(cls, browser) -> None:
+        try:
+            cookie_btn = WebDriverWait(browser, 3).until(
+                EC.element_to_be_clickable(
+                    (By.CSS_SELECTOR, "button.onetrust-close-btn-handler.banner-close-button.ot-close-link")
+                )
+            )
+            cookie_btn.click()
+            cls.logger.debug("Cookies pop up is closed.")
+        except TimeoutException:
+            cls.logger.debug("No cookies pop up found.")
+
         super()._rough_page_parsing_actions(browser)
+
+    @classmethod
+    def _job_rough_page_parsing_actions(cls, browser, timeout=15):
+        """
+        A method called each time a page that contains a list of jobs should be parsed.
+        :param browser: A selenium browser
+        :param int timeout: How long can the browser wait (s).
+        """
+        cls._rough_page_parsing_actions(browser)
+        button_id = "div.pagination-all a.pagination-show-all" # pagination-show-all
         try:
             wait = WebDriverWait(browser, timeout)
 
-            # Wait until the button is present
-            wait.until(
-                EC.presence_of_element_located(
-                    (
-                        By.CSS_SELECTOR,
-                        "div.pagination-all a.pagination-show-all",
-                    )
-                )
-            )
-
-            # Wait until the button is clickable and then click
+            # wait until the button is clickable
             button = wait.until(
-                EC.element_to_be_clickable(
-                    (
-                        By.CSS_SELECTOR,
-                        "div.pagination-all a.pagination-show-all",
-                    )
-                )
+                EC.element_to_be_clickable((By.CSS_SELECTOR, button_id))
             )
-            button.click()
 
-            # Optional wait for page to load
-            WebDriverWait(browser, timeout).until(
-                EC.staleness_of(button)  # waits until button becomes stale
+            # Execute button's script (as if we clicked on it)
+            browser.execute_script("arguments[0].click();", button)
+
+            # wait for update
+            wait.until(
+                EC.staleness_of(button)  # ou une autre condition adaptée
             )
+
 
         except TimeoutException:
             # Button not found – probably no "show all" option
@@ -93,19 +109,14 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
         except (
             StaleElementReferenceException,
             ElementClickInterceptedException,
-        ):
-            # Retry once if button became stale or was intercepted
-            try:
-                button = browser.find_element(
-                    By.CSS_SELECTOR, "div.pagination-all a.pagination-show-all"
-                )
-                button.click()
-            except WebDriverException as wbe:
-                cls.logger.warning(
-                    "Can not click on the 'Show all' button. Some offers might be ignored. %s",
-                    wbe,
-                )
-                return
+        ) as wbe:
+
+            cls.logger.warning(
+                "Can not click on the 'Show all' button. Some offers might be ignored. %s",
+                wbe,
+            )
+            time.sleep(50)
+            return
 
 
 class SanofiMontpellierScrapper(SanofiScrapper):
