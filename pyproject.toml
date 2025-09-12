@@ -13,6 +13,8 @@ selenium = "^4.35.0"
 bs4 = "^0.0.2"
 geopy = "^2.4.1"
 pypdf2 = "^3.0.1"
+click-option-group = "^0.5.7"
+cloup = "^3.0.8"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
