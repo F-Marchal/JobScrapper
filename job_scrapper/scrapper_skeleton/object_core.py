@@ -116,11 +116,29 @@ class ScrapperObjectCore(CoreLogger):
         return str_items
 
     @classmethod
-    def list_to_flat_file(
-        cls, file_path: str | None, *jobs: "ScrapperObjectCore", sep: str = "\t"
+    def _list_to_flat_file(
+        cls, jobs: list ["ScrapperObjectCore"], sep: str = "\t"
     ):
         """
-        Export a list of job inside a flatfile.
+        turn a list of jobs to a generator. This generator output the content of .job file.
+        :param ScrapperObjectCore jobs: A list of ScrapperObjectCore
+        :param str sep: Column delimiter. Do not use "|"
+        """
+        last_header = None
+        for job_object in jobs:
+            header, line = job_object.flat(sep=sep).split("\n")
+
+            if last_header != header:
+                yield "\n" + header + "\n"
+                last_header = header
+            yield line + "\n"
+
+    @classmethod
+    def list_to_flat_file(
+        cls, file_path: str | None, jobs: list ["ScrapperObjectCore"], sep: str = "\t"
+    ):
+        """
+        Export a list of job inside a jobfile.
         :param str file_path: A file in which all will be written
         :param ScrapperObjectCore jobs: A list of ScrapperObjectCore
         :param str sep: Column delimiter. Do not use "|"
@@ -128,26 +146,42 @@ class ScrapperObjectCore(CoreLogger):
         if file_path is None:
             file_path = os.path.join(cls.workdir, "JobFiles")
 
-        last_header = None
         with open(file_path, "w", encoding="utf-8") as f:
-            for job_object in jobs:
-                header, line = job_object.flat(sep=sep).split("\n")
-
-                if last_header != header:
-                    f.write(header + "\n")
-                    last_header = header
-                f.write(line)
+            for lines in cls._list_to_flat_file(jobs, sep=sep):
+                f.write(lines)
 
     @classmethod
+    def complete_display_list_of_offers(cls, jobs: list ["ScrapperObjectCore"], sep: str = "\t"):
+        """
+        print a list of job inside the terminal as if it was a jobfile.
+        :param list[ScrapperObjectCore] jobs: A list of ScrapperObjectCore
+        :param str sep: Column delimiter. Do not use "|"
+        :return:
+        """
+        for lines in cls._list_to_flat_file(jobs, sep=sep):
+            print(lines, end="")
+
+    @staticmethod
     def quick_display_list_of_offers(
-        cls, job_list: Sequence["ScrapperObjectCore"]
+        job_list: Sequence["ScrapperObjectCore"]
     ):
-        """Quickly display in terminal all jobs from a list of jobs."""
+        """Quickly display in terminal all jobs from a list of jobs. is printed only one time.
+        If the <job_list> has been generated using multiple configurations use <complete_display_list_of_offers>"""
         for i, job in enumerate(job_list):
             if i == 0:
                 print(job.flat())
             else:
                 print(job.flat(with_header=False))
+
+    @staticmethod
+    def list_to_sql(jobs: list ["ScrapperObjectCore"]):
+        """
+        Export a list of job inside the sql database.
+        :param list ["ScrapperObjectCore"] jobs: A list of ScrapperObjectCore
+        :return:
+        """
+        for job_obj in jobs:
+            job_obj.sql_export()
 
     @classmethod
     def get_class_name(cls) -> str:
@@ -243,7 +277,7 @@ class ScrapperObjectCore(CoreLogger):
         """
         Sort two string by alphabetic order.
         :param str localisation1: a string
-        :param str localisation2: a string
+        :param str localisation2: another string
         :return:
         """
         return sorted([localisation1, localisation2])
@@ -274,7 +308,12 @@ class ScrapperObjectCore(CoreLogger):
             cursor.execute(true_command)
         ```
         """
-        conn = sqlite3.connect(cls.get_database_path())
+        data_path = cls.get_database_path()
+        data_dir = os.path.dirname(data_path)
+        if not os.path.exists(data_dir):
+            os.mkdir(data_dir)
+
+        conn = sqlite3.connect(data_path)
         cursor = conn.cursor()
         cls.ensure_tables_presences(cursor)
         try:
@@ -298,20 +337,20 @@ class ScrapperObjectCore(CoreLogger):
         command = [
             f"INSERT OR REPLACE INTO {self.main_table_name}",
             "(",
-            "VALUES (",
+            "VALUES (" + ', '.join(["?"] * len( self.default_header)) + ")",
         ]
+        format_list = []
         self_dict = self.to_dict()
         for cat_name in self.default_header:
             command[1] += self.sql_compatible_header_keyword(cat_name) + ", "
-            command[2] += "'" + self_dict[cat_name] + "', "
+            format_list.append(self_dict[cat_name])
 
         command[1] = command[1].removesuffix(", ") + ")"
-        command[2] = command[2].removesuffix(", ") + ")"
 
         true_command = " ".join(command) + ";"
 
         with self.write_in_database() as cursor:
-            cursor.execute(true_command)
+            cursor.execute(true_command, format_list)
 
     def _sql_export_metadata(self):
         if not self._metadata:
@@ -335,13 +374,16 @@ class ScrapperObjectCore(CoreLogger):
             f"INSERT OR REPLACE INTO {self.keywords_table_name}(url, keyword, occurrences)",
             "VALUES",
         ]
+        format_list = []
         for keyword, occurrences in self.keywords.items():
-            command.append(f"('{self.url}', '{keyword}', {occurrences}),")
+            command.append("(?, ?, ?),")
+            format_list.extend([self.url, keyword, occurrences])
         command[-1] = command[-1].removesuffix(",") + ";"
 
         true_command = "\n".join(command)
+
         with self.write_in_database() as cursor:
-            cursor.execute(true_command)
+            cursor.execute(true_command, format_list)
 
     def _sql_export_distances(self):
         if not self.distances:
@@ -350,16 +392,18 @@ class ScrapperObjectCore(CoreLogger):
             f"INSERT OR REPLACE INTO {self.distances_table_name}(localisation1, localisation2, distances)",
             "VALUES",
         ]
+        format_list = []
         for localisation, distance in self.distances.items():
             loc1, loc2 = self.sort_localisations(
                 self.localisation, localisation
             )
-            command.append(f"('{loc1}', '{loc2}', {distance}),")
+            format_list.extend([loc1, loc2, distance])
+            command.append(f"(?, ?, ?),")
         command[-1] = command[-1].removesuffix(",") + ";"
 
         true_command = "\n".join(command)
         with self.write_in_database() as cursor:
-            cursor.execute(true_command)
+            cursor.execute(true_command, format_list)
 
     # --- --- Exports --- ---
     # --- --- --- --- Sqlite --- --- ---
@@ -476,10 +520,10 @@ class ScrapperObjectCore(CoreLogger):
 
 
 if __name__ == "__main__":
-    # test = ScrapperObjectCore("Test1", "Paris", "https://google.com", "CDD", "Biology", fake='True', second="3")
-    # test._keywords["Alpha"] = 34
-    # test._keywords["Beta"] = 35
-    # test._distances["Alpha"] = 34.345
-    # test._distances["Beta"] = 35.250
+    # test = ScrapperObjectCore("Test1'", 'Paris"', "https://google.com", "CDD", "Biology", fake='True', second="3")
+    # test._keywords["Alpha'"] = 34
+    # test._keywords['Beta"'] = 35
+    # test._distances['Alpha"'] = 34.345
+    # test._distances["Beta'"] = 35.250
     # print(test.sql_export())
     pass
