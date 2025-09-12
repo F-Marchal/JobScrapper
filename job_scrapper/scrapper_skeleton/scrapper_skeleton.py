@@ -194,7 +194,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         # Export methods
         sql_export: bool = True,
         display: bool = True,
-        flat_export: str | None = "flat.job"
+        flat_export: str | None = None,
+        save_job_page: bool = False
         ) -> list[ScrapperRequestCore]:
 
 
@@ -211,6 +212,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                 localisations=lts,
                 known_localisations=kl,
                 known_urls=ku,
+                save_job_page=save_job_page,
             )
 
         if flat_export:

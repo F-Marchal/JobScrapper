@@ -5,6 +5,7 @@ import time
 from typing import Callable
 from urllib.parse import unquote, urlparse
 
+import zipfile
 import bs4
 from bs4 import BeautifulSoup
 from geopy.distance import geodesic  # type: ignore[import-untyped]
@@ -244,7 +245,8 @@ class ScrapperRequestCore(ScrapperObjectCore):
         keywords: dict[str, list[str]] | None = None,
         known_localisations: dict[str, tuple[float, float]] | None = None,
         known_urls: set[str] | None = None,
-    ):
+        save_job_page: bool = False,
+    ) -> list['ScrapperRequestCore']:
         """
         Try to scrap a maximum of details from an offer.
         :param jobs: A number of Job object
@@ -256,12 +258,16 @@ class ScrapperRequestCore(ScrapperObjectCore):
             known localisations : "localisation1": (latitude, longitude)
         :param set[str] or None known_urls: A set of url that should not be parsed.
             Each job object with its url in this set will be ignored.
+        :param bool save_job_page: Do the webpage of this offer is download
+            and stored on the disk ? Job's metadata will be updated to
+            link file and object.
         """
-
         if known_localisations is None:
             known_localisations = {}
         if known_urls is None:
             known_urls = set()
+
+        parsed_jobs = []
 
         cls.logger.info("Starting Analysis of %s jobs", len(jobs))
         for i, job_object in enumerate(jobs):
@@ -272,6 +278,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
                     len(jobs),
                 )
                 continue
+            parsed_jobs.append(job_object)
 
             cls.logger.info("%s / %s analysis done.", i + 1, len(jobs))
             known_urls.add(job_object.url)
@@ -281,8 +288,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
                     *localisations, known_localisations=known_localisations
                 )
 
-            if keywords:
-                job_object.search_keywords(**keywords)
+            job_object.analyse_html_page(save_page=save_job_page, **keywords)
+
+        return parsed_jobs
 
     @classmethod
     def ask_for_localisation_coordinates(
@@ -378,19 +386,49 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
             time.sleep(self.sleep_between_geo_interrogation)
 
-    def search_keywords(self, **keywords: list[str]):
-        """
-        Search a set of keywords with a number of aliases inside.
-        This research is not case-sensitive.
-        the page pointed by <self.url>.
-        Results are stored inside <self.keywords>
-        key=["key", "alias1", "alias2"]
-        """
+    def analyse_html_page(self, save_page: bool=False, **keywords: list[str]):
+        if not save_page and not keywords:
+            # Nothing to do
+            return
+
         page_content = self.rough_page_parsing(
             self.url,
             only_block_of_interest=False,
             sleep_time=self.sleep_between_keyword_interrogation,
         )
+
+        if save_page:
+            self.save_html_page(page_content)
+
+        if keywords:
+            self.search_keywords(page_content, **keywords)
+
+    def save_html_page(self, page_content: bs4.BeautifulSoup):
+        local_time = time.localtime()
+        formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S", local_time)
+        name = formatted_time + " " + self.title[:30] + ".html"
+        folder = os.path.join(self.workdir, self.get_class_name())
+        file_path = os.path.join(folder, name + ".zip")
+
+        self.logger.debug("Saving job in %s", file_path)
+
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+
+        with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(name, str(page_content))
+
+        self._metadata["html_file"] = file_path
+
+    def search_keywords(self, page_content: bs4.BeautifulSoup, **keywords: list[str]):
+        """
+        Search a set of keywords with a number of aliases inside the page_content.
+        This research is not case-sensitive.
+        the page pointed by <self.url>.
+        Results are stored inside <self.keywords>
+        key=["key", "alias1", "alias2"]
+        :param b.BeautifulSoup page_content: An html BeautifulSoup
+        """
         return self._job_page_content(page_content, **keywords)
 
     def _job_page_content(
