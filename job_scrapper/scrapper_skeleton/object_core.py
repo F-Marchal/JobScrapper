@@ -1,7 +1,10 @@
+import os.path
 import time
 from typing import Sequence
+import sqlite3
+from contextlib import contextmanager
 
-from .logger_core import CoreLogger
+from logger_core import CoreLogger
 
 
 # pylint: disable=R0902
@@ -15,6 +18,11 @@ class ScrapperObjectCore(CoreLogger):
     Basis of JobScrapperSkeleton. Define all attributes, getters, setters and methods to export
     this object.
     """
+    database_file_name = "AllJobs"
+    main_table_name = "Jobs"
+    metadata_table_name = "Metadata"
+    keywords_table_name = "KeywordsCount"
+    distances_table_name = "Distances"
 
     def __init__(
         self,
@@ -37,46 +45,39 @@ class ScrapperObjectCore(CoreLogger):
         self._distances: dict[str, float] = {}
         self._keywords: dict[str, int] = {}
 
-        # --- --- --- --- Export managements --- --- --- ----
+    # --- --- --- --- Export managements --- --- ---
 
-    default_header = [
-        "#Fetch Time",
-        "Origin",
-        "Localisation",
-        "Field",
-        "Contract",
-        "Title",
-        "Metadata",
-        "Url",
-    ]
+    default_header = {
+        "#Fetch_Time": "DATE",
+        "Origin": "TEXT",
+        "Localisation": "TEXT",
+        "Field": "TEXT",
+        "Contract": "TEXT",
+        "Title": "TEXT",
+        # "Metadata": "TEXT",
+        "Url": "TEXT PRIMARY KEY",
+    }
 
-    def flat(self, sep="\t", with_header=True) -> str:
-        """
-        Transform an offer to a line inside a flatfile.
-        Since the header can vary due to configuration differences, you
-            can choose if you want to get the header.
-
-        :param str sep: a separator for the flat file ("\t", ",", ";", ...) Do not use "|" or "=" .
-        :param bool with_header: Do the first line contain the header of this offer.
-            Behind the scenes, the header is generated even with with_header=False. Due
-            to this, with_header=False does not really improve method's speed.
-        """
-        metadata = []
-        for pairs in self._metadata.items():
-            metadata.append("=".join(pairs))
-
+    def to_dict(self):
         items = [
             time.strftime("%Y-%m-%d %H:%M:%S", self._fetch_date),
-            self.__class__.__name__,
+            self.get_class_name(),
             self.localisation,
             self.field,
             self.contract_type,
             self.title,
-            "|".join(metadata),
             self.url,
         ]
 
         header = [*self.default_header]
+
+        metadata = []
+        for pairs in self._metadata.items():
+            metadata.append("=".join(pairs))
+
+        if metadata:
+            header.append("Metadata")
+            items.append("|".join(metadata))
 
         for keywords, occurrences in self._keywords.items():
             header.append(keywords + " (#)")
@@ -86,12 +87,37 @@ class ScrapperObjectCore(CoreLogger):
             header.append(places + " (km)")
             items.append(str(distances))
 
-        str_items = sep.join(items)
-        str_header = sep.join(header)
+        return dict(zip(header, items))
+
+    def flat(self, sep="\t", with_header=True) -> str:
+        """
+        Transform an offer to a line inside a flatfile.
+        Since the header can vary due to configuration differences, you
+            can choose if you want to get the header.
+
+        :param str sep: a separator for the flat file ("\t", ",", ";", ...) Do not use "|" or "=" .
+        :param bool with_header: Do the first line contain the header of this offer.
+        """
+        self_dict = self.to_dict()
+        str_items = sep.join(self_dict.values())
 
         if with_header:
+            str_header = sep.join(self_dict.keys())
             return f"{str_header}\n{str_items}"
         return str_items
+
+    @classmethod
+    def list_to_flat_file(cls, file_path : str, *jobs: 'ScrapperObjectCore'):
+        last_header = None
+        with open(file_path, "w", encoding="utf-8") as f:
+            for job_object in jobs:
+                header, line = job_object.flat().split("\n")
+
+                if last_header != header:
+                    f.write(header + "\n")
+                    last_header = header
+                f.write(line)
+
 
     @classmethod
     def quick_display_list_of_offers(
@@ -104,6 +130,179 @@ class ScrapperObjectCore(CoreLogger):
             else:
                 print(job.flat(with_header=False))
 
+    @classmethod
+    def get_class_name(cls) -> str:
+        """Returns cls.__name__"""
+        return cls.__name__
+
+
+    #  --- --- --- --- Sqlite --- --- --- ----
+    # --- --- Names and paths --- ---
+
+    @classmethod
+    def get_database_path(cls, workdir: str="./"):
+        return os.path.abspath(os.path.join(workdir, cls.database_file_name + ".db"))
+
+
+    @classmethod
+    def sql_comptaible_header_keyword(cls, keyword: str):
+        return keyword.lower().replace("#", "")
+
+    # --- --- Names and paths --- ---
+    # --- --- Databases --- ---
+    @classmethod
+    def _create_main_sql_table_command(cls) -> str:
+        database_definition = [
+            f"CREATE TABLE IF NOT EXISTS  {cls.main_table_name} (",
+        ]
+        for column_name, column_type in cls.default_header.items():
+            column_name = cls.sql_comptaible_header_keyword(column_name)
+            database_definition.append(f"{column_name} {column_type},")
+        database_definition[-1] = database_definition[-1].removesuffix(",")
+
+        # Close definition
+        database_definition.append(")")
+
+        database_command = "\n".join(database_definition)
+        return database_command
+    
+    @classmethod
+    def _create_metadata_sql_table_command(cls) -> str:
+        command = [
+            f'CREATE TABLE IF NOT EXISTS {cls.metadata_table_name} (',
+                'url TEXT,',
+                'key TEXT NOT NULL,',
+                'value TEXT NOT NULL,',
+                'PRIMARY KEY(url, key),'
+                f'FOREIGN KEY (url) REFERENCES {cls.main_table_name}(url)',
+            ');',
+        ]
+        return "\n".join(command)
+
+    @classmethod
+    def _create_keywords_sql_table_command(cls) -> str:
+        command = [
+            f'CREATE TABLE IF NOT EXISTS {cls.keywords_table_name} (',
+                'url TEXT KEY,',
+                'keyword TEXT NOT NULL,',
+                'occurrences INT NOT NULL,',
+                'PRIMARY KEY(url, keyword),'
+                f'FOREIGN KEY (url) REFERENCES {cls.main_table_name}(url)',
+            ');',
+        ]
+        return "\n".join(command)
+
+    @classmethod
+    def _create_distances_sql_table_command(cls) -> str:
+        command = [
+            f'CREATE TABLE IF NOT EXISTS {cls.distances_table_name} (',
+                'localisation1 TEXT NOT NULL,',
+                'localisation2 TEXT NOT NULL,',
+                'distances REAL NOT NULL,',
+                'PRIMARY KEY(localisation1, localisation2)'
+            ');',
+        ]
+        return "\n".join(command)
+
+    @staticmethod
+    def sort_localisations(localisation1: str, localisation2: str) -> list[str]:
+        return sorted([localisation1, localisation2])
+
+    @classmethod
+    def assure_tables_presences(cls, cursor):
+        cursor.execute(cls._create_main_sql_table_command())
+        cursor.execute(cls._create_metadata_sql_table_command())
+        cursor.execute(cls._create_keywords_sql_table_command())
+        cursor.execute(cls._create_distances_sql_table_command())
+
+
+    @classmethod
+    @contextmanager
+    def write_in_database(cls):
+        conn = sqlite3.connect(cls.get_database_path())
+        cursor = conn.cursor()
+        cls.assure_tables_presences(cursor)
+        try:
+            yield cursor
+            conn.commit()
+        finally:
+            conn.close()
+
+    # --- --- Databases --- ---
+    # --- --- Exports --- ---
+    def sql_export(self):
+        self._sql_export_main()
+        self._sql_export_metadata()
+        self._sql_export_keywords()
+        self._sql_export_distances()
+
+    def _sql_export_main(self):
+        command = [
+            f"INSERT OR REPLACE INTO {self.main_table_name}",
+            "(",
+            "VALUES (",
+        ]
+        self_dict = self.to_dict()
+        for cat_name in self.default_header:
+            command[1] += self.sql_comptaible_header_keyword(cat_name) + ", "
+            command[2] += "'" + self_dict[cat_name] + "', "
+
+        command[1] = command[1].removesuffix(", ") + ")"
+        command[2] = command[2].removesuffix(", ") + ")"
+
+        true_command = " ".join(command) + ";"
+
+        with self.write_in_database() as cursor:
+            cursor.execute(true_command)
+
+    def _sql_export_metadata(self):
+        if not self._metadata:
+            return
+        command = [
+            f"INSERT OR REPLACE INTO {self.metadata_table_name}(url, key, value)",
+            "VALUES"
+        ]
+        for key, value in self.metadata.items():
+            command.append(f"('{self.url}', '{key}', '{value}'),")
+        command[-1] = command[-1].removesuffix(",") + ";"
+
+        true_command = "\n".join(command)
+        with self.write_in_database() as cursor:
+            cursor.execute(true_command)
+
+    def _sql_export_keywords(self):
+        if not self._keywords:
+            return
+        command = [
+            f"INSERT OR REPLACE INTO {self.keywords_table_name}(url, keyword, occurrences)",
+            "VALUES"
+        ]
+        for keyword, occurrences in self.keywords.items():
+            command.append(f"('{self.url}', '{keyword}', {occurrences}),")
+        command[-1] = command[-1].removesuffix(",") + ";"
+
+        true_command = "\n".join(command)
+        with self.write_in_database() as cursor:
+            cursor.execute(true_command)
+
+
+    def _sql_export_distances(self):
+        if not self.distances:
+            return
+        command = [
+            f"INSERT OR REPLACE INTO {self.distances_table_name}(localisation1, localisation2, distances)",
+            "VALUES"
+        ]
+        for localisation, distance in self.distances.items():
+            loc1, loc2 = self.sort_localisations(self.localisation, localisation)
+            command.append(f"('{loc1}', '{loc2}', {distance}),")
+        command[-1] = command[-1].removesuffix(",") + ";"
+
+        true_command = "\n".join(command)
+        with self.write_in_database() as cursor:
+            cursor.execute(true_command)
+    # --- --- Exports --- ---
+    # --- --- --- --- Sqlite --- --- ---
     # --- --- --- --- Export managements --- --- --- ----
     # --- --- --- --- Attributes managements --- --- --- ----
     @staticmethod
@@ -214,3 +413,12 @@ class ScrapperObjectCore(CoreLogger):
         return self._keywords.copy()
 
     # --- --- --- --- Attributes managements --- --- --- ----
+
+if __name__ == "__main__":
+    # test = ScrapperObjectCore("Test1", "Paris", "https://google.com", "CDD", "Biology", fake='True', second="3")
+    # test._keywords["Alpha"] = 34
+    # test._keywords["Beta"] = 35
+    # test._distances["Alpha"] = 34.345
+    # test._distances["Beta"] = 35.250
+    # print(test.sql_export())
+    pass
