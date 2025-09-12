@@ -67,6 +67,20 @@ class CoreLogger:
     logger.propagate = (
         False  # Prevent double logging if root logger also configured
     )
+    logger_levels = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR":  logging.ERROR,
+        "CRITICAL":  logging.CRITICAL
+    }
+
+    @classmethod
+    def set_logging_level(cls, level: str):
+        level = level.upper()
+        if level not in cls.logger_levels:
+           raise ValueError(f"Logging level should be one of the following : {list(cls.logger_levels)}")
+        cls.logger.setLevel(cls.logger_levels[level])
 
 
 if "__main__" == __name__:
