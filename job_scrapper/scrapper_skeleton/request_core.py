@@ -258,7 +258,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
             Each job object with its url in this set will be ignored.
         """
 
-        if not known_localisations is None:
+        if known_localisations is None:
             known_localisations = {}
         if known_urls is None:
             known_urls = set()
@@ -335,6 +335,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         result = (geocode_objet.latitude, geocode_objet.longitude)
         known_localisations[localisation] = result
+
         return result
 
     def compute_localisation(

@@ -116,7 +116,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         be parsed and output as dict / list or sets. When the with statement will end. The content of each
         file will be updated.
         ```python3
-        with JobScrapperSkeleton.full_setup() as (lts, kts, kl, ku):
+        with JobScrapperSkeleton.full_setup(*args) as (lts, kts, kl, ku):
             # Functions using those configurations files
         ```
         :param str or None localisations_to_search_json: A json (list[str]) that contain a list of places.
@@ -180,10 +180,57 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         cls.logger.debug("Save configurations files' state")
         localisations_search_file.dump(localisations_to_search)
         keywords_search_file.dump(keywords_to_search)
+
         known_localisations_file.dump(known_localisations)
         known_urls_file.dump(list(known_urls))
 
+    @classmethod
+    def main(cls,
+        # Setting
+        localisations_to_search_json: None | str = None,
+        keywords_to_search_json: str | None = None,
+        known_localisations_json: str | None = None,
+        known_urls_json: str | None = None,
+        # Export methods
+        sql_export: bool = True,
+        display: bool = True,
+        flat_export: str | None = "flat.job"
+        ) -> list[ScrapperRequestCore]:
 
-if __name__ == "__main__":
-    with JobScrapperSkeleton.full_setup() as (lts, kts, kl, ku):
-        print(lts, kts, kl, ku)
+
+        with cls.full_setup(
+                localisations_to_search_json,
+                keywords_to_search_json,
+                known_localisations_json,
+                known_urls_json
+        ) as (lts, kts, kl, ku):
+            result = cls.interrogate_website()
+            cls.analyse_jobs(
+                *result,
+                keywords=kts,
+                localisations=lts,
+                known_localisations=kl,
+                known_urls=ku,
+            )
+
+        if flat_export:
+            if os.path.exists(flat_export) and not os.path.isfile(flat_export):
+                cls.logger.warning("Can not export jobs to '%s'. The export will be done in the terminal. ",
+                                   flat_export)
+                display = True
+            else:
+                cls.logger.info("Starting the export of %s jobs in '%s'", len(result), flat_export)
+                cls.list_to_flat_file(flat_export, result)
+
+        if display:
+            cls.logger.info("Starting display of %s jobs", len(result))
+            cls.complete_display_list_of_offers(result)
+
+
+        if sql_export:
+            cls.logger.info("Starting export into the sql database of %s jobs", len(result))
+            cls.list_to_sql(result)
+
+
+        return result
+
