@@ -353,7 +353,7 @@ class ScrapperObjectCore(CoreLogger):
             cursor.execute(true_command, format_list)
 
     def _sql_export_metadata(self):
-        if not self._metadata:
+        if not self.metadata:
             return
         command = [
             f"INSERT OR REPLACE INTO {self.metadata_table_name}(url, key, value)",
@@ -368,39 +368,67 @@ class ScrapperObjectCore(CoreLogger):
             cursor.execute(true_command)
 
     def _sql_export_keywords(self):
-        if not self._keywords:
+        # Is there anything to do ?
+        if not self.keywords:
             return
+
+        # Prepare command
         command = [
             f"INSERT OR REPLACE INTO {self.keywords_table_name}(url, keyword, occurrences)",
             "VALUES",
         ]
         format_list = []
+
+        # Fill command / format_list
         for keyword, occurrences in self.keywords.items():
+            if occurrences == -1:
+                # Do not flood database with useless values
+                continue
+
             command.append("(?, ?, ?),")
             format_list.extend([self.url, keyword, occurrences])
-        command[-1] = command[-1].removesuffix(",") + ";"
 
+        if not format_list:
+            # Nothing to do
+            return
+
+        # Command
+        command[-1] = command[-1].removesuffix(",") + ";"
         true_command = "\n".join(command)
 
         with self.write_in_database() as cursor:
             cursor.execute(true_command, format_list)
 
     def _sql_export_distances(self):
+        # Is there anything to do ?
         if not self.distances:
             return
+
+        # Prepare sql command
         command = [
             f"INSERT OR REPLACE INTO {self.distances_table_name}(localisation1, localisation2, distances)",
             "VALUES",
         ]
         format_list = []
+
+        # Fill command / format_list
         for localisation, distance in self.distances.items():
+            if distance == -1:
+                # Do not flood database with useless values
+                continue
+
             loc1, loc2 = self.sort_localisations(
                 self.localisation, localisation
             )
             format_list.extend([loc1, loc2, distance])
             command.append(f"(?, ?, ?),")
-        command[-1] = command[-1].removesuffix(",") + ";"
 
+        if not format_list:
+            # Nothing to do
+            return
+
+        # Run sql command
+        command[-1] = command[-1].removesuffix(",") + ";"
         true_command = "\n".join(command)
         with self.write_in_database() as cursor:
             cursor.execute(true_command, format_list)
