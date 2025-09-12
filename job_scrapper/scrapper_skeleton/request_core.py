@@ -252,15 +252,12 @@ class ScrapperRequestCore(ScrapperObjectCore):
             Each job object with its url in this set will be ignored.
         """
 
-        if not known_localisations:
+        if not known_localisations is None:
             known_localisations = {}
-        if not known_urls:
+        if not known_urls is None:
             known_urls = set()
 
         cls.logger.info("Starting Analysis of %s jobs", len(jobs))
-        if not known_localisations:
-            known_localisations = {}
-
         for i, job_object in enumerate(jobs):
             if job_object.url in known_urls:
                 cls.logger.info(
@@ -269,7 +266,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
                     len(jobs),
                 )
                 continue
+
             cls.logger.info("%s / %s analysis done.", i + 1, len(jobs))
+            known_urls.add(job_object.url)
 
             if localisations:
                 job_object.compute_localisation(
@@ -278,6 +277,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
             if keywords:
                 job_object.search_keywords(**keywords)
+
 
     @classmethod
     def ask_for_localisation_coordinates(
@@ -298,7 +298,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         :return: (geocode_objet.latitude, geocode_objet.longitude) or None if too many
             errors happen or if this address is unknown
         """
-        if not known_localisations:
+        if known_localisations is None:
             known_localisations = {}
 
         if localisation in known_localisations:
