@@ -2,8 +2,8 @@ import os
 import re
 import tempfile
 import time
-from urllib.parse import unquote, urlparse
 from typing import Callable
+from urllib.parse import unquote, urlparse
 
 import bs4
 from bs4 import BeautifulSoup
@@ -72,7 +72,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
     # --- --- --- --- Job acquisition --- --- --- ----
     # --- --- Retrieve jobs  --- ---
     @classmethod
-    def interrogate_website(cls, prepare_page: Callable = None) -> list["ScrapperRequestCore"]:
+    def interrogate_website(
+        cls, prepare_page: Callable | None = None
+    ) -> list["ScrapperRequestCore"]:
         """
         Interrogate the website stored in <cls.website_url> to extract job offers.
         :return: All jobs offers founds in this website.
@@ -94,7 +96,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
             # This loop avoid offer duplication
             while not page_already_reached:
                 url = cls.website_url.format(page=page_index)
-                html_block_of_interest = cls.rough_page_parsing(url, prepare_page=prepare_page)
+                html_block_of_interest = cls.rough_page_parsing(
+                    url, prepare_page=prepare_page
+                )
 
                 if html_block_of_interest in known_block:
                     # A : Yes, we have done a full loop, lets stop !
@@ -112,7 +116,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
                 page_index += 1
 
         else:
-            html_block_of_interest = cls.rough_page_parsing(cls.website_url, prepare_page=prepare_page)
+            html_block_of_interest = cls.rough_page_parsing(
+                cls.website_url, prepare_page=prepare_page
+            )
             cls.complete_job_page_parsing(offers, html_block_of_interest)
 
         return offers
@@ -123,7 +129,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         url: str,
         only_block_of_interest: bool = True,
         sleep_time: int | None = None,
-        prepare_page: Callable = None
+        prepare_page: Callable | None = None,
     ) -> bs4.BeautifulSoup:
         """
         Parse web page's html and return a block of html
@@ -138,7 +144,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         browser = cls.open_url_inside_browser(url)
 
-        if not prepare_page:
+        if not callable(prepare_page):
             cls._rough_page_parsing_actions(browser)
         else:
             prepare_page(browser)
@@ -254,7 +260,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         if not known_localisations is None:
             known_localisations = {}
-        if not known_urls is None:
+        if known_urls is None:
             known_urls = set()
 
         cls.logger.info("Starting Analysis of %s jobs", len(jobs))
@@ -277,7 +283,6 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
             if keywords:
                 job_object.search_keywords(**keywords)
-
 
     @classmethod
     def ask_for_localisation_coordinates(

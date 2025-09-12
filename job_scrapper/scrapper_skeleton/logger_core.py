@@ -71,15 +71,22 @@ class CoreLogger:
         "DEBUG": logging.DEBUG,
         "INFO": logging.INFO,
         "WARNING": logging.WARNING,
-        "ERROR":  logging.ERROR,
-        "CRITICAL":  logging.CRITICAL
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
     }
 
     @classmethod
     def set_logging_level(cls, level: str):
+        """
+        Change logging level.
+        :param str level: see cls.logger_levels
+        :return:
+        """
         level = level.upper()
         if level not in cls.logger_levels:
-           raise ValueError(f"Logging level should be one of the following : {list(cls.logger_levels)}")
+            raise ValueError(
+                f"Logging level should be one of the following : {list(cls.logger_levels)}"
+            )
         cls.logger.setLevel(cls.logger_levels[level])
 
 

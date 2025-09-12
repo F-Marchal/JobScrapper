@@ -1,16 +1,16 @@
 import time
+from typing import Callable
 
 from bs4 import BeautifulSoup
 from selenium.common.exceptions import (
     ElementClickInterceptedException,
     StaleElementReferenceException,
     TimeoutException,
-    WebDriverException,
 )
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from typing import Callable
+
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
 
@@ -18,6 +18,7 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
     """
     Use JobScrapperSkeleton to extract jobs offers from Sanofi's website
     """
+
     job_across_multiple_pages = False
 
     @classmethod
@@ -54,7 +55,9 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
             offers.append(cls(**kwargs))
 
     @classmethod
-    def interrogate_website(cls, prepare_page: Callable = None) -> list[srk.ScrapperRequestCore]:
+    def interrogate_website(
+        cls, prepare_page: Callable | None = None
+    ) -> list[srk.ScrapperRequestCore]:
         if prepare_page is None:
             prepare_page = cls._job_rough_page_parsing_actions
         return super().interrogate_website(prepare_page)
@@ -64,7 +67,10 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
         try:
             cookie_btn = WebDriverWait(browser, 3).until(
                 EC.element_to_be_clickable(
-                    (By.CSS_SELECTOR, "button.onetrust-close-btn-handler.banner-close-button.ot-close-link")
+                    (
+                        By.CSS_SELECTOR,
+                        "button.onetrust-close-btn-handler.banner-close-button.ot-close-link",
+                    )
                 )
             )
             cookie_btn.click()
@@ -82,7 +88,9 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
         :param int timeout: How long can the browser wait (s).
         """
         cls._rough_page_parsing_actions(browser)
-        button_id = "div.pagination-all a.pagination-show-all" # pagination-show-all
+        button_id = (
+            "div.pagination-all a.pagination-show-all"  # pagination-show-all
+        )
         try:
             wait = WebDriverWait(browser, timeout)
 
@@ -98,7 +106,6 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
             wait.until(
                 EC.staleness_of(button)  # ou une autre condition adaptée
             )
-
 
         except TimeoutException:
             # Button not found – probably no "show all" option

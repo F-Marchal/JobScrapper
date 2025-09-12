@@ -1,11 +1,13 @@
-from bs4 import BeautifulSoup
 import re
+
+from bs4 import BeautifulSoup
+
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
 
-class TemplateScrapper(srk.JobScrapperSkeleton):
+class SBIScrapper(srk.JobScrapperSkeleton):
     """
-    Use JobScrapperSkeleton to extract jobs offers from Template's website
+    Use JobScrapperSkeleton to extract jobs offers from SBI's website
     """
 
     website_url = "-"
@@ -28,8 +30,6 @@ class TemplateScrapper(srk.JobScrapperSkeleton):
         return soup.find(
             name="table",
         )
-
-
 
     @classmethod
     def complete_job_page_parsing(
@@ -56,10 +56,10 @@ class TemplateScrapper(srk.JobScrapperSkeleton):
 
 
 if __name__ == "__main__":
-    result = TemplateScrapper.interrogate_website()
-    TemplateScrapper.analyse_jobs(
+    result = SBIScrapper.interrogate_website()
+    SBIScrapper.analyse_jobs(
         *result,
         keywords={"Informatique": ["Informatique", "Informatic"]},
         localisations=["Montpellier, France", "Lyon, France"],
     )
-    TemplateScrapper.quick_display_list_of_offers(result)
+    SBIScrapper.quick_display_list_of_offers(result)

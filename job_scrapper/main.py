@@ -1,18 +1,21 @@
 import logging
-import cloup
+
 import click
-import scrapper_skeleton.scrapper_skeleton as skl
+import cloup
+
+from .scrapper_skeleton import scrapper_skeleton as skl
 
 
 @cloup.group()
 @cloup.option(
-    "-v", "--verbosity",
-    type=click.Choice(list(skl.JobScrapperSkeleton.logger_levels), case_sensitive=False),
+    "-v",
+    "--verbosity",
+    type=click.Choice(
+        list(skl.JobScrapperSkeleton.logger_levels), case_sensitive=False
+    ),
     default="INFO",
-    help="Niveau de logs"
+    help="Niveau de logs",
 )
-
-
 @cloup.pass_context
 def cli(ctx, verbosity):
     """Main Command line Interface. Will be specialised later on."""
@@ -22,6 +25,15 @@ def cli(ctx, verbosity):
 
 # --- --- --- SCRAP group --- --- ---
 @cli.group()
+@cloup.option(
+    "-v",
+    "--verbosity",
+    type=click.Choice(
+        list(skl.JobScrapperSkeleton.logger_levels), case_sensitive=False
+    ),
+    default="INFO",
+    help="Niveau de logs",
+)
 @cloup.pass_context
 def scrap(ctx):
     """Commandes liées au scraping."""
