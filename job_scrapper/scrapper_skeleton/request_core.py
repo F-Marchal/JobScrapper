@@ -4,14 +4,13 @@ import tempfile
 import time
 import zipfile
 from typing import Callable
-from urllib.parse import unquote, urlparse
+from urllib.parse import urlparse
 
 import bs4
 from bs4 import BeautifulSoup
 from geopy.distance import geodesic  # type: ignore[import-untyped]
 from geopy.exc import GeocoderServiceError  # type: ignore[import-untyped]
 from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
-from PyPDF2 import PdfReader
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
@@ -180,7 +179,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         except WebDriverException as exception:
             cls.logger.warning("%s\n%s retry left", exception, retry)
             if retry <= 0:
-                cls.logger.error(
+                cls.logger.fatal(
                     "Multiple exception during interrogation of %s. \n%s",
                     url,
                     exception,
@@ -288,7 +287,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
                     *localisations, known_localisations=known_localisations
                 )
 
-            job_object.analyse_html_page(save_page=save_job_page, **keywords)
+            job_object.analyse_job_page(save_page=save_job_page, **keywords)
 
         return parsed_jobs
 
@@ -386,7 +385,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
             time.sleep(self.sleep_between_geo_interrogation)
 
-    def analyse_html_page(self, save_page: bool = False, **keywords: list[str]):
+    def analyse_job_page(self, save_page: bool = False, **keywords: list[str]):
         if not save_page and not keywords:
             # Nothing to do
             return
@@ -398,33 +397,36 @@ class ScrapperRequestCore(ScrapperObjectCore):
         )
 
         if save_page:
-            self.save_html_page(page_content)
+            self.save_job_page(page_content)
 
         if keywords:
             self.search_keywords(page_content, **keywords)
 
-    def save_html_page(self, page_content: bs4.BeautifulSoup):
+    def _generate_job_file_name(self, ext: str):
         local_time = time.localtime()
         formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S", local_time)
-        name = formatted_time + " " + self.title[:30] + ".html"
+        name = formatted_time + " " + self.title[:30] + f".{ext}"
         folder = os.path.join(self.workdir, self.get_class_name())
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+        return folder, name
+
+    def save_job_page(self, page_content: bs4.BeautifulSoup, ext: str="html"):
+        folder, name = self._generate_job_file_name(ext)
         file_path = os.path.join(folder, name + ".zip")
 
         self.logger.debug("Saving job in %s", file_path)
-
-        if not os.path.exists(folder):
-            os.mkdir(folder)
 
         with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr(name, str(page_content))
 
         if self.workdir in file_path:
-            self._metadata["html_file"] = file_path.replace(self.workdir, "./")
+            self._metadata["job_page"] = file_path.replace(self.workdir, "./")
         else:
-            self._metadata["html_file"] = file_path
+            self._metadata["job_page"] = file_path
 
     def search_keywords(
-        self, page_content: bs4.BeautifulSoup, **keywords: list[str]
+        self, page_content: bs4.BeautifulSoup | str, **keywords: list[str]
     ):
         """
         Search a set of keywords with a number of aliases inside the page_content.
@@ -432,7 +434,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         the page pointed by <self.url>.
         Results are stored inside <self.keywords>
         key=["key", "alias1", "alias2"]
-        :param b.BeautifulSoup page_content: An html BeautifulSoup
+        :param bs4.BeautifulSoup or str page_content: An html BeautifulSoup or a string
         """
         return self._job_page_content(page_content, **keywords)
 
@@ -462,73 +464,4 @@ class ScrapperRequestCore(ScrapperObjectCore):
                 self._keywords[key] += count
 
     # --- --- Analyse jobs  --- ---
-    # --- --- Download files  --- ---
-    @classmethod
-    def download_file(
-        cls, url: str, retry: int = 2, timeout: int = 360
-    ) -> str | None:
-        """
-        Download a file using selenium
-        :param str url: An url that point to a file
-        :param int retry: Number of time that this action can be retried when
-            an error occur
-        :param int timeout: How long the download can last
-        :return None or str: Path to the downloaded file when the download succeed. None otherise.
-        """
-        # https://stackoverflow.com/questions/43149534/selenium-webdriver-how-to-download-a-pdf-file-with-python
-
-        download_dir = cls.download_temp_dir.name
-        parsed_url = urlparse(url)
-        filename = os.path.basename(parsed_url.path)
-        filename = unquote(filename)  # Avoid encoding errors
-        filepath = os.path.join(download_dir, filename)
-
-        cls.logger.debug(
-            "Downloading file : %s\ntimeout=%s\tExpected path : %s",
-            url,
-            timeout,
-            filepath,
-        )
-        driver = webdriver.Chrome(
-            options=cls.selenium_download_file_with_chrome_options
-        )
-
-        try:
-            driver.get(url)
-            i = 0
-            while not os.path.exists(filepath) and i < timeout:
-                time.sleep(1)
-                i += 1
-
-        except WebDriverException as exception:
-            cls.logger.warning("%s\n%s retry left", exception, retry)
-            if retry <= 0:
-                cls.logger.error(
-                    "Multiple exception during interrogation of %s. \n%s",
-                    url,
-                    exception,
-                )
-                return None
-            time.sleep(cls.sleep_before_retry_downloading)
-            return cls.download_file(url)
-
-        time.sleep(cls.sleep_between_downloading)
-
-        if not os.path.exists(filepath):
-            cls.logger.warning("Download failed : %s", filepath)
-            return None
-        cls.logger.debug("Download completed : %s", filepath)
-        return filepath
-
-    @staticmethod
-    def parse_pdf(path: str) -> str:
-        """Open a pdf in PdfReader"""
-        pdf = PdfReader(path)
-        output = []
-        for pages in pdf.pages:
-            output.append(pages.extract_text())
-
-        return "\n\n\n\n".join(output)
-
-    # --- --- Download files  --- ---
     # --- --- --- --- Job acquisition --- --- --- ----

@@ -3,14 +3,12 @@ Skeleton for JobScrapperClass
 """
 
 import json
-import logging
 import os.path
 from contextlib import contextmanager
 
 from bs4 import BeautifulSoup
 
 from .request_core import ScrapperRequestCore
-
 
 class JobScrapperSkeleton(ScrapperRequestCore):
     """
@@ -132,7 +130,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         # Locals variables help me to understand my code
 
         if not os.path.isdir(cls.workdir):
-            logging.info("Creation of %s", cls.workdir)
+            cls.logger.info("Creation of %s", cls.workdir)
             os.mkdir(cls.workdir)
 
         localisations_search_file = cls.ConfigurationFile(

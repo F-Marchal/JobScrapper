@@ -3,10 +3,10 @@ import re
 
 from bs4 import BeautifulSoup
 
-import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
+import job_scrapper.scrapper_skeleton.pdf_jobs as pj
 
 
-class InsermScrapper(srk.JobScrapperSkeleton):
+class InsermScrapper(pj.PdfJobBaseScrapper):
     """
     Use JobScrapperSkeleton to extract jobs offers from Inserm's website
     """
@@ -55,18 +55,16 @@ class InsermScrapper(srk.JobScrapperSkeleton):
             }
             offers.append(cls(**kwargs))
 
-    def search_keywords(self, **keywords: list[str]):
-        pdf_path = self.download_file(self.url)
-        if pdf_path and os.path.isfile(pdf_path):
-            content = self.parse_pdf(pdf_path)
-            self._job_page_content(content)
+
+
 
 
 if __name__ == "__main__":
-    result = InsermScrapper.interrogate_website()
+    InsermScrapper.main(sql_export=True, save_job_page=True)
+    '''result = InsermScrapper.interrogate_website()
     InsermScrapper.analyse_jobs(
         *result,
         keywords={"Informatique": ["Informatique", "Informatic"]},
         localisations=["Montpellier, France", "Lyon, France"],
     )
-    InsermScrapper.quick_display_list_of_offers(result)
+    InsermScrapper.quick_display_list_of_offers(result)'''
