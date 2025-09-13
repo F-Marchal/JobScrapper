@@ -25,12 +25,12 @@ class INRAEScrapper(srk.JobScrapperSkeleton):
     ):
         for cells in soup.find_all("a", class_="Cardjob"):
             title = re.findall(r"<span>(.*)</span>", str(cells))[0]
-            localisation = soup.find(
+            localisation = cells.find(
                 "div", class_="Cardjob-location"
             ).text.strip()
 
             # contract_type
-            contract_type = soup.find(
+            contract_type = cells.find(
                 "span", class_=re.compile(r"^Cardjob-contract")
             ).text.strip()
 

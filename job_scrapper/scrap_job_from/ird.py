@@ -27,7 +27,7 @@ class IRDScrapper(srk.JobScrapperSkeleton):
         # Locals variables are here to simplify page parsing logic
         for cells in soup.find_all("div", class_="ts-offer-card Layer"):
             # title ref field
-            title_ref_field = soup.find("a")["title"]
+            title_ref_field = cells.find("a")["title"]
 
             title, ref_field = title_ref_field.split("(Réf. : ")
             split_ref_field = ref_field.split(" - ")

@@ -28,7 +28,7 @@ class CiradScrapper(srk.JobScrapperSkeleton):
             "li", class_="ts-offer-list-item offerlist-item"
         ):
             # Extract title, ref and field
-            title_ref_field = soup.find("a")["title"]
+            title_ref_field = cells.find("a")["title"]
             title_ref, field = title_ref_field.split(" - ")
             title, ref = title_ref.split("(Réf. :")
             ref = ref[:-1].strip()
@@ -52,6 +52,7 @@ class CiradScrapper(srk.JobScrapperSkeleton):
                 "reference": ref,
                 "post date": post_date,
             }
+            print(kwargs)
             offers.append(cls(**kwargs))
 
 
