@@ -4,3 +4,4 @@ poetry.lock
 Discared/*
 Download/jobs/*
 JobScrapperWorkDir/
+Workdir/
