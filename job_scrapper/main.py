@@ -1,8 +1,12 @@
 import click
 import cloup
 
-from scrap_job_from.cirad import CiradScrapper
-from scrapper_skeleton import scrapper_skeleton as skl
+from job_scrapper import (
+    JobScrapperSkeleton,
+    CiradScrapper
+)
+
+
 
 
 @cloup.group()
@@ -10,7 +14,7 @@ from scrapper_skeleton import scrapper_skeleton as skl
     "-v",
     "--verbosity",
     type=click.Choice(
-        list(skl.JobScrapperSkeleton.logger_levels), case_sensitive=False
+        list(JobScrapperSkeleton.logger_levels), case_sensitive=False
     ),
     default="INFO",
     help="Niveau de logs",
@@ -18,7 +22,7 @@ from scrapper_skeleton import scrapper_skeleton as skl
 @cloup.pass_context
 def cli(ctx, verbosity):
     """Main Command line Interface. Will be specialised later on."""
-    skl.JobScrapperSkeleton.set_logging_level(verbosity)
+    JobScrapperSkeleton.set_logging_level(verbosity)
     ctx.obj = {"verbosity": verbosity}
 
 
@@ -138,23 +142,21 @@ def scrap(
             "flat_export": result_file
         }
     ctx.obj["workdir"] = workdir
+    JobScrapperSkeleton.workdir = workdir
 
 @scrap.command()
 @cloup.pass_context
 def sanofi(ctx):
     """Scrap sanofi website for job offers."""
-    logging.info(f"Scraping en mode A (verbosity={ctx})")
+    pass
 
 
 @scrap.command()
 @cloup.pass_context
 def cirad(ctx):
     """Scrap en mode B (complet)."""
-    CiradScrapper.workdir = ctx.obj["workdir"]
-    skl.JobScrapperSkeleton.logger.info("-")
     CiradScrapper.main(**ctx.obj['OptionsScrapperMain'])
 
 
 if __name__ == "__main__":
-    skl.JobScrapperSkeleton.logger.info("a")
-    # cli()
+    cli()

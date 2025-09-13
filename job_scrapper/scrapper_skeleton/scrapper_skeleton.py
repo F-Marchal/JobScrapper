@@ -227,6 +227,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
 
             )
 
+            cls.logger.info("%s analysis done.", len(result))
+
         if flat_export:
             if os.path.exists(flat_export) and not os.path.isfile(flat_export):
                 cls.logger.warning(

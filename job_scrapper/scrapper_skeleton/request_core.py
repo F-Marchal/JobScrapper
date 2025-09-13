@@ -279,7 +279,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
                 continue
             parsed_jobs.append(job_object)
 
-            cls.logger.info("%s / %s analysis done.", i + 1, len(jobs))
+            cls.logger.info("%s / %s analysis done.", i, len(jobs))
             known_urls.add(job_object.url)
 
             if localisations:
