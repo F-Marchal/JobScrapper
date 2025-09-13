@@ -108,6 +108,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         keywords_to_search_json: str | None = None,
         known_localisations_json: str | None = None,
         known_urls_json: str | None = None,
+        dumb_urls: bool = True,
+        dump_localisations: bool = True,
     ):
         """
         Use this with the <with> statement to manage the configuration files. The files will
@@ -125,6 +127,10 @@ class JobScrapperSkeleton(ScrapperRequestCore):
           a dictionary of known localisations : "localisation1": (latitude, longitude)
         :param str or None known_urls_json: A json that contain a list[str] of url that should not be parsed.
             Each job object with its url in this set will be ignored.
+        :param bool dumb_urls: Do known_urls_json is updated with new localisations ?
+            (Default True)
+        :param bool dump_localisations: Do known_localisations_json file is updated with new localisations ?
+            (default True)
         """
         # pylint: disable=R0914
         # Locals variables help me to understand my code
@@ -176,11 +182,14 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         yield localisations_to_search, keywords_to_search, known_localisations, known_urls
 
         cls.logger.debug("Save configurations files' state")
-        localisations_search_file.dump(localisations_to_search)
-        keywords_search_file.dump(keywords_to_search)
+        if dump_localisations:
+            known_localisations_file.dump(known_localisations)
 
-        known_localisations_file.dump(known_localisations)
-        known_urls_file.dump(list(known_urls))
+        if dumb_urls:
+            known_urls_file.dump(list(known_urls))
+
+        # localisations_search_file.dump(localisations_to_search)
+        # keywords_search_file.dump(keywords_to_search)
 
     @classmethod
     def main(
@@ -195,6 +204,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         display: bool = True,
         flat_export: str | None = None,
         save_job_page: bool = False,
+        dumb_urls: bool = True,
+        dump_localisations: bool = True,
     ) -> list[ScrapperRequestCore]:
 
         with cls.full_setup(
@@ -202,6 +213,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
             keywords_to_search_json,
             known_localisations_json,
             known_urls_json,
+            dumb_urls=dumb_urls,
+            dump_localisations=dump_localisations,
         ) as (lts, kts, kl, ku):
             result = cls.interrogate_website()
             cls.analyse_jobs(
@@ -211,6 +224,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                 known_localisations=kl,
                 known_urls=ku,
                 save_job_page=save_job_page,
+
             )
 
         if flat_export:
