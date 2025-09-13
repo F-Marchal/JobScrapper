@@ -185,7 +185,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         known_urls_file.dump(list(known_urls))
 
     @classmethod
-    def main(cls,
+    def main(
+        cls,
         # Setting
         localisations_to_search_json: None | str = None,
         keywords_to_search_json: str | None = None,
@@ -195,15 +196,14 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         sql_export: bool = True,
         display: bool = True,
         flat_export: str | None = None,
-        save_job_page: bool = False
-        ) -> list[ScrapperRequestCore]:
-
+        save_job_page: bool = False,
+    ) -> list[ScrapperRequestCore]:
 
         with cls.full_setup(
-                localisations_to_search_json,
-                keywords_to_search_json,
-                known_localisations_json,
-                known_urls_json
+            localisations_to_search_json,
+            keywords_to_search_json,
+            known_localisations_json,
+            known_urls_json,
         ) as (lts, kts, kl, ku):
             result = cls.interrogate_website()
             cls.analyse_jobs(
@@ -217,22 +217,27 @@ class JobScrapperSkeleton(ScrapperRequestCore):
 
         if flat_export:
             if os.path.exists(flat_export) and not os.path.isfile(flat_export):
-                cls.logger.warning("Can not export jobs to '%s'. The export will be done in the terminal. ",
-                                   flat_export)
+                cls.logger.warning(
+                    "Can not export jobs to '%s'. The export will be done in the terminal. ",
+                    flat_export,
+                )
                 display = True
             else:
-                cls.logger.info("Starting the export of %s jobs in '%s'", len(result), flat_export)
+                cls.logger.info(
+                    "Starting the export of %s jobs in '%s'",
+                    len(result),
+                    flat_export,
+                )
                 cls.list_to_flat_file(flat_export, result)
 
         if display:
             cls.logger.info("Starting display of %s jobs", len(result))
             cls.complete_display_list_of_offers(result)
 
-
         if sql_export:
-            cls.logger.info("Starting export into the sql database of %s jobs", len(result))
+            cls.logger.info(
+                "Starting export into the sql database of %s jobs", len(result)
+            )
             cls.list_to_sql(result)
 
-
         return result
-

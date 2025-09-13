@@ -117,7 +117,7 @@ class ScrapperObjectCore(CoreLogger):
 
     @classmethod
     def _list_to_flat_file(
-        cls, jobs: list ["ScrapperObjectCore"], sep: str = "\t"
+        cls, jobs: list["ScrapperObjectCore"], sep: str = "\t"
     ):
         """
         turn a list of jobs to a generator. This generator output the content of .job file.
@@ -135,7 +135,10 @@ class ScrapperObjectCore(CoreLogger):
 
     @classmethod
     def list_to_flat_file(
-        cls, file_path: str | None, jobs: list ["ScrapperObjectCore"], sep: str = "\t"
+        cls,
+        file_path: str | None,
+        jobs: list["ScrapperObjectCore"],
+        sep: str = "\t",
     ):
         """
         Export a list of job inside a jobfile.
@@ -151,7 +154,9 @@ class ScrapperObjectCore(CoreLogger):
                 f.write(lines)
 
     @classmethod
-    def complete_display_list_of_offers(cls, jobs: list ["ScrapperObjectCore"], sep: str = "\t"):
+    def complete_display_list_of_offers(
+        cls, jobs: list["ScrapperObjectCore"], sep: str = "\t"
+    ):
         """
         print a list of job inside the terminal as if it was a jobfile.
         :param list[ScrapperObjectCore] jobs: A list of ScrapperObjectCore
@@ -162,11 +167,10 @@ class ScrapperObjectCore(CoreLogger):
             print(lines, end="")
 
     @staticmethod
-    def quick_display_list_of_offers(
-        job_list: Sequence["ScrapperObjectCore"]
-    ):
+    def quick_display_list_of_offers(job_list: Sequence["ScrapperObjectCore"]):
         """Quickly display in terminal all jobs from a list of jobs. is printed only one time.
-        If the <job_list> has been generated using multiple configurations use <complete_display_list_of_offers>"""
+        If the <job_list> has been generated using multiple configurations use <complete_display_list_of_offers>
+        """
         for i, job in enumerate(job_list):
             if i == 0:
                 print(job.flat())
@@ -174,7 +178,7 @@ class ScrapperObjectCore(CoreLogger):
                 print(job.flat(with_header=False))
 
     @staticmethod
-    def list_to_sql(jobs: list ["ScrapperObjectCore"]):
+    def list_to_sql(jobs: list["ScrapperObjectCore"]):
         """
         Export a list of job inside the sql database.
         :param list ["ScrapperObjectCore"] jobs: A list of ScrapperObjectCore
@@ -337,7 +341,7 @@ class ScrapperObjectCore(CoreLogger):
         command = [
             f"INSERT OR REPLACE INTO {self.main_table_name}",
             "(",
-            "VALUES (" + ', '.join(["?"] * len( self.default_header)) + ")",
+            "VALUES (" + ", ".join(["?"] * len(self.default_header)) + ")",
         ]
         format_list = []
         self_dict = self.to_dict()
