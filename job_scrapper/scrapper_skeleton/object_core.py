@@ -146,6 +146,7 @@ class ScrapperObjectCore(CoreLogger):
         :param ScrapperObjectCore jobs: A list of ScrapperObjectCore
         :param str sep: Column delimiter. Do not use "|"
         """
+        cls.logger.debug("Exporting %s jobs to %s", len(jobs), file_path)
         if file_path is None:
             file_path = os.path.join(cls.workdir, "JobFiles")
 
@@ -177,13 +178,14 @@ class ScrapperObjectCore(CoreLogger):
             else:
                 print(job.flat(with_header=False))
 
-    @staticmethod
-    def list_to_sql(jobs: list["ScrapperObjectCore"]):
+    @classmethod
+    def list_to_sql(cls, jobs: list["ScrapperObjectCore"]):
         """
         Export a list of job inside the sql database.
         :param list ["ScrapperObjectCore"] jobs: A list of ScrapperObjectCore
         :return:
         """
+        cls.logger.debug("Exporting %s jobs to sql database", len(jobs))
         for job_obj in jobs:
             job_obj.sql_export()
 
