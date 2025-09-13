@@ -2,10 +2,10 @@ import os
 import re
 import tempfile
 import time
+import zipfile
 from typing import Callable
 from urllib.parse import unquote, urlparse
 
-import zipfile
 import bs4
 from bs4 import BeautifulSoup
 from geopy.distance import geodesic  # type: ignore[import-untyped]
@@ -246,7 +246,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         known_localisations: dict[str, tuple[float, float]] | None = None,
         known_urls: set[str] | None = None,
         save_job_page: bool = False,
-    ) -> list['ScrapperRequestCore']:
+    ) -> list["ScrapperRequestCore"]:
         """
         Try to scrap a maximum of details from an offer.
         :param jobs: A number of Job object
@@ -386,7 +386,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
             time.sleep(self.sleep_between_geo_interrogation)
 
-    def analyse_html_page(self, save_page: bool=False, **keywords: list[str]):
+    def analyse_html_page(self, save_page: bool = False, **keywords: list[str]):
         if not save_page and not keywords:
             # Nothing to do
             return
@@ -418,9 +418,14 @@ class ScrapperRequestCore(ScrapperObjectCore):
         with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr(name, str(page_content))
 
-        self._metadata["html_file"] = file_path
+        if self.workdir in file_path:
+            self._metadata["html_file"] = file_path.replace(self.workdir, "./")
+        else:
+            self._metadata["html_file"] = file_path
 
-    def search_keywords(self, page_content: bs4.BeautifulSoup, **keywords: list[str]):
+    def search_keywords(
+        self, page_content: bs4.BeautifulSoup, **keywords: list[str]
+    ):
         """
         Search a set of keywords with a number of aliases inside the page_content.
         This research is not case-sensitive.
