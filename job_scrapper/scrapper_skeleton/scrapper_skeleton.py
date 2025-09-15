@@ -214,6 +214,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         dumb_urls: bool = True,
         dump_localisations: bool = True,
     ) -> list[ScrapperRequestCore]:
+        cls.logger.info("Starting %s's main scrapping method.", cls.get_class_name())
+        cls.logger.debug("Locals : %s", locals())
 
         with cls.full_setup(
             localisations_to_search_json,

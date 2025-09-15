@@ -9,19 +9,27 @@ from typing import Generator
 
 
 @contextmanager
-def redirect_logs_to_file(logger, file) -> Generator:
-    """Redirect log into a file"""
+def redirect_logs_to_file(logger, file, level: str | None = None) -> Generator:
+    """
+    Redirect log into a file
+    :param logger: A logger
+    :param file: An opened file in which logs will be written.
+    :param level: The level of logging (Debug, Info ...)
+    :return:
+    """
+    if level is None:
+        level = logger.level
 
-    file_handler = logging.StreamHandler(file)
-    file_handler.setLevel(logger.level)
-    file_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+    file_log_handler = logging.StreamHandler(file)
+    file_log_handler.setLevel(level)
+    file_log_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
 
-    logger.addHandler(file_handler)
+    logger.addHandler(file_log_handler)
     try:
         yield  # Allow user to take back control
     finally:
         # Supress the handler
-        logger.removeHandler(file_handler)
+        logger.removeHandler(file_log_handler)
 
 
 RESET = "\033[0m"
@@ -75,6 +83,51 @@ class CoreLogger:
         "CRITICAL": logging.CRITICAL,
     }
 
+    file_log_handler = None
+    log_file = None
+    @classmethod
+    def start_file_logging(cls, path: str, level: str = None):
+        """
+        Redirect logs into a file.
+        :param path: A path that lead to a file
+        :param level: Level of logging see : cls.logger_levels
+        """""
+        if not (cls.file_log_handler is None and cls.log_file is None):
+            cls.logger.warning("Can not start file logging. file_log_handler or log_file"
+                               " already exist :\nHandler : %s\nfile : %s", 
+                               cls.file_log_handler, cls.log_file)
+            return
+        
+        
+        cls.log_file = open(path, "w", encoding="UTF-8")
+
+        if level is None:
+            level = cls.logger.level
+        else:
+            level = cls.logger_levels[level]
+
+        cls.file_log_handler = logging.StreamHandler(cls.log_file)
+        cls.file_log_handler.setLevel(level)
+        print(level)
+        cls.file_log_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+
+        cls.logger.addHandler(cls.file_log_handler)
+    
+    @classmethod
+    def stop_file_logging(cls):
+        """
+        Stop log redirection into cls.log_file
+        :return:
+        """
+        if cls.file_log_handler:
+            cls.logger.removeHandler(cls.file_log_handler)
+            cls.file_log_handler.close()
+            cls.file_log_handler = None
+
+        
+        if cls.log_file:
+            cls.log_file.close()
+
     @classmethod
     def set_logging_level(cls, level: str):
         """
@@ -87,7 +140,7 @@ class CoreLogger:
             raise ValueError(
                 f"Logging level should be one of the following : {list(cls.logger_levels)}"
             )
-        cls.logger.setLevel(cls.logger_levels[level])
+        cls.stream_handler.setLevel(cls.logger_levels[level])
 
 
 if "__main__" == __name__:
@@ -95,7 +148,7 @@ if "__main__" == __name__:
     CL.logger.info("Yey !")
 
     with open(".tmp.tmp", "w", encoding="utf-8") as tmp_file:
-        with redirect_logs_to_file(CL.logger, tmp_file):
-            CL.logger.info("Alpha !")
+        with redirect_logs_to_file(CL.logger, tmp_file, level="INFO"):
+            CL.logger.debug("Alpha !")
             CL.logger.info("Beta !")
         CL.logger.info("Fin !")

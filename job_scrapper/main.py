@@ -1,5 +1,6 @@
 import click
 import cloup
+import time
 
 from job_scrapper import CiradScrapper, JobScrapperSkeleton
 
@@ -12,13 +13,27 @@ from job_scrapper import CiradScrapper, JobScrapperSkeleton
         list(JobScrapperSkeleton.logger_levels), case_sensitive=False
     ),
     default="INFO",
-    help="Niveau de logs",
+    help="Log level in terminal. Does not affect log file.",
+)
+@click.option(
+    "--no-log-file",
+    is_flag=True,
+    help="No log file will be created. Logs will still show in terminal",
 )
 @cloup.pass_context
-def cli(ctx, verbosity="INFO"):
+def cli(ctx, verbosity="INFO", no_log_file: bool = False):
     """Main Command line Interface. Will be specialised later on."""
     JobScrapperSkeleton.set_logging_level(verbosity)
     ctx.obj = {"verbosity": verbosity}
+
+    if not no_log_file:
+        local_time = time.localtime()
+        formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S", local_time)
+        logg_file = f"{formatted_time}.job.log"
+
+        JobScrapperSkeleton.start_file_logging(logg_file, level="DEBUG")
+
+    JobScrapperSkeleton.logger.debug("CLI : %s", locals())
 
 
 # --- --- --- SCRAP group --- --- ---
@@ -136,6 +151,7 @@ def scrap(
     General information can be retrieved from all website such as job name, job localisation, job field, and more.
     More specific information like job distance to a certain place (--ref-places) or the number of occurrences of
     certain keyword can also be obtains (--keywords)."""
+    JobScrapperSkeleton.logger.debug("Scrap : %s", locals())
     ctx.obj["OptionsScrapperMain"] = {
         "localisations_to_search_json": ref_places,
         "keywords_to_search_json": keywords,
@@ -154,7 +170,7 @@ def scrap(
 @scrap.command()
 @cloup.pass_context
 def sanofi(ctx):
-    """Scrap sanofi website for job offers."""
+    pass
 
 
 @scrap.command()
