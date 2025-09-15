@@ -16,9 +16,9 @@ import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
 class SanofiScrapper(srk.JobScrapperSkeleton):
     """
-    Use JobScrapperSkeleton to extract jobs offers from Sanofi's website
+    Use JobScrapperSkeleton to extract jobs offers from Sanofi's website (Limited to France)
     """
-
+    website_url = "https://jobs.sanofi.com/fr/recherche-d%27offres/France/2649/2/3017382/46/2/50/2"
     job_across_multiple_pages = False
 
     @classmethod
@@ -151,26 +151,10 @@ class SanofiLyonScrapper(SanofiScrapper):
 
 
 if __name__ == "__main__":
-    result = SanofiLyonScrapper.interrogate_website()
-    SanofiLyonScrapper.analyse_jobs(
+    result = SanofiScrapper.interrogate_website()
+    SanofiScrapper.analyse_jobs(
         *result,
         keywords={"Informatique": ["Informatique", "Informatic"]},
         localisations=["Montpellier, France", "Lyon, France"],
     )
-    SanofiLyonScrapper.quick_display_list_of_offers(result)
-
-    result = SanofiMontpellierScrapper.interrogate_website()
-    SanofiMontpellierScrapper.analyse_jobs(
-        *result,
-        keywords={"Informatique": ["Informatique", "Informatic"]},
-        localisations=["Montpellier, France", "Lyon, France"],
-    )
-    SanofiMontpellierScrapper.quick_display_list_of_offers(result)
-
-    result = SanofiClermontFDScrapper.interrogate_website()
-    SanofiClermontFDScrapper.analyse_jobs(
-        *result,
-        keywords={"Informatique": ["Informatique", "Informatic"]},
-        localisations=["Montpellier, France", "Lyon, France"],
-    )
-    SanofiClermontFDScrapper.quick_display_list_of_offers(result)
+    SanofiScrapper.quick_display_list_of_offers(result)

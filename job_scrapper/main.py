@@ -2,7 +2,17 @@ import click
 import cloup
 import time
 
-from job_scrapper import CiradScrapper, JobScrapperSkeleton
+from job_scrapper import (
+    JobScrapperSkeleton,
+    CHUMtpScrapper,
+    CiradScrapper,
+    CNRScrapper,
+    INRAEScrapper,
+    InsermScrapper,
+    IRDScrapper,
+    SanofiScrapper,
+    SBIScrapper,
+)
 
 
 @cloup.group()
@@ -173,13 +183,14 @@ def scrap(
 @scrap.command()
 @cloup.pass_context
 def sanofi(ctx):
-    pass
+    """Scrap Sanofi's website (Job offers are limited to 'France')."""
+    SanofiScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
 
 @scrap.command()
 @cloup.pass_context
 def cirad(ctx):
-    """Scrap en mode B (complet)."""
+    """Scrap Cirad's website. ('Centre de coopération internationale en recherche agronomique pour le développement')"""
     CiradScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
 
