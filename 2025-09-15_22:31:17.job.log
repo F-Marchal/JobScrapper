@@ -1,0 +1,137 @@
+[DEBUG] CLI : {'ctx': <cloup._context.Context object at 0x7efe5f06f580>, 'verbosity': 'INFO', 'no_log_file': False, 'local_time': time.struct_time(tm_year=2025, tm_mon=9, tm_mday=15, tm_hour=22, tm_min=31, tm_sec=17, tm_wday=0, tm_yday=258, tm_isdst=1), 'formatted_time': '2025-09-15_22:31:17', 'logg_file': '2025-09-15_22:31:17.job.log'}
+[DEBUG] Scrap : {'ctx': <cloup._context.Context object at 0x7efe5c3a0910>, 'ref_places': None, 'keywords': None, 'coordinates': None, 'ignore_urls': None, 'workdir': '/home/marchal/Documents/Progs/DownloadJobsV2/Workdir', 'no_coordinates_update': False, 'no_urls_update': False, 'save_job_page': False, 'display': False, 'result_file': None, 'no_sql_export': False}
+[INFO] Starting CiradScrapper's main scrapping method.
+[DEBUG] Locals : {'cls': <class 'job_scrapper.scrap_job_from.cirad.CiradScrapper'>, 'localisations_to_search_json': None, 'keywords_to_search_json': None, 'known_localisations_json': None, 'known_urls_json': None, 'sql_export': True, 'display': False, 'flat_export': None, 'save_job_page': False, 'dumb_urls': True, 'dump_localisations': True}
+[INFO] '/home/marchal/Documents/Progs/DownloadJobsV2/Workdir/researched-localisation.json' will be used as 'researched-localisation'.
+[INFO] '/home/marchal/Documents/Progs/DownloadJobsV2/Workdir/researched-keywords.json' will be used as 'researched-keywords'.
+[INFO] '/home/marchal/Documents/Progs/DownloadJobsV2/Workdir/known-localisation.json' will be used as 'known-localisation'.
+[INFO] '/home/marchal/Documents/Progs/DownloadJobsV2/Workdir/known-urls.json' will be used as 'known-urls'.
+[INFO] Starting interrogation of https://recrutement.cirad.fr/offre-de-emploi/liste-toutes-offres.aspx?page={page}
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/liste-toutes-offres.aspx?page=1
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/liste-toutes-offres.aspx?page=1)
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/liste-toutes-offres.aspx?page=2
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/liste-toutes-offres.aspx?page=2)
+[INFO] Starting Analysis of 10 jobs
+[DEBUG] Analysis' <localisations> : ['Montpellier, France', 'Lyon, France', 'Clermont-Ferrand, France', 'Nice, France', 'Paris, France', 'Marseille, France', 'Nantes, Frances', 'Lille, France', 'Bordeaux, France', 'Strasbourg, France', 'Toulouse, France']
+[DEBUG] Analysis' <known_localisations> : {'Montpellier': [43.6112422, 3.8767337], 'Montpellier, France': [43.6112422, 3.8767337], 'Lyon, France': [45.7578137, 4.8320114], 'Clermont-Ferrand, France': [45.7774551, 3.0819427], 'Nice, France': [43.7009358, 7.2683912], 'Paris, France': [48.8588897, 2.320041], 'Marseille, France': [43.2961743, 5.3699525], 'Nantes, Frances': [47.2370282, -1.5324505], 'Lille, France': [50.6365654, 3.0635282], 'Bordeaux, France': [44.841225, -0.5800364], 'Strasbourg, France': [48.584614, 7.7507127], 'Toulouse, France': [43.6044622, 1.4442469], 'Petit-Morne / Lamentin': [14.6214144, -60.9767309], 'Cirad Station De Bassin Plat St Pierre': [-21.3218942, 55.488837], 'Campus International De Baillarguet, Montpellier': [43.6835992, 3.8764969], 'Dembeni, Mayotte': [-12.8433081, 45.1839954], 'St Pierre, Ligne Paradis': [-21.3056242, 55.4634498], 'Station De La Bretagne, Saint-Denis': [-20.9296991, 55.4877742]}
+[DEBUG] Analysis' <keywords> : {'Informatique': ['Informatique', 'Informatic'], 'Bioinformatique': ['Bioinformatique', 'Bio-informatique', 'Bioinformatic', 'Bio-informatic', 'Computational biology'], 'Pipeline': ['Pipeline', 'Nextflow', 'Snakemake'], 'IA': [' IA ', ' LLM ', 'Reseaux de neurone', 'Réseaux de neurone', 'Reseau de neurones', 'Réseau de neurones', 'Neural network', 'Large language model'], 'Python': ['Python']}
+[DEBUG] Analysis' <known_urls> : set()
+[DEBUG] Analysis' <save_job_page> : False
+[INFO] 0 / 10 analysis done.
+[DEBUG] Can not find coordinates of 
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-controleur-euse-de-gestion_12249.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-controleur-euse-de-gestion_12249.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-controleur-euse-de-gestion_12249.aspx
+[INFO] 1 / 10 analysis done.
+[DEBUG] Asking for 'Cirad-Campus De Baillarguet Avec Mobilité Géographique/Expatriation En Fonction Des Projets' coordinates.
+[DEBUG] Can not find coordinates of Cirad-Campus De Baillarguet Avec Mobilité Géographique/Expatriation En Fonction Des Projets
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-chercheur-e-specialiste-des-instruments-economiques-pour-le-climat-la-biodiversite-justice-sociale-f-h_12430.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-chercheur-e-specialiste-des-instruments-economiques-pour-le-climat-la-biodiversite-justice-sociale-f-h_12430.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-chercheur-e-specialiste-des-instruments-economiques-pour-le-climat-la-biodiversite-justice-sociale-f-h_12430.aspx
+[INFO] 2 / 10 analysis done.
+[DEBUG] 'Montpellier's coordinates are already known.
+[DEBUG] Seeking distances between "Montpellier" [43.6112422, 3.8767337] and "Montpellier, France and Lyon, France and Clermont-Ferrand, France and Nice, France and Paris, France and Marseille, France and Nantes, Frances and Lille, France and Bordeaux, France and Strasbourg, France and Toulouse, France"
+[DEBUG] 'Montpellier, France's coordinates are already known.
+[DEBUG] 'Lyon, France's coordinates are already known.
+[DEBUG] 'Clermont-Ferrand, France's coordinates are already known.
+[DEBUG] 'Nice, France's coordinates are already known.
+[DEBUG] 'Paris, France's coordinates are already known.
+[DEBUG] 'Marseille, France's coordinates are already known.
+[DEBUG] 'Nantes, Frances's coordinates are already known.
+[DEBUG] 'Lille, France's coordinates are already known.
+[DEBUG] 'Bordeaux, France's coordinates are already known.
+[DEBUG] 'Strasbourg, France's coordinates are already known.
+[DEBUG] 'Toulouse, France's coordinates are already known.
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-ingenieur-re-en-biotechnologies-du-cafeier-culture-in-vitro-et-edition-des-genomes-_12470.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-ingenieur-re-en-biotechnologies-du-cafeier-culture-in-vitro-et-edition-des-genomes-_12470.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-ingenieur-re-en-biotechnologies-du-cafeier-culture-in-vitro-et-edition-des-genomes-_12470.aspx
+[INFO] 3 / 10 analysis done.
+[DEBUG] Asking for 'Après Une Période De 1 Mois Sur Le Site De Montpellier, Vous Serez Affecté.E À Saint-Pierre, La Réunion' coordinates.
+[DEBUG] Can not find coordinates of Après Une Période De 1 Mois Sur Le Site De Montpellier, Vous Serez Affecté.E À Saint-Pierre, La Réunion
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-chercheur-se-en-entomologie-pour-l-etude-des-pollinisateurs-en-zone-tropicale_12335.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-chercheur-se-en-entomologie-pour-l-etude-des-pollinisateurs-en-zone-tropicale_12335.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-chercheur-se-en-entomologie-pour-l-etude-des-pollinisateurs-en-zone-tropicale_12335.aspx
+[INFO] 4 / 10 analysis done.
+[DEBUG] Asking for 'Après Une Période D'Intégration Et De Formation De 6 Mois Sur Le Site Du Cirad De Montpellier Au Sein De L'Ur Biowooeb, Vous Serez Affecté-E À La Réunion Pour 3 Ans (Période Renouvelable).' coordinates.
+[DEBUG] Can not find coordinates of Après Une Période D'Intégration Et De Formation De 6 Mois Sur Le Site Du Cirad De Montpellier Au Sein De L'Ur Biowooeb, Vous Serez Affecté-E À La Réunion Pour 3 Ans (Période Renouvelable).
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-chercheur-e-en-evaluation-multicritere-des-systemes-de-valorisation-de-la-biomasse-en-zone-tropicale_12417.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-chercheur-e-en-evaluation-multicritere-des-systemes-de-valorisation-de-la-biomasse-en-zone-tropicale_12417.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-chercheur-e-en-evaluation-multicritere-des-systemes-de-valorisation-de-la-biomasse-en-zone-tropicale_12417.aspx
+[INFO] 5 / 10 analysis done.
+[DEBUG] Asking for 'Poste Basé À Montpellier Sur Le Site Cirad De Lavalette. La Majorité Du Collectif Dims Étant Basée Sur Le Site Cirad De Baillarguet (5 Km Env), Prévoir Fréquents Déplacements Entre Les Deux Sites' coordinates.
+[DEBUG] Can not find coordinates of Poste Basé À Montpellier Sur Le Site Cirad De Lavalette. La Majorité Du Collectif Dims Étant Basée Sur Le Site Cirad De Baillarguet (5 Km Env), Prévoir Fréquents Déplacements Entre Les Deux Sites
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-directeur-trice-de-la-direction-de-l-impact-et-du-marketing-de-la-science-dims-_12463.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-directeur-trice-de-la-direction-de-l-impact-et-du-marketing-de-la-science-dims-_12463.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-directeur-trice-de-la-direction-de-l-impact-et-du-marketing-de-la-science-dims-_12463.aspx
+[INFO] 6 / 10 analysis done.
+[DEBUG] 'Cirad Station De Bassin Plat St Pierre's coordinates are already known.
+[DEBUG] Seeking distances between "Cirad Station De Bassin Plat St Pierre" [-21.3218942, 55.488837] and "Montpellier, France and Lyon, France and Clermont-Ferrand, France and Nice, France and Paris, France and Marseille, France and Nantes, Frances and Lille, France and Bordeaux, France and Strasbourg, France and Toulouse, France"
+[DEBUG] 'Montpellier, France's coordinates are already known.
+[DEBUG] 'Lyon, France's coordinates are already known.
+[DEBUG] 'Clermont-Ferrand, France's coordinates are already known.
+[DEBUG] 'Nice, France's coordinates are already known.
+[DEBUG] 'Paris, France's coordinates are already known.
+[DEBUG] 'Marseille, France's coordinates are already known.
+[DEBUG] 'Nantes, Frances's coordinates are already known.
+[DEBUG] 'Lille, France's coordinates are already known.
+[DEBUG] 'Bordeaux, France's coordinates are already known.
+[DEBUG] 'Strasbourg, France's coordinates are already known.
+[DEBUG] 'Toulouse, France's coordinates are already known.
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-ouvrier-agricole-des-systemes-maraichers_12453.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-ouvrier-agricole-des-systemes-maraichers_12453.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-ouvrier-agricole-des-systemes-maraichers_12453.aspx
+[INFO] 7 / 10 analysis done.
+[DEBUG] 'Dembeni, Mayotte's coordinates are already known.
+[DEBUG] Seeking distances between "Dembeni, Mayotte" [-12.8433081, 45.1839954] and "Montpellier, France and Lyon, France and Clermont-Ferrand, France and Nice, France and Paris, France and Marseille, France and Nantes, Frances and Lille, France and Bordeaux, France and Strasbourg, France and Toulouse, France"
+[DEBUG] 'Montpellier, France's coordinates are already known.
+[DEBUG] 'Lyon, France's coordinates are already known.
+[DEBUG] 'Clermont-Ferrand, France's coordinates are already known.
+[DEBUG] 'Nice, France's coordinates are already known.
+[DEBUG] 'Paris, France's coordinates are already known.
+[DEBUG] 'Marseille, France's coordinates are already known.
+[DEBUG] 'Nantes, Frances's coordinates are already known.
+[DEBUG] 'Lille, France's coordinates are already known.
+[DEBUG] 'Bordeaux, France's coordinates are already known.
+[DEBUG] 'Strasbourg, France's coordinates are already known.
+[DEBUG] 'Toulouse, France's coordinates are already known.
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-agronome-amelioration-des-systemes-de-culture-bananes-agrumes-legumes-racines_12452.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-agronome-amelioration-des-systemes-de-culture-bananes-agrumes-legumes-racines_12452.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-agronome-amelioration-des-systemes-de-culture-bananes-agrumes-legumes-racines_12452.aspx
+[INFO] 8 / 10 analysis done.
+[DEBUG] 'St Pierre, Ligne Paradis's coordinates are already known.
+[DEBUG] Seeking distances between "St Pierre, Ligne Paradis" [-21.3056242, 55.4634498] and "Montpellier, France and Lyon, France and Clermont-Ferrand, France and Nice, France and Paris, France and Marseille, France and Nantes, Frances and Lille, France and Bordeaux, France and Strasbourg, France and Toulouse, France"
+[DEBUG] 'Montpellier, France's coordinates are already known.
+[DEBUG] 'Lyon, France's coordinates are already known.
+[DEBUG] 'Clermont-Ferrand, France's coordinates are already known.
+[DEBUG] 'Nice, France's coordinates are already known.
+[DEBUG] 'Paris, France's coordinates are already known.
+[DEBUG] 'Marseille, France's coordinates are already known.
+[DEBUG] 'Nantes, Frances's coordinates are already known.
+[DEBUG] 'Lille, France's coordinates are already known.
+[DEBUG] 'Bordeaux, France's coordinates are already known.
+[DEBUG] 'Strasbourg, France's coordinates are already known.
+[DEBUG] 'Toulouse, France's coordinates are already known.
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-ingenieur-en-agroalimentaire-specialise-dans-la-transformation-et-la-qualite-des-aliments_12439.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-ingenieur-en-agroalimentaire-specialise-dans-la-transformation-et-la-qualite-des-aliments_12439.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-ingenieur-en-agroalimentaire-specialise-dans-la-transformation-et-la-qualite-des-aliments_12439.aspx
+[INFO] 9 / 10 analysis done.
+[DEBUG] 'Station De La Bretagne, Saint-Denis's coordinates are already known.
+[DEBUG] Seeking distances between "Station De La Bretagne, Saint-Denis" [-20.9296991, 55.4877742] and "Montpellier, France and Lyon, France and Clermont-Ferrand, France and Nice, France and Paris, France and Marseille, France and Nantes, Frances and Lille, France and Bordeaux, France and Strasbourg, France and Toulouse, France"
+[DEBUG] 'Montpellier, France's coordinates are already known.
+[DEBUG] 'Lyon, France's coordinates are already known.
+[DEBUG] 'Clermont-Ferrand, France's coordinates are already known.
+[DEBUG] 'Nice, France's coordinates are already known.
+[DEBUG] 'Paris, France's coordinates are already known.
+[DEBUG] 'Marseille, France's coordinates are already known.
+[DEBUG] 'Nantes, Frances's coordinates are already known.
+[DEBUG] 'Lille, France's coordinates are already known.
+[DEBUG] 'Bordeaux, France's coordinates are already known.
+[DEBUG] 'Strasbourg, France's coordinates are already known.
+[DEBUG] 'Toulouse, France's coordinates are already known.
+[DEBUG] Starting Chrome on https://recrutement.cirad.fr/offre-de-emploi/emploi-ingenieur-e-charge-e-d-etude-plateforme-web-de-l-observatoire-des-agricultures-de-l-ocean-indien-_12072.aspx
+[DEBUG] Closing Chrome (https://recrutement.cirad.fr/offre-de-emploi/emploi-ingenieur-e-charge-e-d-etude-plateforme-web-de-l-observatoire-des-agricultures-de-l-ocean-indien-_12072.aspx)
+[DEBUG] Seeking keywords in https://recrutement.cirad.fr/offre-de-emploi/emploi-ingenieur-e-charge-e-d-etude-plateforme-web-de-l-observatoire-des-agricultures-de-l-ocean-indien-_12072.aspx
+[INFO] 10 analysis done.
+[DEBUG] Save configurations files' state
+[INFO] Starting export into the sql database of 10 jobs
+[DEBUG] Exporting 10 jobs to sql database

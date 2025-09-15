@@ -270,9 +270,15 @@ class ScrapperRequestCore(ScrapperObjectCore):
         if keywords is None:
             keywords = {}
 
+        cls.logger.info("Starting Analysis of %s jobs", len(jobs))
+        cls.logger.debug("Analysis' <localisations> : %s", localisations)
+        cls.logger.debug("Analysis' <known_localisations> : %s", known_localisations)
+        cls.logger.debug("Analysis' <keywords> : %s", keywords)
+        cls.logger.debug("Analysis' <known_urls> : %s", known_urls)
+        cls.logger.debug("Analysis' <save_job_page> : %s", save_job_page)
+
         parsed_jobs = []
 
-        cls.logger.info("Starting Analysis of %s jobs", len(jobs))
         for i, job_object in enumerate(jobs):
             if job_object.url in known_urls:
                 cls.logger.info(
@@ -436,6 +442,8 @@ class ScrapperRequestCore(ScrapperObjectCore):
         """
         folder, name = self._generate_job_file_name(ext)
         file_path = os.path.join(folder, name + ".zip")
+        self.time_stamps["page_download"] = time.localtime()
+
 
         self.logger.debug("Saving job in %s", file_path)
 
@@ -458,6 +466,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         key=["key", "alias1", "alias2"]
         :param bs4.BeautifulSoup or str page_content: An html BeautifulSoup or a string
         """
+        self.time_stamps["keywords_research"] = time.localtime()
         return self._job_page_content(page_content, **keywords)
 
     def _job_page_content(

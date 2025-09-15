@@ -22,7 +22,10 @@ from job_scrapper import CiradScrapper, JobScrapperSkeleton
 )
 @cloup.pass_context
 def cli(ctx, verbosity="INFO", no_log_file: bool = False):
-    """Main Command line Interface. Will be specialised later on."""
+    """Welcome in JobScrapper !
+    You can use this tool to scrap a number of website in order to extract potential job offers.
+    See other commands.
+    """
     JobScrapperSkeleton.set_logging_level(verbosity)
     ctx.obj = {"verbosity": verbosity}
 

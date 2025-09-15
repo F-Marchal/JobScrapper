@@ -258,7 +258,9 @@ class JobScrapperSkeleton(ScrapperRequestCore):
 
         if sql_export:
             cls.logger.info(
-                "Starting export into the sql database of %s jobs", len(result)
+                "Exporting %s jobs in %s",
+                len(result),
+                cls.get_database_path()
             )
             cls.list_to_sql(result)
 

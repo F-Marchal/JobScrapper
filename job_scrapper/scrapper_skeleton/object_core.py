@@ -4,6 +4,8 @@ import time
 from contextlib import contextmanager
 from typing import Sequence
 
+from mypy.types_utils import AnyType
+
 from .logger_core import CoreLogger
 
 
@@ -26,6 +28,7 @@ class ScrapperObjectCore(CoreLogger):
     metadata_table_name = "Metadata"
     keywords_table_name = "KeywordsCount"
     distances_table_name = "Distances"
+    time_stamps_table_name = "TimeStamps"
 
     workdir = "./JobScrapperWorkDir/"
 
@@ -44,16 +47,18 @@ class ScrapperObjectCore(CoreLogger):
         self.url = url
         self.localisation = localisation
         self.title = title
-        self._fetch_date = time.localtime()
         self._metadata = metadata
 
         self._distances: dict[str, float] = {}
         self._keywords: dict[str, int] = {}
+        self._time_stamps: dict[str, time.struct_time] = {
+            "Found": time.localtime()
+        }
 
     # --- --- --- --- Export managements --- --- ---
 
     default_header = {
-        "#Fetch_Time": "DATE",
+        "#Time_Stamp": "DATE",
         "Origin": "TEXT",
         "Localisation": "TEXT",
         "Field": "TEXT",
@@ -69,7 +74,7 @@ class ScrapperObjectCore(CoreLogger):
         are directly contained inside the dictionary.
         """
         items = [
-            time.strftime("%Y-%m-%d %H:%M:%S", self._fetch_date),
+            time.strftime("%Y-%m-%d %H:%M:%S", self._time_stamps["Found"]),
             self.get_class_name(),
             self.localisation,
             self.field,
@@ -278,6 +283,22 @@ class ScrapperObjectCore(CoreLogger):
             ");"
         )
 
+    @classmethod
+    def _create_time_stamps_sql_table_command(cls):
+        """
+        :return str: The command that allow the creation of the time stamps table.
+        """
+        command = [
+            f"CREATE TABLE IF NOT EXISTS {cls.time_stamps_table_name} (",
+            "url TEXT KEY,",
+            "keyword TEXT NOT NULL,",
+            "timeStamp DATE NOT NULL,",
+            "PRIMARY KEY(url, keyword),"
+            f"FOREIGN KEY (url) REFERENCES {cls.main_table_name}(url)",
+            ");",
+        ]
+        return "\n".join(command)
+
     @staticmethod
     def sort_localisations(localisation1: str, localisation2: str) -> list[str]:
         """
@@ -299,6 +320,7 @@ class ScrapperObjectCore(CoreLogger):
         cursor.execute(cls._create_metadata_sql_table_command())
         cursor.execute(cls._create_keywords_sql_table_command())
         cursor.execute(cls._create_distances_sql_table_command())
+        cursor.execute(cls._create_time_stamps_sql_table_command())
 
     @classmethod
     @contextmanager
@@ -338,6 +360,7 @@ class ScrapperObjectCore(CoreLogger):
         self._sql_export_metadata()
         self._sql_export_keywords()
         self._sql_export_distances()
+        self._sql_export_time_stamps()
 
     def _sql_export_main(self):
         command = [
@@ -360,23 +383,23 @@ class ScrapperObjectCore(CoreLogger):
 
     def _sql_export_metadata(self):
         if not self.metadata:
-            return
+            return None
+
+        format_list = []
         command = [
             f"INSERT OR REPLACE INTO {self.metadata_table_name}(url, key, value)",
             "VALUES",
         ]
         for key, value in self.metadata.items():
-            command.append(f"('{self.url}', '{key}', '{value}'),")
-        command[-1] = command[-1].removesuffix(",") + ";"
+            command.append("(?, ?, ?),")
+            format_list.extend([self.url, key, value])
 
-        true_command = "\n".join(command)
-        with self.write_in_database() as cursor:
-            cursor.execute(true_command)
+        return self._sql_finalise_export(command, format_list)
 
     def _sql_export_keywords(self):
         # Is there anything to do ?
         if not self.keywords:
-            return
+            return None
 
         # Prepare command
         command = [
@@ -394,21 +417,12 @@ class ScrapperObjectCore(CoreLogger):
             command.append("(?, ?, ?),")
             format_list.extend([self.url, keyword, occurrences])
 
-        if not format_list:
-            # Nothing to do
-            return
-
-        # Command
-        command[-1] = command[-1].removesuffix(",") + ";"
-        true_command = "\n".join(command)
-
-        with self.write_in_database() as cursor:
-            cursor.execute(true_command, format_list)
+        return self._sql_finalise_export(command, format_list)
 
     def _sql_export_distances(self):
         # Is there anything to do ?
         if not self.distances:
-            return
+            return None
 
         # Prepare sql command
         command = [
@@ -429,13 +443,32 @@ class ScrapperObjectCore(CoreLogger):
             format_list.extend([loc1, loc2, distance])
             command.append("(?, ?, ?),")
 
+        return self._sql_finalise_export(command, format_list)
+
+    def _sql_export_time_stamps(self):
+        if not self._time_stamps:
+            return None
+
+        format_list = []
+        command = [
+            f"INSERT OR REPLACE INTO {self.time_stamps_table_name}(url, keyword, timeStamp)",
+            "VALUES",
+        ]
+        for key, value in self.time_stamps.items():
+            command.append(f"(?, ?, ?),")
+            format_list.extend([self.url, key, time.strftime("%Y-%m-%d %H:%M:%S", value)])
+
+        return self._sql_finalise_export(command, format_list)
+
+    def _sql_finalise_export(self, command: list[str], format_list: list[AnyType]) -> None:
+        command[-1] = command[-1].removesuffix(",") + ";"
+
         if not format_list:
             # Nothing to do
             return
 
-        # Run sql command
-        command[-1] = command[-1].removesuffix(",") + ";"
         true_command = "\n".join(command)
+
         with self.write_in_database() as cursor:
             cursor.execute(true_command, format_list)
 
@@ -523,16 +556,11 @@ class ScrapperObjectCore(CoreLogger):
         """Returns a copy of all metadata"""
         return self._metadata.copy()
 
-    # --- --- fetch_date --- ----
+    # --- --- time_stamps --- ----
     @property
-    def fetch_date(self) -> time.struct_time:
-        """Returns a time.struct_time theoretically generated when the job was fetched"""
-        return self._fetch_date
-
-    @fetch_date.setter
-    def fetch_date(self, timing: time.struct_time):
-        """Returns a time.struct_time theoretically generated when the job was fetched"""
-        self._fetch_date = timing
+    def time_stamps(self) -> dict[str, time.struct_time]:
+        """Returns a dictionary that contained one or multiple time stamp."""
+        return self._time_stamps
 
     # --- --- distances --- ----
     @property
@@ -540,7 +568,7 @@ class ScrapperObjectCore(CoreLogger):
         """Returns a dictionary with places as key
         and, as value, the distance that separate this job from
         this places"""
-        return self._distances.copy()
+        return self._distances
 
     # --- --- keywords --- ----
     @property
@@ -548,16 +576,18 @@ class ScrapperObjectCore(CoreLogger):
         """A dictionary with keywords as ket and integers
         as key. Each value is the number of occurrences inside
         this offer of a key."""
-        return self._keywords.copy()
+        return self._keywords
 
     # --- --- --- --- Attributes managements --- --- --- ----
 
 
 if __name__ == "__main__":
     # test = ScrapperObjectCore("Test1'", 'Paris"', "https://google.com", "CDD", "Biology", fake='True', second="3")
-    # test._keywords["Alpha'"] = 34
-    # test._keywords['Beta"'] = 35
-    # test._distances['Alpha"'] = 34.345
-    # test._distances["Beta'"] = 35.250
+    # test.keywords["Alpha'"] = 34
+    # test.keywords['Beta"'] = 35
+    # test.distances['Alpha"'] = 34.345
+    # test.distances["Beta'"] = 35.250
+    # test.time_stamps['Alpha"'] = time.localtime()
+    # test.time_stamps["Beta'"] = time.localtime()
     # print(test.sql_export())
     pass
