@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 
 from .request_core import ScrapperRequestCore
 
+
 class JobScrapperSkeleton(ScrapperRequestCore):
     """
     Skeleton for JobScrapperClass. Those class should be able to :
@@ -100,6 +101,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                 json.dump(data, file, ensure_ascii=False, indent=4)
 
     #
+    # pylint: disable=R0913
+    # having many arguments is expected for this command
     @classmethod
     @contextmanager
     def full_setup(
@@ -191,6 +194,10 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         # localisations_search_file.dump(localisations_to_search)
         # keywords_search_file.dump(keywords_to_search)
 
+    # pylint: disable=R0913
+    # pylint: disable=R0914
+    # pylint: disable=R0917
+    # having many arguments is expected for this command
     @classmethod
     def main(
         cls,
@@ -224,7 +231,6 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                 known_localisations=kl,
                 known_urls=ku,
                 save_job_page=save_job_page,
-
             )
 
             cls.logger.info("%s analysis done.", len(result))

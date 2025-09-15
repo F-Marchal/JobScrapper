@@ -1,9 +1,9 @@
-import os.path
 import re
 
 from bs4 import BeautifulSoup
 
 import job_scrapper.scrapper_skeleton.pdf_jobs as pj
+from job_scrapper.scrapper_skeleton.request_core import ScrapperRequestCore
 
 
 class InsermScrapper(pj.PdfJobBaseScrapper):
@@ -23,7 +23,7 @@ class InsermScrapper(pj.PdfJobBaseScrapper):
     @classmethod
     def complete_job_page_parsing(
         cls,
-        offers: list["srk.ScrapperRequestCore"],
+        offers: list[ScrapperRequestCore],
         soup,
     ):
         for cells in soup.find_all("div", class_="offer-container"):
@@ -56,15 +56,11 @@ class InsermScrapper(pj.PdfJobBaseScrapper):
             offers.append(cls(**kwargs))
 
 
-
-
-
 if __name__ == "__main__":
-    InsermScrapper.main(sql_export=True, save_job_page=True)
-    '''result = InsermScrapper.interrogate_website()
+    result = InsermScrapper.interrogate_website()
     InsermScrapper.analyse_jobs(
         *result,
         keywords={"Informatique": ["Informatique", "Informatic"]},
         localisations=["Montpellier, France", "Lyon, France"],
     )
-    InsermScrapper.quick_display_list_of_offers(result)'''
+    InsermScrapper.quick_display_list_of_offers(result)

@@ -1,19 +1,44 @@
-from PyPDF2 import PdfReader
+import os
+import shutil
 import time
+from urllib.parse import unquote, urlparse
+
+from bs4 import BeautifulSoup
+from PyPDF2 import PdfReader
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
-from urllib.parse import unquote, urlparse
-import shutil
-import os
-from .scrapper_skeleton import JobScrapperSkeleton
+
+from .scrapper_skeleton import JobScrapperSkeleton, ScrapperRequestCore
+
 
 class PdfJobBaseScrapper(JobScrapperSkeleton):
+    """
+    JobScrapper Skeleton adapted to website that store there offer inside pdf instead of html pages.
+    """
+
+    @classmethod
+    def extract_block_of_interest(cls, soup) -> BeautifulSoup:
+        raise NotImplementedError("Should be reimplemented when inherited")
+
+    @classmethod
+    def complete_job_page_parsing(
+        cls,
+        offers: list[ScrapperRequestCore],
+        soup,
+    ):
+        raise NotImplementedError("Should be reimplemented when inherited")
+
     def analyse_job_page(self, save_page: bool = False, **keywords: list[str]):
         if not save_page and not keywords:
             # Nothing to do
             return
 
         pdf_path = self.download_file(self.url)
+        if pdf_path is None:
+            self.logger.warning(
+                "Unable to find or download .PDF linked to this offer. Aborting keyword search."
+            )
+            return
         page_content = self.parse_pdf(pdf_path)
 
         if save_page:
@@ -23,6 +48,7 @@ class PdfJobBaseScrapper(JobScrapperSkeleton):
             self.search_keywords(page_content, **keywords)
 
     def export_pdf(self, path: str):
+        """Copy a pdf download inside a temple to another directory."""
         self.logger.debug("Exporting pfd...")
         folder, name = self._generate_job_file_name("pdf")
         final_path = str(os.path.join(folder, name))
@@ -31,7 +57,7 @@ class PdfJobBaseScrapper(JobScrapperSkeleton):
     # --- --- Download files  --- ---
     @classmethod
     def download_file(
-            cls, url: str, retry: int = 2, timeout: int = 360
+        cls, url: str, retry: int = 2, timeout: int = 360
     ) -> str | None:
         """
         Download a file using selenium
@@ -88,7 +114,7 @@ class PdfJobBaseScrapper(JobScrapperSkeleton):
 
     @staticmethod
     def parse_pdf(path: str) -> str:
-        """Open a pdf in PdfReader"""
+        """Parse the content of a pdf and returns a string that represent it"""
         pdf = PdfReader(path)
         output = []
         for pages in pdf.pages:

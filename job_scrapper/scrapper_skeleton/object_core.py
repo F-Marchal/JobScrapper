@@ -117,7 +117,7 @@ class ScrapperObjectCore(CoreLogger):
 
     @classmethod
     def _list_to_flat_file(
-        cls, jobs: list["ScrapperObjectCore"], sep: str = "\t"
+        cls, jobs: Sequence["ScrapperObjectCore"], sep: str = "\t"
     ):
         """
         turn a list of jobs to a generator. This generator output the content of .job file.
@@ -137,7 +137,7 @@ class ScrapperObjectCore(CoreLogger):
     def list_to_flat_file(
         cls,
         file_path: str | None,
-        jobs: list["ScrapperObjectCore"],
+        jobs: Sequence["ScrapperObjectCore"],
         sep: str = "\t",
     ):
         """
@@ -156,7 +156,7 @@ class ScrapperObjectCore(CoreLogger):
 
     @classmethod
     def complete_display_list_of_offers(
-        cls, jobs: list["ScrapperObjectCore"], sep: str = "\t"
+        cls, jobs: Sequence["ScrapperObjectCore"], sep: str = "\t"
     ):
         """
         print a list of job inside the terminal as if it was a jobfile.
@@ -179,7 +179,7 @@ class ScrapperObjectCore(CoreLogger):
                 print(job.flat(with_header=False))
 
     @classmethod
-    def list_to_sql(cls, jobs: list["ScrapperObjectCore"]):
+    def list_to_sql(cls, jobs: Sequence["ScrapperObjectCore"]):
         """
         Export a list of job inside the sql database.
         :param list ["ScrapperObjectCore"] jobs: A list of ScrapperObjectCore
@@ -427,7 +427,7 @@ class ScrapperObjectCore(CoreLogger):
                 self.localisation, localisation
             )
             format_list.extend([loc1, loc2, distance])
-            command.append(f"(?, ?, ?),")
+            command.append("(?, ?, ?),")
 
         if not format_list:
             # Nothing to do

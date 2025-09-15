@@ -236,6 +236,8 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
     # --- --- Retrieve jobs  --- ---
     # --- --- Analyse jobs  --- ---
+    # pylint: disable=R0913
+    # Job analysis require a lot of configuration
     @classmethod
     def analyse_jobs(
         cls,
@@ -265,6 +267,8 @@ class ScrapperRequestCore(ScrapperObjectCore):
             known_localisations = {}
         if known_urls is None:
             known_urls = set()
+        if keywords is None:
+            keywords = {}
 
         parsed_jobs = []
 
@@ -386,6 +390,12 @@ class ScrapperRequestCore(ScrapperObjectCore):
             time.sleep(self.sleep_between_geo_interrogation)
 
     def analyse_job_page(self, save_page: bool = False, **keywords: list[str]):
+        """
+        Analyse job's webpage (self.url)
+        :param bool save_page: Should we download this page and save it inside the workdir ?
+        :param keywords: A number of keywords. Each keyword is searched inside the offer a counted.
+        :return:
+        """
         if not save_page and not keywords:
             # Nothing to do
             return
@@ -402,7 +412,13 @@ class ScrapperRequestCore(ScrapperObjectCore):
         if keywords:
             self.search_keywords(page_content, **keywords)
 
-    def _generate_job_file_name(self, ext: str):
+    def _generate_job_file_name(self, ext: str) -> tuple[str, str]:
+        """
+        Generate a name (and a path) for when the content of self.url should be saved.
+        This path will be self.workdir/self.get_class_name()/time self.title
+        :param str ext: file extension (html; pdf ...)
+        :return: Folder name and file name
+        """
         local_time = time.localtime()
         formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S", local_time)
         name = formatted_time + " " + self.title[:30] + f".{ext}"
@@ -411,7 +427,13 @@ class ScrapperRequestCore(ScrapperObjectCore):
             os.mkdir(folder)
         return folder, name
 
-    def save_job_page(self, page_content: bs4.BeautifulSoup, ext: str="html"):
+    def save_job_page(self, page_content: bs4.BeautifulSoup, ext: str = "html"):
+        """
+        Use it to save the content of self.url inside a zip file. File path is selected by
+        self._generate_job_file_name
+        :param bs4.BeautifulSoup page_content: Content of self.url
+        :param str ext: file extension (html; pdf ...)
+        """
         folder, name = self._generate_job_file_name(ext)
         file_path = os.path.join(folder, name + ".zip")
 
