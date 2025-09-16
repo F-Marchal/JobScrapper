@@ -151,7 +151,7 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
     "--result-file",
     type=click.Path(file_okay=True, dir_okay=False, resolve_path=True),
     default=None,
-    help="Write the result of the scrapping inside a file. /!\\ This file will be overwritten.",
+    help="Write the result of the scrapping inside a file. /!\\ If this file exist, this file will be overwritten.",
 )
 @click.option(
     "-q",

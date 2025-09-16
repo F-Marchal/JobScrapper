@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import tempfile
@@ -432,10 +433,13 @@ class ScrapperRequestCore(ScrapperObjectCore):
         else:
             name = formatted_time + " " + self.title[:30]
 
+        sanitized_name = re.sub(r'[<>"/\\|?*\x00-\x1F]', '', name)
+        sanitized_name = sanitized_name.strip()
+
         folder = os.path.join(self.workdir, self.get_class_name())
         if not os.path.exists(folder):
             os.mkdir(folder)
-        return folder, name
+        return folder, sanitized_name
 
     def save_job_page(self, page_content: bs4.BeautifulSoup, ext: str = "html"):
         """
@@ -452,8 +456,11 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         self.logger.debug("Saving job in %s", file_path)
 
-        with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(name, str(page_content))
+        try:
+            with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr(name, str(page_content))
+        except FileNotFoundError as fne:
+            self.logger.error("Unable to save '%s' as zip : %s", self.url, fne)
 
         # Reduce path length when possible
         if self.workdir in file_path:
