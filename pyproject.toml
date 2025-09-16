@@ -1,11 +1,14 @@
 [tool.poetry]
 name = "JobScrapper"
-version="0.0.1"
+version="0.1.0"
 description = "A simple library that dowload job offers from several instituts."
 authors = ["Marhal Florent <marchal.florent.pro@gmail.com>"]
 readme = "README.md"
 license = "CC BY-SA 4.0"
 packages = [{ include = "job_scrapper" }]
+
+[tool.poetry.scripts]
+job-scrapper = "job_scrapper.main:cli"
 
 [tool.poetry.dependencies]
 python = ">=3.10.12,<3.11"

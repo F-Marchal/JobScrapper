@@ -159,7 +159,7 @@ def scrap(
     result_file,
     no_sql_export,
 ):
-    """Scrap a specific website (see command section) to extract job offers. By default,
+    """Scraps a specific website (see command section) to extract job offers. By default,
     the results are exported inside a sqlite database.
     General information can be retrieved from all website such as job name, job localisation, job field, and more.
     More specific information like job distance to a certain place (--ref-places) or the number of occurrences of
@@ -179,20 +179,59 @@ def scrap(
     ctx.obj["workdir"] = workdir
     JobScrapperSkeleton.workdir = workdir
 
-
 @scrap.command()
 @cloup.pass_context
-def sanofi(ctx):
-    """Scrap Sanofi's website (Job offers are limited to 'France')."""
-    SanofiScrapper.main(**ctx.obj["OptionsScrapperMain"])
-
+def chu_mpt(ctx):
+    """Scraps Montpellier CHU's job offer. """
+    CHUMtpScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
 @scrap.command()
 @cloup.pass_context
 def cirad(ctx):
-    """Scrap Cirad's website. ('Centre de coopération internationale en recherche agronomique pour le développement')"""
+    """Scraps Cirad's website. ('Centre de coopération internationale en recherche agronomique pour le développement')"""
     CiradScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
+@scrap.command()
+@cloup.pass_context
+def cnrs(ctx):
+    """Scrap CNRS job offers 'Centre national de la recherche scientifique'"""
+    CNRScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
+@scrap.command()
+@cloup.pass_context
+def inrae(ctx):
+    """Scrapss jobs from INRAE's website. 'Institut national de recherche pour l’agriculture,
+    l’alimentation et l’environnement'"""
+    INRAEScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
+@scrap.command()
+@cloup.pass_context
+def inserm(ctx):
+    """Scraps 'CDD Ingénieurs et Techniciens' jobs from INSERM's ('Institut national de
+     la santé et de la recherche médicale') website. 'Mobilité Chercheurs', 'CDD Chercheurs'
+     and 'Mobilité Ingénieurs et Techniciens' are ignored."""
+    InsermScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
+@scrap.command()
+@cloup.pass_context
+def ird(ctx):
+    """Scraps jobs from IRD's website. ('Institut de recherche pour le développement')"""
+    IRDScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
+@scrap.command()
+@cloup.pass_context
+def sanofi(ctx):
+    """Scraps Sanofi's website (Job offers are limited to 'France')."""
+    SanofiScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
+@scrap.command()
+@cloup.pass_context
+def sfbi(ctx):
+    """Scraps SFBI's website. ('Société Française de Bioinformatique')"""
+    SBIScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
+def main():
+    cli()
 
 if __name__ == "__main__":
     cli()

@@ -10,7 +10,7 @@ class SBIScrapper(srk.JobScrapperSkeleton):
     Use JobScrapperSkeleton to extract jobs offers from SBI's website
     """
 
-    website_url = "-"
+    website_url = "https://www.sfbi.fr/emplois/offres-en-cours"
     job_across_multiple_pages = True
     HEADERS = [
         "title",  # "Titre",
@@ -48,7 +48,7 @@ class SBIScrapper(srk.JobScrapperSkeleton):
                 continue
 
             # Find url
-            re_url = re.findall('<td><a href="(.*)"', str(tr))
+            re_url = re.findall('<td.*><a href="(.*)"', str(tr))
             url = cls.get_base_url() + re_url[0]
 
             # Generate job
