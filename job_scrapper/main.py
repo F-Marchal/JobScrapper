@@ -1,3 +1,5 @@
+import os.path
+
 import click
 import cloup
 import time
@@ -26,26 +28,49 @@ from job_scrapper import (
     help="Log level in terminal. Does not affect log file.",
 )
 @click.option(
+    "-w",
+    "--workdir",
+    type=click.Path(file_okay=False, dir_okay=True, resolve_path=True),
+    default="./Workdir",
+    help="A folder in which the program will store configuration files (when not specified) and output files."
+    "Default : './Workdir'",
+)
+@click.option(
     "--no-log-file",
     is_flag=True,
     help="No log file will be created. Logs will still show in terminal",
 )
 @cloup.pass_context
-def cli(ctx, verbosity="INFO", no_log_file: bool = False):
+def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
     """Welcome in JobScrapper !
     You can use this tool to scrap a number of website in order to extract potential job offers.
     See other commands.
     """
+    # --- Verbose ---
     JobScrapperSkeleton.set_logging_level(verbosity)
     ctx.obj = {"verbosity": verbosity}
 
+    # --- Workdir ---
+    if not os.path.exists(workdir):
+        os.mkdir(workdir)
+
+    ctx.obj["workdir"] = workdir
+    JobScrapperSkeleton.workdir = workdir
+
+    # --- Logging file ---
     if not no_log_file:
+        log_dir = os.path.join(workdir, "Logs")
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
+
         local_time = time.localtime()
-        formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S", local_time)
-        logg_file = f"{formatted_time}.job.log"
+        formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S")
+        logg_file = os.path.join(log_dir, f"{formatted_time}")
+        complete_log_file = JobScrapperSkeleton.get_unique_file_name(logg_file, "log")
 
-        JobScrapperSkeleton.start_file_logging(logg_file, level="DEBUG")
+        JobScrapperSkeleton.start_file_logging(complete_log_file, level="DEBUG")
 
+    # --- Log---
     JobScrapperSkeleton.logger.debug("CLI : %s", locals())
 
 
@@ -98,14 +123,6 @@ def cli(ctx, verbosity="INFO", no_log_file: bool = False):
     'By default "Workdir/known-urls.json" is used.',
 )
 @click.option(
-    "-w",
-    "--workdir",
-    type=click.Path(file_okay=False, dir_okay=True, resolve_path=True),
-    default="./Workdir",
-    help="A folder in which the program will store configuration files (when not specified) and output files."
-    "Default : './Workdir'",
-)
-@click.option(
     "--no-coordinates-update",
     is_flag=True,
     help="Turn this flag on to disable coordinates's json updates",
@@ -151,7 +168,6 @@ def scrap(
     keywords,
     coordinates,
     ignore_urls,
-    workdir,
     no_coordinates_update,
     no_urls_update,
     save_job_page,
@@ -176,8 +192,7 @@ def scrap(
         "display": display or (no_sql_export and not result_file),
         "flat_export": result_file,
     }
-    ctx.obj["workdir"] = workdir
-    JobScrapperSkeleton.workdir = workdir
+
 
 @scrap.command()
 @cloup.pass_context
@@ -230,8 +245,6 @@ def sfbi(ctx):
     """Scraps SFBI's website. ('Société Française de Bioinformatique')"""
     SBIScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
-def main():
-    cli()
 
 if __name__ == "__main__":
     cli()
