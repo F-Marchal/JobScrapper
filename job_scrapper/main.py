@@ -1,8 +1,11 @@
+import logging
 import os.path
+from gc import callbacks
 
 import click
 import cloup
 import time
+from datetime import datetime
 
 from job_scrapper import (
     JobScrapperSkeleton,
@@ -73,7 +76,136 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
     # --- Log---
     JobScrapperSkeleton.logger.debug("CLI : %s", locals())
 
+# --- --- --- Database --- --- ---
+def _parse_date_or_datetime(_, __, value):
+    if value is None:
+        return None
 
+    formats = ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S"]
+    for fmt in formats:
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+
+    raise click.BadParameter(
+        f"Invalid date format: {value}. Expected 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'."
+    )
+
+def _execute_sql_command(command: str, format_list: None | list = None) -> str:
+    if format_list is None:
+        format_list = []
+
+    JobScrapperSkeleton.logger.debug("Executing sql command : %s\nFormat list : %s", command, format_list)
+
+    with JobScrapperSkeleton.write_in_database() as cursor:
+        cursor.execute(command, format_list)
+        result = cursor.fetchall()
+
+    logging.debug("Result : %", result)
+    return result
+
+
+@cli.group()
+@cloup.pass_context
+@click.option(
+    "-a",
+    "--after",
+    callback=_parse_date_or_datetime,
+    default=None,
+    help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' When applicable, ensure that returned values comes from "
+         "job that hava a time stamp older (>=) than this date. This mean that this job offer has been seen "
+         "on a website after this date",
+)
+
+def database(ctx, after):
+    """A small set of command that can be used to interact with the database."""
+    if after:
+        ctx.obj["after"] = after
+    else:
+        ctx.obj["after"] = datetime.min
+
+@database.command()
+@cloup.argument(
+    'command',
+    help="An sqlite command that will be executed on scrapper's database."
+)
+def execute(command):
+    """Execute sqlite code."""
+    for line in _execute_sql_command(
+        command
+    ):
+        print(line)
+
+
+@database.command()
+@cloup.argument(
+    'job-url',
+    help="Job's url"
+)
+def get_job_page(job_url):
+    """If it exists, will return a path that lead to a .zip / .pdf that contain the offer."""
+    print("#url")
+    for line in _execute_sql_command(
+        f"""
+        SELECT * FROM Metadata 
+        where url="{job_url}"
+        and key="job_page";
+        """
+    ):
+        print(os.path.abspath(line[2]))
+
+
+@database.command()
+@cloup.pass_context
+@cloup.argument(
+    'localisation',
+    help="A localisation (e.g. 'Paris, France')"
+)
+@click.option(
+    "-m",
+    "--max-distance",
+    type=float,
+    default=100,
+    help="Jobs returned by this command can not be further away than this value (km). default : 100",
+)
+def get_job_near(ctx, localisation, max_distance):
+    """Displays all job near enough a localisation. /!\\ Some jobs have missing / non-standard location
+     and thus will be excluded from this command ! """
+    print(f"#Job_localisation\tdistance_to_{localisation}\tlast_sighting\turl")
+    for line in _execute_sql_command(
+        f"""
+        SELECT localisation, distances.distances, time_stamp, url
+        FROM Jobs
+        JOIN distances
+          ON (Jobs.localisation = distances.localisation1  OR Jobs.localisation = distances.localisation2)
+          WHERE (distances.localisation1 == "{localisation}" or distances.localisation2 == "{localisation}")
+          AND time_stamp >= '{ctx.obj["after"]}'
+          AND distances.distances <= {max_distance}
+          ORDER BY distances.distances ASC, time_stamp DESC;
+        """
+    ):
+        print("\t".join([str(c) for c in line]))
+
+@database.command()
+def known_localisation():
+    """Displays a list of all localisations that can be used into get_job_near"""
+    print(f"#Places")
+    for line in _execute_sql_command(
+        """
+        SELECT DISTINCT place
+        FROM (
+            SELECT localisation1 AS place
+            FROM distances
+            UNION
+            SELECT localisation2 AS place
+            FROM distances
+        );
+        """
+    ):
+        print("\t".join(line))
+
+# --- --- ---Database --- --- ---
 # --- --- --- SCRAP group --- --- ---
 @cli.group()
 @cloup.pass_context
@@ -244,7 +376,10 @@ def sanofi(ctx):
 def sfbi(ctx):
     """Scraps SFBI's website. ('Société Française de Bioinformatique')"""
     SBIScrapper.main(**ctx.obj["OptionsScrapperMain"])
+# --- --- --- SCRAP group --- --- ---
 
+def main():
+    cli()
 
 if __name__ == "__main__":
     cli()
