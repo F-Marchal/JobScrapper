@@ -418,7 +418,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         if keywords:
             self.search_keywords(page_content, **keywords)
 
-    def _generate_job_file_name(self, ext: str) -> tuple[str, str]:
+    def _generate_job_file_name(self, ext: str | None=None) -> tuple[str, str]:
         """
         Generate a name (and a path) for when the content of self.url should be saved.
         This path will be self.workdir/self.get_class_name()/time self.title
@@ -427,7 +427,11 @@ class ScrapperRequestCore(ScrapperObjectCore):
         """
         local_time = time.localtime()
         formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S", local_time)
-        name = formatted_time + " " + self.title[:30] + f".{ext}"
+        if ext:
+            name = formatted_time + " " + self.title[:30] + f".{ext}"
+        else:
+            name = formatted_time + " " + self.title[:30]
+
         folder = os.path.join(self.workdir, self.get_class_name())
         if not os.path.exists(folder):
             os.mkdir(folder)
@@ -440,16 +444,18 @@ class ScrapperRequestCore(ScrapperObjectCore):
         :param bs4.BeautifulSoup page_content: Content of self.url
         :param str ext: file extension (html; pdf ...)
         """
-        folder, name = self._generate_job_file_name(ext)
-        file_path = os.path.join(folder, name + ".zip")
         self.time_stamps["page_download"] = time.localtime()
 
+        folder, name = self._generate_job_file_name(ext)
+        file_path = os.path.join(folder, name)
+        file_path = self.get_unique_file_name(file_path, "zip")
 
         self.logger.debug("Saving job in %s", file_path)
 
         with zipfile.ZipFile(file_path, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr(name, str(page_content))
 
+        # Reduce path length when possible
         if self.workdir in file_path:
             self._metadata["job_page"] = file_path.replace(self.workdir, "./")
         else:

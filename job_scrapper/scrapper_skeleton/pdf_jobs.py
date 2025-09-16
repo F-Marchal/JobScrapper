@@ -49,9 +49,12 @@ class PdfJobBaseScrapper(JobScrapperSkeleton):
 
     def export_pdf(self, path: str):
         """Copy a pdf download inside a temple to another directory."""
+        self.time_stamps["page_download"] = time.localtime()
+
         self.logger.debug("Exporting pfd...")
-        folder, name = self._generate_job_file_name("pdf")
+        folder, name = self._generate_job_file_name()
         final_path = str(os.path.join(folder, name))
+        final_path = self.get_unique_file_name(final_path, "pdf")
         shutil.copy(path, final_path)
 
     # --- --- Download files  --- ---

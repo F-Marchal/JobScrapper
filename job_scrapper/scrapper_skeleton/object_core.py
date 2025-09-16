@@ -474,6 +474,20 @@ class ScrapperObjectCore(CoreLogger):
 
     # --- --- Exports --- ---
     # --- --- --- --- Sqlite --- --- ---
+
+    @staticmethod
+    def get_unique_file_name(file_path, ext):
+        default_name = file_path + "." + ext
+        if not os.path.exists(file_path + ext):
+            return default_name
+
+        counter = 1
+        filename = file_path + "-{}." + ext
+        while os.path.isfile(filename.format(counter)):
+            counter += 1
+
+        return filename.format(counter)
+
     # --- --- --- --- Export managements --- --- --- ----
     # --- --- --- --- Attributes managements --- --- --- ----
     @staticmethod
