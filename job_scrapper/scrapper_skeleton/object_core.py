@@ -51,12 +51,30 @@ class ScrapperObjectCore(CoreLogger):
 
         self._distances: dict[str, float] = {}
         self._keywords: dict[str, int] = {}
+        local_time =  time.localtime()
         self._time_stamps: dict[str, time.struct_time] = {
-            "Found": time.localtime()
+            "last_sighting": local_time,
         }
 
-    # --- --- --- --- Export managements --- --- ---
+        # first_sighting
+        with self.write_in_database() as cursor:
+            cursor.execute(
+                f"""
+                select time_stamp from TimeStamps where TimeStamps.url="{self.url}" and TimeStamps.keyword="first_sighting";
+                """
+            )
+            result = cursor.fetchall()
 
+        if result:
+            try:
+                self._time_stamps["first_sighting"] = time.strptime(result[-1][0], "%Y-%m-%d %H:%M:%S")
+            except ValueError as ve:
+                self.logger.error("Error during loading of the 'first_sighting' time_stamp of '%s' : \n %s", url, ve)
+        else:
+            self._time_stamps["first_sighting"] = local_time
+
+    # --- --- --- --- Export managements --- --- ---
+    # Default header is used both for flat file, display and sql main table.
     default_header = {
         "#Time_Stamp": "DATE",
         "Origin": "TEXT",
@@ -74,7 +92,7 @@ class ScrapperObjectCore(CoreLogger):
         are directly contained inside the dictionary.
         """
         items = [
-            time.strftime("%Y-%m-%d %H:%M:%S", self._time_stamps["Found"]),
+            time.strftime("%Y-%m-%d %H:%M:%S", self._time_stamps["last_sighting"]),
             self.get_class_name(),
             self.localisation,
             self.field,
@@ -262,7 +280,7 @@ class ScrapperObjectCore(CoreLogger):
             f"CREATE TABLE IF NOT EXISTS {cls.keywords_table_name} (",
             "url TEXT KEY,",
             "keyword TEXT NOT NULL,",
-            "occurrences INT NOT NULL,",
+            "occurrence INT NOT NULL,",
             "PRIMARY KEY(url, keyword),"
             f"FOREIGN KEY (url) REFERENCES {cls.main_table_name}(url)",
             ");",
@@ -278,7 +296,7 @@ class ScrapperObjectCore(CoreLogger):
             f"CREATE TABLE IF NOT EXISTS {cls.distances_table_name} ("
             + "localisation1 TEXT NOT NULL,"
             + "localisation2 TEXT NOT NULL,"
-            + "distances REAL NOT NULL,"
+            + "distance REAL NOT NULL,"
             + "PRIMARY KEY(localisation1, localisation2)"
             ");"
         )
@@ -292,7 +310,7 @@ class ScrapperObjectCore(CoreLogger):
             f"CREATE TABLE IF NOT EXISTS {cls.time_stamps_table_name} (",
             "url TEXT KEY,",
             "keyword TEXT NOT NULL,",
-            "timeStamp DATE NOT NULL,",
+            "time_stamp DATE NOT NULL,",
             "PRIMARY KEY(url, keyword),"
             f"FOREIGN KEY (url) REFERENCES {cls.main_table_name}(url)",
             ");",
@@ -403,7 +421,7 @@ class ScrapperObjectCore(CoreLogger):
 
         # Prepare command
         command = [
-            f"INSERT OR REPLACE INTO {self.keywords_table_name}(url, keyword, occurrences)",
+            f"INSERT OR REPLACE INTO {self.keywords_table_name}(url, keyword, occurrence)",
             "VALUES",
         ]
         format_list = []
@@ -426,7 +444,7 @@ class ScrapperObjectCore(CoreLogger):
 
         # Prepare sql command
         command = [
-            f"INSERT OR REPLACE INTO {self.distances_table_name}(localisation1, localisation2, distances)",
+            f"INSERT OR REPLACE INTO {self.distances_table_name}(localisation1, localisation2, distance)",
             "VALUES",
         ]
         format_list = []
@@ -451,7 +469,7 @@ class ScrapperObjectCore(CoreLogger):
 
         format_list = []
         command = [
-            f"INSERT OR REPLACE INTO {self.time_stamps_table_name}(url, keyword, timeStamp)",
+            f"INSERT OR REPLACE INTO {self.time_stamps_table_name}(url, keyword, time_stamp)",
             "VALUES",
         ]
         for key, value in self.time_stamps.items():

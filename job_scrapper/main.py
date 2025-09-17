@@ -1,6 +1,5 @@
 import logging
 import os.path
-from gc import callbacks
 
 import click
 import cloup
@@ -75,7 +74,7 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
 
     # --- Log---
     JobScrapperSkeleton.logger.debug("CLI : %s", locals())
-
+'''
 # --- --- --- Database --- --- ---
 def _parse_date_or_datetime(_, __, value):
     if value is None:
@@ -206,6 +205,7 @@ def known_localisation():
         print("\t".join(line))
 
 # --- --- ---Database --- --- ---
+'''
 # --- --- --- SCRAP group --- --- ---
 @cli.group()
 @cloup.pass_context
@@ -252,7 +252,7 @@ def known_localisation():
     "At the end of the program, this file will be updated with newly encountered url. Use "
     "`--no-urls-update` to disable this behaviour."
     'The JSON file should look like :  ["urls"].'
-    'By default "Workdir/known-urls.json" is used.',
+    'By default "Workdir/.known-urls.json" is used.',
 )
 @click.option(
     "--no-coordinates-update",

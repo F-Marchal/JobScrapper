@@ -464,7 +464,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         # Reduce path length when possible
         if self.workdir in file_path:
-            self._metadata["job_page"] = file_path.replace(self.workdir, "./")
+            self._metadata["job_page"] = os.path.relpath(file_path, start=self.workdir)
         else:
             self._metadata["job_page"] = file_path
 
