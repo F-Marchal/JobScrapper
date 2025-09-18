@@ -284,7 +284,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
             if job_object.url in known_urls:
                 cls.logger.info(
                     "%s / %s ignored. Its url is contained in <known_urls>.",
-                    i + 1,
+                    i,
                     len(jobs),
                 )
                 continue
