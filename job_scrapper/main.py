@@ -15,7 +15,7 @@ from job_scrapper import (
     InsermScrapper,
     IRDScrapper,
     SanofiScrapper,
-    SBIScrapper,
+    SFBIScrapper,
 )
 
 
@@ -74,6 +74,51 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
 
     # --- Log---
     JobScrapperSkeleton.logger.debug("CLI : %s", locals())
+
+# --- --- --- Database --- --- ---
+def _parse_date_or_datetime(_, __, value):
+    if value is None:
+        return None
+
+    formats = ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S"]
+    for fmt in formats:
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+
+    raise click.BadParameter(
+        f"Invalid date format: {value}. Expected 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'."
+    )
+
+@cli.group()
+@cloup.pass_context
+@click.option(
+    "-a",
+    "--after",
+    callback=_parse_date_or_datetime,
+    default=None,
+    help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' When applicable, ensure that returned values comes from "
+         "job that hava a time stamp older (>=) than this date. This mean that this job offer has been seen "
+         "on a website after this date",
+)
+
+def database(ctx, after):
+    """A small set of command that can be used to interact with the database."""
+    if after:
+        ctx.obj["after"] = after
+    else:
+        ctx.obj["after"] = datetime.min
+
+@database.command()
+def seek(ctx):
+    print(ctx)
+
+# --- --- --- Database --- --- ---
+
+
+
+
 '''
 # --- --- --- Database --- --- ---
 def _parse_date_or_datetime(_, __, value):
@@ -375,7 +420,7 @@ def sanofi(ctx):
 @cloup.pass_context
 def sfbi(ctx):
     """Scraps SFBI's website. ('Société Française de Bioinformatique')"""
-    SBIScrapper.main(**ctx.obj["OptionsScrapperMain"])
+    SFBIScrapper.main(**ctx.obj["OptionsScrapperMain"])
 # --- --- --- SCRAP group --- --- ---
 
 def main():

@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
 
-class SBIScrapper(srk.JobScrapperSkeleton):
+class SFBIScrapper(srk.JobScrapperSkeleton):
     """
     Use JobScrapperSkeleton to extract jobs offers from SBI's website
     """
@@ -56,10 +56,10 @@ class SBIScrapper(srk.JobScrapperSkeleton):
 
 
 if __name__ == "__main__":
-    result = SBIScrapper.interrogate_website()
-    SBIScrapper.analyse_jobs(
+    result = SFBIScrapper.interrogate_website()
+    SFBIScrapper.analyse_jobs(
         *result,
         keywords={"Informatique": ["Informatique", "Informatic"]},
         localisations=["Montpellier, France", "Lyon, France"],
     )
-    SBIScrapper.quick_display_list_of_offers(result)
+    SFBIScrapper.quick_display_list_of_offers(result)
