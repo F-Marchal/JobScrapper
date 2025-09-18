@@ -390,7 +390,13 @@ class ScrapperObjectCore(CoreLogger):
         self_dict = self.to_dict()
         for cat_name in self.default_header:
             command[1] += self.sql_compatible_header_keyword(cat_name) + ", "
-            format_list.append(self_dict[cat_name])
+
+            if str(self_dict[cat_name]).lower() not in ("", "none", "undefined", "n/a", "?"):
+                value = self_dict[cat_name]
+            else:
+                value = None
+
+            format_list.append(value)
 
         command[1] = command[1].removesuffix(", ") + ")"
 
@@ -517,7 +523,7 @@ class ScrapperObjectCore(CoreLogger):
         :return str: The new string
         """
         if string is None:
-            return None
+            return ""
 
         string = string.strip()
         string = string.replace("\n", " ").replace("\t", " ")
