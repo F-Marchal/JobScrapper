@@ -45,7 +45,7 @@ class CNRScrapper(srk.JobScrapperSkeleton):
             # Generate job
             offers.append(cls(field=None, url=url, **kwargs))
 
-    def _job_page_content(
+    def _search_keyword_in_page_content(
         self, page: BeautifulSoup | str, **keywords: list[str]
     ):
         if isinstance(page, BeautifulSoup):
@@ -65,7 +65,7 @@ class CNRScrapper(srk.JobScrapperSkeleton):
                         value
                     ).strip()
 
-        return super()._job_page_content(page, **keywords)
+        return super()._search_keyword_in_page_content(page, **keywords)
 
 
 if __name__ == "__main__":

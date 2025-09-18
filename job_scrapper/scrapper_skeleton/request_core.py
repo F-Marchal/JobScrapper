@@ -480,9 +480,23 @@ class ScrapperRequestCore(ScrapperObjectCore):
         :param bs4.BeautifulSoup or str page_content: An html BeautifulSoup or a string
         """
         self.time_stamps["keywords_research"] = time.localtime()
-        return self._job_page_content(page_content, **keywords)
+        self._search_keyword_in_page_content(page_content, **keywords)
+        self._search_keywords_in_attributes(**keywords)
 
-    def _job_page_content(
+
+    def _search_keywords_in_attributes(self, **keywords: list[str]):
+        for key, list_of_associated_keywords in keywords.items():
+            if key not in self._keywords:
+                self._keywords[key] = 0
+
+            for patterns in list_of_associated_keywords:
+                count = len(re.findall(f"(?={patterns.lower()})", self.field.lower()))
+                count += len(re.findall(f"(?={patterns.lower()})", self.contract_type.lower()))
+                count += len(re.findall(f"(?={patterns.lower()})", self.localisation.lower()))
+                count += len(re.findall(f"(?={patterns.lower()})", self.title.lower()))
+                self._keywords[key] += count
+
+    def _search_keyword_in_page_content(
         self, page: bs4.BeautifulSoup | str, **keywords: list[str]
     ):
         """
@@ -501,7 +515,8 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         self.logger.debug("Seeking keywords in %s", self.url)
         for key, list_of_associated_keywords in keywords.items():
-            self._keywords[key] = 0
+            if key not in self._keywords:
+                self._keywords[key] = 0
 
             for patterns in list_of_associated_keywords:
                 count = len(re.findall(f"(?={patterns.lower()})", page_content))
