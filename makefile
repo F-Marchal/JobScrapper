@@ -5,7 +5,7 @@ cleancode:
 	poetry run pylint  ./job_scrapper/  # Coding Standard
 
 
-ORGS = chu-mpt cirad cnrs inrae inserm ird sanofi sfbi
+ORGS = chu-mpt cirad cnrs france-genomique inrae inserm ird sanofi sfbi
 WORKDIR = "./Workdir"
 FLAT_PATH = "./Workdir/flat_jobs_files/"
 
