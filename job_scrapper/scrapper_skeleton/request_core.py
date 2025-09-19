@@ -91,7 +91,6 @@ class ScrapperRequestCore(ScrapperObjectCore):
         if cls.job_across_multiple_pages_mandatory_action:
             for soups in cls._job_across_multiple_pages_command_action():
                 html_block_of_interest = cls.extract_block_of_interest(soups)
-                print(html_block_of_interest)
                 cls.complete_job_page_parsing(offers, html_block_of_interest)
 
         elif cls.job_across_multiple_pages:

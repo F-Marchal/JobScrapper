@@ -10,6 +10,7 @@ class TemplateScrapper(srk.JobScrapperSkeleton):
 
     website_url = "-"
     job_across_multiple_pages = True
+    job_across_multiple_pages_mandatory_action = False
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
@@ -30,6 +31,7 @@ class TemplateScrapper(srk.JobScrapperSkeleton):
         for cells in soup.find_all( # pylint: disable=W0612
             "-", class_="-"
         ):
+            # cells.find("span", class_="job-location").get_text(strip=True)
             continue
 
 
