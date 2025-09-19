@@ -59,9 +59,10 @@ class ScrapperObjectCore(CoreLogger):
         # first_sighting
         with self.write_in_database() as cursor:
             cursor.execute(
-                f"""
-                select time_stamp from TimeStamps where TimeStamps.url="{self.url}" and TimeStamps.keyword="first_sighting";
                 """
+                select time_stamp from TimeStamps where TimeStamps.url=? and TimeStamps.keyword="first_sighting";
+                """,
+                [self.url]
             )
             result = cursor.fetchall()
 

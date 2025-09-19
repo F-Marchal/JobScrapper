@@ -4,7 +4,7 @@ import re
 import tempfile
 import time
 import zipfile
-from typing import Callable
+from typing import Callable, Generator
 from urllib.parse import urlparse
 
 import bs4
@@ -29,6 +29,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
     website_url = ""
     job_across_multiple_pages = False
+    job_across_multiple_pages_mandatory_action = False
 
     sleep_between_job_interrogation = 2
     sleep_between_keyword_interrogation = 4
@@ -87,7 +88,13 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         cls.logger.info("Starting interrogation of %s", cls.website_url)
 
-        if cls.job_across_multiple_pages:
+        if cls.job_across_multiple_pages_mandatory_action:
+            for soups in cls._job_across_multiple_pages_command_action():
+                html_block_of_interest = cls.extract_block_of_interest(soups)
+                print(html_block_of_interest)
+                cls.complete_job_page_parsing(offers, html_block_of_interest)
+
+        elif cls.job_across_multiple_pages:
             known_block = set()
             page_index = 1
             page_already_reached = False
@@ -201,6 +208,12 @@ class ScrapperRequestCore(ScrapperObjectCore):
             "window.scrollTo(0, document.body.scrollHeight);"
         )
         time.sleep(cls.sleep_during_page_loading)
+
+    @classmethod
+    def _job_across_multiple_pages_command_action(cls) -> list[bs4.BeautifulSoup]:
+        """Uses selenium to clik on button when we can not just use {page} in url.
+        Returns a list of bs4.BeautifulSoup that correspond to a html page."""
+        raise NotImplementedError("Should be reimplemented when inherited")
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
