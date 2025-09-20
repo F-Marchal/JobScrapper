@@ -5,15 +5,6 @@ import bs4
 from bs4 import BeautifulSoup
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-from typing import Generator
-from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
-from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import (
-    ElementClickInterceptedException,
-    StaleElementReferenceException,
-    TimeoutException,
-)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
