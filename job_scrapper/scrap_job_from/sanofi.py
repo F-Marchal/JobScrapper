@@ -64,20 +64,12 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
 
     @classmethod
     def _rough_page_parsing_actions(cls, browser) -> None:
-        try:
-            cookie_btn = WebDriverWait(browser, 3).until(
-                EC.element_to_be_clickable(
-                    (
-                        By.CSS_SELECTOR,
-                        "button.onetrust-close-btn-handler.banner-close-button.ot-close-link",
-                    )
-                )
-            )
-            cookie_btn.click()
-            cls.logger.debug("Cookies pop up is closed.")
-        except TimeoutException:
-            cls.logger.debug("No cookies pop up found.")
-
+        cls._close_pop_up(
+            browser=browser,
+            by=By.CSS_SELECTOR,
+            button_identifier="button.onetrust-close-btn-handler.banner-close-button.ot-close-link",
+            msg="Cookies pop"
+        )
         super()._rough_page_parsing_actions(browser)
 
     @classmethod

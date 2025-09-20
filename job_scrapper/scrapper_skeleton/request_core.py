@@ -4,8 +4,14 @@ import re
 import tempfile
 import time
 import zipfile
-from typing import Callable, Generator
+from typing import Callable
 from urllib.parse import urlparse
+from selenium.common.exceptions import (
+    TimeoutException,
+)
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 import bs4
 from bs4 import BeautifulSoup
@@ -36,6 +42,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
     sleep_during_page_loading = 2
     sleep_before_retry_job_interrogation = 5
+    timeout_close_pop_up = 3
 
     selenium_chrome_options = Options()
     selenium_chrome_options.add_argument(
@@ -246,6 +253,19 @@ class ScrapperRequestCore(ScrapperObjectCore):
     def get_base_url(cls):
         """Get class base url"""
         return cls.extract_baseurl(cls.website_url)
+
+    @classmethod
+    def _close_pop_up(cls, browser, button_identifier, by=By.CSS_SELECTOR, msg="Pop up"):
+        try:
+            pop_up = WebDriverWait(browser, cls.timeout_close_pop_up).until(
+                EC.element_to_be_clickable(
+                    (by, button_identifier)
+                )
+            )
+            pop_up.click()
+            cls.logger.debug("%s is closed.", msg)
+        except TimeoutException:
+            cls.logger.debug("%s not found.", msg)
 
     # --- --- Retrieve jobs  --- ---
     # --- --- Analyse jobs  --- ---
