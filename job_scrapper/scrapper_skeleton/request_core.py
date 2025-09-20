@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 import tempfile
@@ -104,6 +103,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
             known_block = set()
             page_index = 1
             page_already_reached = False
+            no_offer_in_last_page = False
 
             # Offers can be split between multiple pages.
             # An invalid page number load the first page.
@@ -119,12 +119,28 @@ class ScrapperRequestCore(ScrapperObjectCore):
                     # Remember : Offers can be split between multiple pages.
                     # An invalid page number load the first page.
                     page_already_reached = True
+                    cls.logger.debug("Page %s already reached. Quiting loop.", page_index)
                     continue
 
                 # A : No, lets continue !
                 known_block.add(html_block_of_interest)
 
+                last_number_of_offer = len(offers)
                 cls.complete_job_page_parsing(offers, html_block_of_interest)
+                new_number_of_offer = len(offers)
+                cls.logger.debug("Number of offers incremented from %s to %s", last_number_of_offer, new_number_of_offer)
+
+                # Kill switch when each page without offer have a new html_block_of_interest
+                # but does not contain offers
+                if last_number_of_offer - new_number_of_offer == 0:
+                    cls.logger.debug("Page %s contains no job !", page_index)
+                    if no_offer_in_last_page:
+                        page_already_reached = True
+                        cls.logger.debug("Page %s and %s contains no job. Quiting loop.", page_index-1, page_index)
+                    else:
+                        no_offer_in_last_page = True
+                else:
+                    no_offer_in_last_page = False
 
                 # Continue the loop
                 page_index += 1
