@@ -17,7 +17,7 @@ class SFBIScrapper(srk.JobScrapperSkeleton):
 
     website_url = "https://www.sfbi.fr/emplois/offres-en-cours"
     job_across_multiple_pages = True
-    job_across_multiple_pages_mandatory_action = True
+    job_offer_fetch_require_manual_actions = True
     HEADERS = [
         "title",  # "Titre",
         "Niveau",
@@ -38,7 +38,7 @@ class SFBIScrapper(srk.JobScrapperSkeleton):
         )
 
     @classmethod
-    def _job_across_multiple_pages_command_action(cls) -> list[bs4.BeautifulSoup]:
+    def _job_offer_fetch_require_manual_actions_command(cls) -> list[bs4.BeautifulSoup]:
         browser = cls.open_url_inside_browser(cls.website_url)
         is_disabled = False
         all_pages = []

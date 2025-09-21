@@ -12,7 +12,7 @@ class IfremerScrapper(srk.JobScrapperSkeleton):
 
     website_url = "https://www.hellowork.com/fr-fr/entreprises/ifremer-9336.html?p={page}"
     job_across_multiple_pages = True
-    job_across_multiple_pages_mandatory_action = False
+    job_offer_fetch_require_manual_actions = False
     @classmethod
     def _rough_page_parsing_actions(cls, browser) -> None:
         cls._close_pop_up(
@@ -30,7 +30,7 @@ class IfremerScrapper(srk.JobScrapperSkeleton):
         super()._rough_page_parsing_actions(browser)
 
     @classmethod
-    def _job_across_multiple_pages_command_action(cls) -> list[BeautifulSoup]:
+    def _job_offer_fetch_require_manual_actions_command(cls) -> list[BeautifulSoup]:
         browser = cls.open_url_inside_browser(cls.website_url)
         is_disabled = False
         all_pages = []

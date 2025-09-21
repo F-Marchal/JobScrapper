@@ -10,7 +10,7 @@ class TemplateScrapper(srk.JobScrapperSkeleton):
 
     website_url = "-"
     job_across_multiple_pages = True
-    job_across_multiple_pages_mandatory_action = False
+    job_offer_fetch_require_manual_actions = False
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
