@@ -41,7 +41,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
     sleep_during_page_loading = 2
     sleep_before_retry_job_interrogation = 5
-    timeout_close_pop_up = 3
+    timeout_wait_until_clickable = 3
 
     selenium_chrome_options = Options()
     selenium_chrome_options.add_argument(
@@ -81,10 +81,14 @@ class ScrapperRequestCore(ScrapperObjectCore):
     # --- --- Retrieve jobs  --- ---
     @classmethod
     def interrogate_website(
-        cls, prepare_page: Callable | None = None
+        cls,
+        prepare_page: Callable | None = None,
+        ensure_uniqueness: bool = True
+
     ) -> list["ScrapperRequestCore"]:
         """
         Interrogate the website stored in <cls.website_url> to extract job offers.
+        ensure_uniqueness = True ensure that each offer have a unique url.
         :return: All jobs offers founds in this website.
         """
 
@@ -151,7 +155,27 @@ class ScrapperRequestCore(ScrapperObjectCore):
             )
             cls.complete_job_page_parsing(offers, html_block_of_interest)
 
+        if ensure_uniqueness:
+            return cls._ensure_job_uniqueness(offers)
         return offers
+
+    @classmethod
+    def _ensure_job_uniqueness(cls, offers) ->  list["ScrapperRequestCore"]:
+        complete_length = len(offers)
+        cls.logger.debug("Cleaning offer list. (%s items)", complete_length)
+        urls = set()
+        result = []
+        for each_offer in offers:
+            if each_offer.url in urls:
+                cls.logger.debug("%s (%s) removed", each_offer.url, each_offer)
+                continue
+
+            urls.add(each_offer.url)
+            result.append(each_offer)
+        cls.logger.debug("Removed %s offers (%s / %s)", len(offers), len(offers), complete_length)
+        return result
+
+
 
     @classmethod
     def rough_page_parsing(
@@ -232,6 +256,13 @@ class ScrapperRequestCore(ScrapperObjectCore):
         time.sleep(cls.sleep_during_page_loading)
 
     @classmethod
+    def _wait_until_clickable(cls, browser, *args):
+        obj = WebDriverWait(browser, cls.timeout_wait_until_clickable).until(
+            EC.element_to_be_clickable(*args)
+        )
+        return obj
+
+    @classmethod
     def _job_offer_fetch_require_manual_actions_command(cls) -> list[bs4.BeautifulSoup]:
         """Uses selenium to clik on button when we can not just use {page} in url.
         Returns a list of bs4.BeautifulSoup that correspond to a html page."""
@@ -273,10 +304,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
     @classmethod
     def _close_pop_up(cls, browser, button_identifier, by=By.CSS_SELECTOR, msg="Pop up"):
         try:
-            pop_up = WebDriverWait(browser, cls.timeout_close_pop_up).until(
-                EC.element_to_be_clickable(
-                    (by, button_identifier)
-                )
+            pop_up = cls._wait_until_clickable(
+                browser,
+                (by, button_identifier)
             )
             pop_up.click()
             cls.logger.debug("%s is closed.", msg)
