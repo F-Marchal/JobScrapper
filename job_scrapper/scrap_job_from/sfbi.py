@@ -52,12 +52,11 @@ class SFBIScrapper(srk.JobScrapperSkeleton):
                 all_pages.append(soup)
             i += 1
 
-            next_page_btn = WebDriverWait(browser, 5).until(
-                    EC.element_to_be_clickable(
-                        (
-                            By.CSS_SELECTOR,
-                            "button.page-link.next",
-                        )
+            next_page_btn = cls._wait_until_clickable(
+                browser,
+                    (
+                        By.CSS_SELECTOR,
+                        "button.page-link.next",
                     )
                 )
             is_disabled = next_page_btn.get_attribute("aria-disabled")

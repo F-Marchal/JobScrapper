@@ -20,6 +20,7 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
     """
     website_url = "https://jobs.sanofi.com/fr/recherche-d%27offres/France/2649/2/3017382/46/2/50/2"
     job_across_multiple_pages = False
+    selenium_chrome_options = None
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
@@ -87,16 +88,20 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
             wait = WebDriverWait(browser, timeout)
 
             # wait until the button is clickable
-            button = wait.until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, button_id))
-            )
+            button = cls._wait_until_clickable(
+                browser,
+                    (
+                        By.CSS_SELECTOR,
+                     button_id
+                     )
+                )
 
             # Execute button's script (as if we clicked on it)
             browser.execute_script("arguments[0].click();", button)
 
             # wait for update
             wait.until(
-                EC.staleness_of(button)  # ou une autre condition adaptée
+                EC.staleness_of(button)
             )
 
         except TimeoutException:
