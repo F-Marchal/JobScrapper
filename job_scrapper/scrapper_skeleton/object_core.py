@@ -106,7 +106,7 @@ class ScrapperObjectCore(CoreLogger):
 
         metadata = []
         for pairs in self._metadata.items():
-            metadata.append("=".join(pairs))
+            metadata.append("=".join([str(items) for items in pairs]))
 
         if metadata:
             header.append("Metadata")
