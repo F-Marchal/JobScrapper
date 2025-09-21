@@ -1,7 +1,10 @@
 from bs4 import BeautifulSoup
 
-import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 
+import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
+import time
 
 class CNRScrapper(srk.JobScrapperSkeleton):
     """
@@ -10,6 +13,8 @@ class CNRScrapper(srk.JobScrapperSkeleton):
 
     website_url = "https://emploi.cnrs.fr/RechercheAvancee.aspx"
     job_across_multiple_pages = False
+    job_offer_fetch_require_manual_actions = True
+
     HEADERS = [
         "post_date",  # "Date de parution",
         "title",
@@ -17,6 +22,64 @@ class CNRScrapper(srk.JobScrapperSkeleton):
         "general_localisation",
         "contract_type",
     ]
+
+    @classmethod
+    def _job_offer_fetch_require_manual_actions_command(cls) -> list[BeautifulSoup]:
+        i = 0
+        continue_ = True
+        pages = []
+        while continue_:
+            soup = cls._parse_region(i)
+            i += 1
+
+            if soup :
+                pages.append(soup)
+            else:
+                continue_ = False
+
+        return pages
+
+    @classmethod
+    def _parse_region(cls, index=0) -> BeautifulSoup | None:
+        """CNRS' website contains a dropdown that show offers by regions.
+        This function generate a BeautifulSoup soup for the item <index> in the dropdown.
+        If the index iss too great, it returns None."""
+        browser = cls.open_url_inside_browser(cls.website_url)
+        time.sleep(cls.sleep_during_page_loading)
+
+        dropdown_element = cls._wait_until_clickable(
+            browser,
+            (By.ID, "DdlBassinsGeographiques")
+        )
+
+        search_btn = cls._wait_until_clickable(
+            browser,
+            (By.ID, "CphMain_BtnRecherche")
+        )
+
+        dropdown = Select(dropdown_element)
+        options = dropdown.options
+        region_list = sorted([opt.get_attribute("value") for opt in options])
+        if len(region_list) <= index:
+            return None
+        region = region_list[index]
+
+        time.sleep(cls.sleep_during_page_loading)
+
+
+        cls.logger.debug("Loading '%s'", region)
+        dropdown.select_by_value(region)
+        search_btn.click()
+
+        time.sleep(cls.sleep_during_page_loading)
+        cls._rough_page_parsing_actions(browser)
+
+        html = browser.page_source
+        browser.close()
+        cls.logger.debug("Closing Chrome from %s (%s)", cls.website_url, region)
+
+        soup = BeautifulSoup(html, "html.parser")
+        return soup
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
