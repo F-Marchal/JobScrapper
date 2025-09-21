@@ -12,6 +12,7 @@ from job_scrapper import (
     CiradScrapper,
     CNRScrapper,
     FranceGenomiqueScrapper,
+    IfremerScrapper,
     INRAEScrapper,
     InsermScrapper,
     IRDScrapper,
@@ -395,6 +396,13 @@ def cnrs(ctx):
 def france_genomique(ctx):
     """Scraps jobs from France Genomics's website. Not tested with many offers !!"""
     FranceGenomiqueScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
+@scrap.command()
+@cloup.pass_context
+def ifremer(ctx):
+    """Scrapss jobs from ifremer. 'French research institute for the exploitation of maritime environment'"""
+    IfremerScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
 
 @scrap.command()
 @cloup.pass_context

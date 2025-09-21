@@ -4,6 +4,7 @@ from .scrap_job_from.chu_mtp import CHUMtpScrapper
 from .scrap_job_from.cirad import CiradScrapper
 from .scrap_job_from.cnrs import CNRScrapper
 from .scrap_job_from.france_genomique import FranceGenomiqueScrapper
+from .scrap_job_from.ifremer import IfremerScrapper
 from .scrap_job_from.inrae import INRAEScrapper
 from .scrap_job_from.inserm import InsermScrapper
 from .scrap_job_from.ird import IRDScrapper
