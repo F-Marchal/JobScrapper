@@ -29,55 +29,6 @@ class IfremerScrapper(srk.JobScrapperSkeleton):
         )
         super()._rough_page_parsing_actions(browser)
 
-    @classmethod
-    def _job_offer_fetch_require_manual_actions_command(cls) -> list[BeautifulSoup]:
-        browser = cls.open_url_inside_browser(cls.website_url)
-        is_disabled = False
-        all_pages = []
-        i = 1
-        while not is_disabled:
-            cls._rough_page_parsing_actions(browser)
-            if i == 1:
-                cls.logger.debug("Loading page %s", i)
-                html = browser.page_source
-                time.sleep(1)
-                soup = BeautifulSoup(html, "html.parser")
-                print(len(str(soup)))
-                time.sleep(1)
-                all_pages.append(soup)
-            i += 1
-            time.sleep(2)
-
-            # ------------------------
-            next_page_svg = WebDriverWait(browser, 5).until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, 'button[name="p"] svg[data-cross-origin-svg-url-value*="arrow-right.svg"]')
-                )
-            )
-
-            next_page_btn = next_page_svg.find_element(By.XPATH, "./..")
-            browser.execute_script("arguments[0].scrollIntoView({block: 'center'});", next_page_btn)
-            time.sleep(2)
-            is_disabled = next_page_btn.get_attribute("aria-disabled")
-            # -------------------------
-
-            if not is_disabled:
-                cls.logger.debug("Loading page %s", i)
-                next_page_btn.click()
-                html = browser.page_source
-                time.sleep(1)
-                soup = BeautifulSoup(html, "html.parser")
-                print(len(str(soup)))
-                time.sleep(150)
-                all_pages.append(soup)
-                time.sleep(cls.sleep_during_page_loading)
-
-
-            else:
-                cls.logger.debug("No page %s, closing browser on %s", i + 1, cls.website_url)
-                browser.close()
-
-        return all_pages
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
@@ -136,7 +87,7 @@ class IfremerScrapper(srk.JobScrapperSkeleton):
                 "contract_tag": contract_tag,
             }
 
-            if not post_date:
+            if post_date:
                 kwargs["post_date"] = post_date
             offers.append(cls(**kwargs))
 
