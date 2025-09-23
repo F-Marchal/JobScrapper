@@ -313,6 +313,39 @@ class ScrapperRequestCore(ScrapperObjectCore):
         except TimeoutException:
             cls.logger.debug("%s not found.", msg)
 
+    @classmethod
+    def _parse_offer_page_using_buttons(cls, command: Callable) -> list[BeautifulSoup]:
+        browser = cls.open_url_inside_browser(cls.website_url)
+        is_disabled = False
+        all_pages = []
+        i = 1
+        while not is_disabled:
+            cls._rough_page_parsing_actions(browser)
+            if i == 1:
+                cls.logger.debug("Loading page %s", i)
+                html = browser.page_source
+                soup = BeautifulSoup(html, "html.parser")
+                all_pages.append(soup)
+            i += 1
+
+            # ------------------------
+            next_page_btn, is_disabled = command(browser)
+            # -------------------------
+
+            if not is_disabled:
+                cls.logger.debug("Loading page %s", i)
+                next_page_btn.click()
+                time.sleep(cls.sleep_during_page_loading)
+                html = browser.page_source
+                soup = BeautifulSoup(html, "html.parser")
+                all_pages.append(soup)
+
+            else:
+                cls.logger.debug("No page %s, closing browser on %s", i + 1, cls.website_url)
+                browser.close()
+
+        return all_pages
+
     # --- --- Retrieve jobs  --- ---
     # --- --- Analyse jobs  --- ---
     # pylint: disable=R0913

@@ -19,7 +19,8 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
     Use JobScrapperSkeleton to extract jobs offers from Sanofi's website (Limited to France)
     """
     website_url = "https://jobs.sanofi.com/fr/recherche-d%27offres/France/2649/2/3017382/46/2/50/2"
-    job_across_multiple_pages = False
+    job_across_multiple_pages = True
+    job_offer_fetch_require_manual_actions = True
     selenium_chrome_options = None
 
     @classmethod
@@ -55,13 +56,6 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
             }
             offers.append(cls(**kwargs))
 
-    @classmethod
-    def interrogate_website(
-        cls, prepare_page: Callable | None = None
-    ) -> list[srk.ScrapperRequestCore]:
-        if prepare_page is None:
-            prepare_page = cls._job_rough_page_parsing_actions
-        return super().interrogate_website(prepare_page)
 
     @classmethod
     def _rough_page_parsing_actions(cls, browser) -> None:
@@ -74,54 +68,34 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
         super()._rough_page_parsing_actions(browser)
 
     @classmethod
-    def _job_rough_page_parsing_actions(cls, browser, timeout=15):
-        """
-        A method called each time a page that contains a list of jobs should be parsed.
-        :param browser: A selenium browser
-        :param int timeout: How long can the browser wait (s).
-        """
-        cls._rough_page_parsing_actions(browser)
-        button_id = (
-            "div.pagination-all a.pagination-show-all"  # pagination-show-all
-        )
+    def _next_page_command(cls, browser):
         try:
-            wait = WebDriverWait(browser, timeout)
 
-            # wait until the button is clickable
-            button = cls._wait_until_clickable(
+            next_button = cls._wait_until_clickable(
                 browser,
-                    (
-                        By.CSS_SELECTOR,
-                     button_id
-                     )
-                )
-
-            # Execute button's script (as if we clicked on it)
-            browser.execute_script("arguments[0].click();", button)
-
-            # wait for update
-            wait.until(
-                EC.staleness_of(button)
+                (By.CSS_SELECTOR, "a.next.disabled")
             )
+            is_disabled = True
 
         except TimeoutException:
-            # Button not found – probably no "show all" option
-            cls.logger.debug(
-                "'Show all' button not found. Assume that all jobs are already in display'"
+            next_button = cls._wait_until_clickable(
+                browser,
+                (By.CSS_SELECTOR, "a.next")
             )
-            return
-        except (
-            StaleElementReferenceException,
-            ElementClickInterceptedException,
-        ) as wbe:
 
-            cls.logger.warning(
-                "Can not click on the 'Show all' button. Some offers might be ignored. %s",
-                wbe,
-            )
-            time.sleep(50)
-            return
+            is_disabled = False
 
+
+
+        browser.execute_script("arguments[0].scrollIntoView({block: 'center'});", next_button)
+
+        time.sleep(2)
+
+        return next_button, is_disabled
+
+    @classmethod
+    def _job_offer_fetch_require_manual_actions_command(cls) -> list[BeautifulSoup]:
+        return cls._parse_offer_page_using_buttons(cls._next_page_command)
 
 class SanofiMontpellierScrapper(SanofiScrapper):
     """
