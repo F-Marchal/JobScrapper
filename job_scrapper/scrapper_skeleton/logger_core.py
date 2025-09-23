@@ -22,7 +22,9 @@ def redirect_logs_to_file(logger, file, level: str | None = None) -> Generator:
 
     file_log_handler = logging.StreamHandler(file)
     file_log_handler.setLevel(level)
-    file_log_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+    file_log_handler.setFormatter(
+        logging.Formatter("[%(levelname)s] %(message)s")
+    )
 
     logger.addHandler(file_log_handler)
     try:
@@ -85,34 +87,39 @@ class CoreLogger:
 
     file_log_handler = None
     log_file = None
+
     @classmethod
-    def start_file_logging(cls, path: str, level: str = None):
+    def start_file_logging(cls, path: str, level: str | None | int = None):
         """
         Redirect logs into a file.
         :param path: A path that lead to a file
         :param level: Level of logging see : cls.logger_levels
-        """""
+        """ ""
         if not (cls.file_log_handler is None and cls.log_file is None):
-            cls.logger.warning("Can not start file logging. file_log_handler or log_file"
-                               " already exist :\nHandler : %s\nfile : %s", 
-                               cls.file_log_handler, cls.log_file)
+            cls.logger.warning(
+                "Can not start file logging. file_log_handler or log_file"
+                " already exist :\nHandler : %s\nfile : %s",
+                cls.file_log_handler,
+                cls.log_file,
+            )
             return
-        
-        
+
         cls.log_file = open(path, "w", encoding="UTF-8")
 
         if level is None:
             level = cls.logger.level
-        else:
+        elif not isinstance(level, int):
             level = cls.logger_levels[level]
 
         cls.file_log_handler = logging.StreamHandler(cls.log_file)
         cls.file_log_handler.setLevel(level)
 
-        cls.file_log_handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+        cls.file_log_handler.setFormatter(
+            logging.Formatter("[%(levelname)s] %(message)s")
+        )
 
         cls.logger.addHandler(cls.file_log_handler)
-    
+
     @classmethod
     def stop_file_logging(cls):
         """
@@ -124,7 +131,6 @@ class CoreLogger:
             cls.file_log_handler.close()
             cls.file_log_handler = None
 
-        
         if cls.log_file:
             cls.log_file.close()
 

@@ -1,13 +1,12 @@
 import logging
 import os.path
-
-import click
-import cloup
 import time
 from datetime import datetime
 
+import click
+import cloup
+
 from job_scrapper import (
-    JobScrapperSkeleton,
     CHUMtpScrapper,
     CiradScrapper,
     CNRScrapper,
@@ -16,6 +15,7 @@ from job_scrapper import (
     INRAEScrapper,
     InsermScrapper,
     IRDScrapper,
+    JobScrapperSkeleton,
     SanofiScrapper,
     SFBIScrapper,
 )
@@ -67,15 +67,17 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
 
-        local_time = time.localtime()
         formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S")
         logg_file = os.path.join(log_dir, f"{formatted_time}")
-        complete_log_file = JobScrapperSkeleton.get_unique_file_name(logg_file, "log")
+        complete_log_file = JobScrapperSkeleton.get_unique_file_name(
+            logg_file, "log"
+        )
 
         JobScrapperSkeleton.start_file_logging(complete_log_file, level="DEBUG")
 
     # --- Log---
     JobScrapperSkeleton.logger.debug("CLI : %s", locals())
+
 
 # --- --- --- Database --- --- ---
 def _parse_date_or_datetime(_, __, value):
@@ -93,6 +95,7 @@ def _parse_date_or_datetime(_, __, value):
         f"Invalid date format: {value}. Expected 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'."
     )
 
+
 @cli.group()
 @cloup.pass_context
 @click.option(
@@ -101,10 +104,9 @@ def _parse_date_or_datetime(_, __, value):
     callback=_parse_date_or_datetime,
     default=None,
     help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' When applicable, ensure that returned values comes from "
-         "job that hava a time stamp older (>=) than this date. This mean that this job offer has been seen "
-         "on a website after this date",
+    "job that hava a time stamp older (>=) than this date. This mean that this job offer has been seen "
+    "on a website after this date",
 )
-
 def database(ctx, after):
     """A small set of command that can be used to interact with the database."""
     if after:
@@ -112,13 +114,13 @@ def database(ctx, after):
     else:
         ctx.obj["after"] = datetime.min
 
+
 @database.command()
 def seek(ctx):
     print(ctx)
 
+
 # --- --- --- Database --- --- ---
-
-
 
 
 '''
@@ -253,6 +255,8 @@ def known_localisation():
 
 # --- --- ---Database --- --- ---
 '''
+
+
 # --- --- --- SCRAP group --- --- ---
 @cli.group()
 @cloup.pass_context
@@ -376,8 +380,9 @@ def scrap(
 @scrap.command()
 @cloup.pass_context
 def chu_mpt(ctx):
-    """Scraps Montpellier CHU's job offer. """
+    """Scraps Montpellier CHU's job offer."""
     CHUMtpScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
 
 @scrap.command()
 @cloup.pass_context
@@ -385,17 +390,20 @@ def cirad(ctx):
     """Scraps Cirad's website. ('Centre de coopération internationale en recherche agronomique pour le développement')"""
     CiradScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
+
 @scrap.command()
 @cloup.pass_context
 def cnrs(ctx):
     """Scrap CNRS job offers 'Centre national de la recherche scientifique'"""
     CNRScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
+
 @scrap.command()
 @cloup.pass_context
 def france_genomique(ctx):
     """Scraps jobs from France Genomics's website. Not tested with many offers !!"""
     FranceGenomiqueScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
 
 @scrap.command()
 @cloup.pass_context
@@ -411,13 +419,15 @@ def inrae(ctx):
     l’alimentation et l’environnement'"""
     INRAEScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
+
 @scrap.command()
 @cloup.pass_context
 def inserm(ctx):
     """Scraps 'CDD Ingénieurs et Techniciens' jobs from INSERM's ('Institut national de
-     la santé et de la recherche médicale') website. 'Mobilité Chercheurs', 'CDD Chercheurs'
-     and 'Mobilité Ingénieurs et Techniciens' are ignored."""
+    la santé et de la recherche médicale') website. 'Mobilité Chercheurs', 'CDD Chercheurs'
+    and 'Mobilité Ingénieurs et Techniciens' are ignored."""
     InsermScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
 
 @scrap.command()
 @cloup.pass_context
@@ -425,21 +435,28 @@ def ird(ctx):
     """Scraps jobs from IRD's website. ('Institut de recherche pour le développement')"""
     IRDScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
+
 @scrap.command()
 @cloup.pass_context
 def sanofi(ctx):
     """Scraps Sanofi's website (Job offers are limited to 'France')."""
     SanofiScrapper.main(**ctx.obj["OptionsScrapperMain"])
 
+
 @scrap.command()
 @cloup.pass_context
 def sfbi(ctx):
     """Scraps SFBI's website. ('Société Française de Bioinformatique')"""
     SFBIScrapper.main(**ctx.obj["OptionsScrapperMain"])
+
+
 # --- --- --- SCRAP group --- --- ---
 
+
 def main():
+    """Start JobScrapper's Command Line Interface"""
     cli()
+
 
 if __name__ == "__main__":
     cli()

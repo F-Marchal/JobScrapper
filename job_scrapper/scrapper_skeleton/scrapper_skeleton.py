@@ -100,7 +100,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
             with open(self.path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
 
-    #
+    # pylint: disable=R0917
     # pylint: disable=R0913
     # having many arguments is expected for this command
     @classmethod
@@ -214,7 +214,9 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         dumb_urls: bool = True,
         dump_localisations: bool = True,
     ) -> list[ScrapperRequestCore]:
-        cls.logger.info("Starting %s's main scrapping method.", cls.get_class_name())
+        cls.logger.info(
+            "Starting %s's main scrapping method.", cls.get_class_name()
+        )
         cls.logger.debug("Locals : %s", locals())
 
         with cls.full_setup(
@@ -258,9 +260,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
 
         if sql_export:
             cls.logger.info(
-                "Exporting %s jobs in %s",
-                len(result),
-                cls.get_database_path()
+                "Exporting %s jobs in %s", len(result), cls.get_database_path()
             )
             cls.list_to_sql(result)
 

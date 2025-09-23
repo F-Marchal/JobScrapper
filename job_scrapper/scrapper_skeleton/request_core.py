@@ -5,12 +5,6 @@ import time
 import zipfile
 from typing import Callable
 from urllib.parse import urlparse
-from selenium.common.exceptions import (
-    TimeoutException,
-)
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
 
 import bs4
 from bs4 import BeautifulSoup
@@ -18,8 +12,16 @@ from geopy.distance import geodesic  # type: ignore[import-untyped]
 from geopy.exc import GeocoderServiceError  # type: ignore[import-untyped]
 from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
 from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import (
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from .object_core import ScrapperObjectCore
 
@@ -83,8 +85,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
     def interrogate_website(
         cls,
         prepare_page: Callable | None = None,
-        ensure_uniqueness: bool = True
-
+        ensure_uniqueness: bool = True,
     ) -> list["ScrapperRequestCore"]:
         """
         Interrogate the website stored in <cls.website_url> to extract job offers.
@@ -123,7 +124,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
                     # Remember : Offers can be split between multiple pages.
                     # An invalid page number load the first page.
                     page_already_reached = True
-                    cls.logger.debug("Page %s already reached. Quiting loop.", page_index)
+                    cls.logger.debug(
+                        "Page %s already reached. Quiting loop.", page_index
+                    )
                     continue
 
                 # A : No, lets continue !
@@ -132,7 +135,11 @@ class ScrapperRequestCore(ScrapperObjectCore):
                 last_number_of_offer = len(offers)
                 cls.complete_job_page_parsing(offers, html_block_of_interest)
                 new_number_of_offer = len(offers)
-                cls.logger.debug("Number of offers incremented from %s to %s", last_number_of_offer, new_number_of_offer)
+                cls.logger.debug(
+                    "Number of offers incremented from %s to %s",
+                    last_number_of_offer,
+                    new_number_of_offer,
+                )
 
                 # Kill switch when each page without offer have a new html_block_of_interest
                 # but does not contain offers
@@ -140,7 +147,11 @@ class ScrapperRequestCore(ScrapperObjectCore):
                     cls.logger.debug("Page %s contains no job !", page_index)
                     if no_offer_in_last_page:
                         page_already_reached = True
-                        cls.logger.debug("Page %s and %s contains no job. Quiting loop.", page_index-1, page_index)
+                        cls.logger.debug(
+                            "Page %s and %s contains no job. Quiting loop.",
+                            page_index - 1,
+                            page_index,
+                        )
                     else:
                         no_offer_in_last_page = True
                 else:
@@ -160,7 +171,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         return offers
 
     @classmethod
-    def _ensure_job_uniqueness(cls, offers) ->  list["ScrapperRequestCore"]:
+    def _ensure_job_uniqueness(cls, offers) -> list["ScrapperRequestCore"]:
         complete_length = len(offers)
         cls.logger.debug("Cleaning offer list. (%s items)", complete_length)
         urls = set()
@@ -172,10 +183,13 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
             urls.add(each_offer.url)
             result.append(each_offer)
-        cls.logger.debug("Removed %s offers (%s / %s)", len(offers), len(offers), complete_length)
+        cls.logger.debug(
+            "Removed %s offers (%s / %s)",
+            len(offers),
+            len(offers),
+            complete_length,
+        )
         return result
-
-
 
     @classmethod
     def rough_page_parsing(
@@ -263,10 +277,12 @@ class ScrapperRequestCore(ScrapperObjectCore):
         return obj
 
     @classmethod
-    def _job_offer_fetch_require_manual_actions_command(cls) -> list[bs4.BeautifulSoup]:
+    def _job_offer_fetch_require_manual_actions_command(
+        cls,
+    ) -> list[bs4.BeautifulSoup]:
         """Uses selenium to clik on button when we can not just use {page} in url.
         Returns a list of bs4.BeautifulSoup that correspond to a html page."""
-        raise NotImplementedError("Should be reimplemented when inherited")
+        return []
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
@@ -302,19 +318,20 @@ class ScrapperRequestCore(ScrapperObjectCore):
         return cls.extract_baseurl(cls.website_url)
 
     @classmethod
-    def _close_pop_up(cls, browser, button_identifier, by=By.CSS_SELECTOR, msg="Pop up"):
+    def _close_pop_up(
+        cls, browser, button_identifier, by=By.CSS_SELECTOR, msg="Pop up"
+    ):
         try:
-            pop_up = cls._wait_until_clickable(
-                browser,
-                (by, button_identifier)
-            )
+            pop_up = cls._wait_until_clickable(browser, (by, button_identifier))
             pop_up.click()
             cls.logger.debug("%s is closed.", msg)
         except TimeoutException:
             cls.logger.debug("%s not found.", msg)
 
     @classmethod
-    def _parse_offer_page_using_buttons(cls, command: Callable) -> list[BeautifulSoup]:
+    def _parse_offer_page_using_buttons(
+        cls, command: Callable[[WebDriver], tuple[WebElement, bool]]
+    ) -> list[BeautifulSoup]:
         browser = cls.open_url_inside_browser(cls.website_url)
         is_disabled = False
         all_pages = []
@@ -341,7 +358,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
                 all_pages.append(soup)
 
             else:
-                cls.logger.debug("No page %s, closing browser on %s", i + 1, cls.website_url)
+                cls.logger.debug(
+                    "No page %s, closing browser on %s", i + 1, cls.website_url
+                )
                 browser.close()
 
         return all_pages
@@ -384,7 +403,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         cls.logger.info("Starting Analysis of %s jobs", len(jobs))
         cls.logger.debug("Analysis' <localisations> : %s", localisations)
-        cls.logger.debug("Analysis' <known_localisations> : %s", known_localisations)
+        cls.logger.debug(
+            "Analysis' <known_localisations> : %s", known_localisations
+        )
         cls.logger.debug("Analysis' <keywords> : %s", keywords)
         cls.logger.debug("Analysis' <known_urls> : %s", known_urls)
         cls.logger.debug("Analysis' <save_job_page> : %s", save_job_page)
@@ -530,7 +551,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
         if keywords:
             self.search_keywords(page_content, **keywords)
 
-    def _generate_job_file_name(self, ext: str | None=None) -> tuple[str, str]:
+    def _generate_job_file_name(
+        self, ext: str | None = None
+    ) -> tuple[str, str]:
         """
         Generate a name (and a path) for when the content of self.url should be saved.
         This path will be self.workdir/self.get_class_name()/time self.title
@@ -544,7 +567,7 @@ class ScrapperRequestCore(ScrapperObjectCore):
         else:
             name = formatted_time + " " + self.title[:30]
 
-        sanitized_name = re.sub(r'[<>"/\\|?*\x00-\x1F]', '', name)
+        sanitized_name = re.sub(r'[<>"/\\|?*\x00-\x1F]', "", name)
         sanitized_name = sanitized_name.strip()
 
         folder = os.path.join(self.workdir, self.get_class_name())
@@ -575,7 +598,9 @@ class ScrapperRequestCore(ScrapperObjectCore):
 
         # Reduce path length when possible
         if self.workdir in file_path:
-            self._metadata["job_page"] = os.path.relpath(file_path, start=self.workdir)
+            self._metadata["job_page"] = os.path.relpath(
+                file_path, start=self.workdir
+            )
         else:
             self._metadata["job_page"] = file_path
 
@@ -594,17 +619,28 @@ class ScrapperRequestCore(ScrapperObjectCore):
         self._search_keyword_in_page_content(page_content, **keywords)
         self._search_keywords_in_attributes(**keywords)
 
-
     def _search_keywords_in_attributes(self, **keywords: list[str]):
         for key, list_of_associated_keywords in keywords.items():
             if key not in self._keywords:
                 self._keywords[key] = 0
 
             for patterns in list_of_associated_keywords:
-                count = len(re.findall(f"(?={patterns.lower()})", self.field.lower()))
-                count += len(re.findall(f"(?={patterns.lower()})", self.contract_type.lower()))
-                count += len(re.findall(f"(?={patterns.lower()})", self.localisation.lower()))
-                count += len(re.findall(f"(?={patterns.lower()})", self.title.lower()))
+                count = len(
+                    re.findall(f"(?={patterns.lower()})", self.field.lower())
+                )
+                count += len(
+                    re.findall(
+                        f"(?={patterns.lower()})", self.contract_type.lower()
+                    )
+                )
+                count += len(
+                    re.findall(
+                        f"(?={patterns.lower()})", self.localisation.lower()
+                    )
+                )
+                count += len(
+                    re.findall(f"(?={patterns.lower()})", self.title.lower())
+                )
                 self._keywords[key] += count
 
     def _search_keyword_in_page_content(

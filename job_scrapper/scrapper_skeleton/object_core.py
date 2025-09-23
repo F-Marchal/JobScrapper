@@ -4,6 +4,7 @@ import time
 from contextlib import contextmanager
 from typing import Sequence
 
+# pylint: disable=E0611
 from mypy.types_utils import AnyType
 
 from .logger_core import CoreLogger
@@ -51,7 +52,7 @@ class ScrapperObjectCore(CoreLogger):
 
         self._distances: dict[str, float] = {}
         self._keywords: dict[str, int] = {}
-        local_time =  time.localtime()
+        local_time = time.localtime()
         self._time_stamps: dict[str, time.struct_time] = {
             "last_sighting": local_time,
         }
@@ -62,15 +63,21 @@ class ScrapperObjectCore(CoreLogger):
                 """
                 select time_stamp from TimeStamps where TimeStamps.url=? and TimeStamps.keyword="first_sighting";
                 """,
-                [self.url]
+                [self.url],
             )
             result = cursor.fetchall()
 
         if result:
             try:
-                self._time_stamps["first_sighting"] = time.strptime(result[-1][0], "%Y-%m-%d %H:%M:%S")
+                self._time_stamps["first_sighting"] = time.strptime(
+                    result[-1][0], "%Y-%m-%d %H:%M:%S"
+                )
             except ValueError as ve:
-                self.logger.error("Error during loading of the 'first_sighting' time_stamp of '%s' : \n %s", url, ve)
+                self.logger.error(
+                    "Error during loading of the 'first_sighting' time_stamp of '%s' : \n %s",
+                    url,
+                    ve,
+                )
         else:
             self._time_stamps["first_sighting"] = local_time
 
@@ -93,7 +100,9 @@ class ScrapperObjectCore(CoreLogger):
         are directly contained inside the dictionary.
         """
         items = [
-            time.strftime("%Y-%m-%d %H:%M:%S", self._time_stamps["last_sighting"]),
+            time.strftime(
+                "%Y-%m-%d %H:%M:%S", self._time_stamps["last_sighting"]
+            ),
             self.get_class_name(),
             self.localisation,
             self.field,
@@ -392,7 +401,13 @@ class ScrapperObjectCore(CoreLogger):
         for cat_name in self.default_header:
             command[1] += self.sql_compatible_header_keyword(cat_name) + ", "
 
-            if str(self_dict[cat_name]).lower() not in ("", "none", "undefined", "n/a", "?"):
+            if str(self_dict[cat_name]).lower() not in (
+                "",
+                "none",
+                "undefined",
+                "n/a",
+                "?",
+            ):
                 value = self_dict[cat_name]
             else:
                 value = None
@@ -480,12 +495,16 @@ class ScrapperObjectCore(CoreLogger):
             "VALUES",
         ]
         for key, value in self.time_stamps.items():
-            command.append(f"(?, ?, ?),")
-            format_list.extend([self.url, key, time.strftime("%Y-%m-%d %H:%M:%S", value)])
+            command.append("(?, ?, ?),")
+            format_list.extend(
+                [self.url, key, time.strftime("%Y-%m-%d %H:%M:%S", value)]
+            )
 
         return self._sql_finalise_export(command, format_list)
 
-    def _sql_finalise_export(self, command: list[str], format_list: list[AnyType]) -> None:
+    def _sql_finalise_export(
+        self, command: list[str], format_list: list[AnyType]
+    ) -> None:
         command[-1] = command[-1].removesuffix(",") + ";"
 
         if not format_list:
@@ -501,7 +520,15 @@ class ScrapperObjectCore(CoreLogger):
     # --- --- --- --- Sqlite --- --- ---
 
     @staticmethod
-    def get_unique_file_name(file_path, ext):
+    def get_unique_file_name(file_path: str, ext: str) -> str:
+        """
+        Give a filename that does not exist.
+        if <file_path>.<ext> exist, <file_path>-<#>.<ext> will be tested. <#> is incremented
+        until an unoccupied file name is found.
+        :param str file_path: folder/filename
+        :param str ext: file extension that should be added to  folder/filename (-->  folder/filename.ext)
+        :return:
+        """
         default_name = file_path + "." + ext
         if not os.path.exists(file_path + ext):
             return default_name

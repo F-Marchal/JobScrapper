@@ -1,13 +1,11 @@
 import re
-import time
 
-import bs4
 from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
 
 
 class SFBIScrapper(srk.JobScrapperSkeleton):
@@ -32,49 +30,28 @@ class SFBIScrapper(srk.JobScrapperSkeleton):
     ]
 
     @classmethod
-    def extract_block_of_interest(cls, soup) -> list[BeautifulSoup]:
+    def extract_block_of_interest(cls, soup) -> BeautifulSoup:
         return soup.find(
             name="table",
         )
 
     @classmethod
-    def _job_offer_fetch_require_manual_actions_command(cls) -> list[bs4.BeautifulSoup]:
-        browser = cls.open_url_inside_browser(cls.website_url)
-        is_disabled = False
-        all_pages = []
-        i = 1
-        while not is_disabled:
-            cls._rough_page_parsing_actions(browser)
-            if i == 1:
-                cls.logger.debug("Loading page %s", i)
-                html = browser.page_source
-                soup = BeautifulSoup(html, "html.parser")
-                all_pages.append(soup)
-            i += 1
+    def _job_offer_fetch_require_manual_actions_command(
+        cls,
+    ) -> list[BeautifulSoup]:
+        return cls._parse_offer_page_using_buttons(cls._next_page_command)
 
-            next_page_btn = cls._wait_until_clickable(
-                browser,
-                    (
-                        By.CSS_SELECTOR,
-                        "button.page-link.next",
-                    )
-                )
-            is_disabled = next_page_btn.get_attribute("aria-disabled")
-
-            if not is_disabled:
-                next_page_btn.click()
-                cls.logger.debug("Loading page %s", i)
-                html = browser.page_source
-                soup = BeautifulSoup(html, "html.parser")
-                all_pages.append(soup)
-                time.sleep(cls.sleep_during_page_loading)
-
-
-            else:
-                cls.logger.debug("No page %s, closing browser on %s", i + 1, cls.website_url)
-                browser.close()
-
-        return all_pages
+    @classmethod
+    def _next_page_command(cls, browser: WebDriver) -> tuple[WebElement, bool]:
+        next_button = cls._wait_until_clickable(
+            browser,
+            (
+                By.CSS_SELECTOR,
+                "button.page-link.next",
+            ),
+        )
+        is_disabled = next_button.get_attribute("aria-disabled")
+        return next_button, is_disabled
 
     @classmethod
     def complete_job_page_parsing(

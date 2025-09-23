@@ -1,15 +1,10 @@
 import time
-from typing import Callable
 
 from bs4 import BeautifulSoup
-from selenium.common.exceptions import (
-    ElementClickInterceptedException,
-    StaleElementReferenceException,
-    TimeoutException,
-)
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
@@ -18,10 +13,10 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
     """
     Use JobScrapperSkeleton to extract jobs offers from Sanofi's website (Limited to France)
     """
+
     website_url = "https://jobs.sanofi.com/fr/recherche-d%27offres/France/2649/2/3017382/46/2/50/2"
     job_across_multiple_pages = True
     job_offer_fetch_require_manual_actions = True
-    selenium_chrome_options = None
 
     @classmethod
     def extract_block_of_interest(cls, soup) -> BeautifulSoup:
@@ -56,46 +51,46 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
             }
             offers.append(cls(**kwargs))
 
-
     @classmethod
     def _rough_page_parsing_actions(cls, browser) -> None:
         cls._close_pop_up(
             browser=browser,
             by=By.CSS_SELECTOR,
             button_identifier="button.onetrust-close-btn-handler.banner-close-button.ot-close-link",
-            msg="Cookies pop"
+            msg="Cookies pop",
         )
         super()._rough_page_parsing_actions(browser)
 
     @classmethod
-    def _next_page_command(cls, browser):
+    def _next_page_command(cls, browser: WebDriver) -> tuple[WebElement, bool]:
         try:
 
             next_button = cls._wait_until_clickable(
-                browser,
-                (By.CSS_SELECTOR, "a.next.disabled")
+                browser, (By.CSS_SELECTOR, "a.next.disabled")
             )
             is_disabled = True
 
         except TimeoutException:
             next_button = cls._wait_until_clickable(
-                browser,
-                (By.CSS_SELECTOR, "a.next")
+                browser, (By.CSS_SELECTOR, "a.next")
             )
 
             is_disabled = False
 
-
-
-        browser.execute_script("arguments[0].scrollIntoView({block: 'center'});", next_button)
+        browser.execute_script(
+            "arguments[0].scrollIntoView({block: 'center'});", next_button
+        )
 
         time.sleep(2)
 
         return next_button, is_disabled
 
     @classmethod
-    def _job_offer_fetch_require_manual_actions_command(cls) -> list[BeautifulSoup]:
+    def _job_offer_fetch_require_manual_actions_command(
+        cls,
+    ) -> list[BeautifulSoup]:
         return cls._parse_offer_page_using_buttons(cls._next_page_command)
+
 
 class SanofiMontpellierScrapper(SanofiScrapper):
     """

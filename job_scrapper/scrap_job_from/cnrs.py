@@ -1,10 +1,11 @@
-from bs4 import BeautifulSoup
+import time
 
+from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-import time
+
 
 class CNRScrapper(srk.JobScrapperSkeleton):
     """
@@ -24,7 +25,9 @@ class CNRScrapper(srk.JobScrapperSkeleton):
     ]
 
     @classmethod
-    def _job_offer_fetch_require_manual_actions_command(cls) -> list[BeautifulSoup]:
+    def _job_offer_fetch_require_manual_actions_command(
+        cls,
+    ) -> list[BeautifulSoup]:
         i = 0
         continue_ = True
         pages = []
@@ -32,7 +35,7 @@ class CNRScrapper(srk.JobScrapperSkeleton):
             soup = cls._parse_region(i)
             i += 1
 
-            if soup :
+            if soup:
                 pages.append(soup)
             else:
                 continue_ = False
@@ -48,24 +51,27 @@ class CNRScrapper(srk.JobScrapperSkeleton):
         time.sleep(cls.sleep_during_page_loading)
 
         dropdown_element = cls._wait_until_clickable(
-            browser,
-            (By.ID, "DdlBassinsGeographiques")
+            browser, (By.ID, "DdlBassinsGeographiques")
         )
 
         search_btn = cls._wait_until_clickable(
-            browser,
-            (By.ID, "CphMain_BtnRecherche")
+            browser, (By.ID, "CphMain_BtnRecherche")
         )
 
         dropdown = Select(dropdown_element)
         options = dropdown.options
-        region_list = sorted([opt.get_attribute("value") for opt in options])
+        region_list = sorted(
+            [
+                str(opt.get_attribute("value"))
+                for opt in options
+                if opt.get_attribute("value") is not None
+            ]
+        )
         if len(region_list) <= index:
             return None
         region = region_list[index]
 
         time.sleep(cls.sleep_during_page_loading)
-
 
         cls.logger.debug("Loading '%s'", region)
         dropdown.select_by_value(region)
