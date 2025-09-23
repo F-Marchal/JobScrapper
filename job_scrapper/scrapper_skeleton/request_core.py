@@ -23,12 +23,12 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from .object_core import ScrapperObjectCore
+from .sql_core import ScrapperSQLightCore
 
 
-class ScrapperRequestCore(ScrapperObjectCore):
+class ScrapperRequestCore(ScrapperSQLightCore):
     """
-    Specialisation of ScrapperObjectCore. Add the ability to fetch
+    Specialisation of ScrapperSQLightCore. Add the ability to fetch
     website's jobs, count keywords occurrences inside the description
     of an offer and compute distances between two localisation
     (e.g. job' address and a city)
