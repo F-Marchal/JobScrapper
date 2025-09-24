@@ -115,7 +115,7 @@ class CoreLogger:
         cls.file_log_handler.setLevel(level)
 
         cls.file_log_handler.setFormatter(
-            logging.Formatter("[%(levelname)s] %(message)s")
+            logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
         )
 
         cls.logger.addHandler(cls.file_log_handler)
