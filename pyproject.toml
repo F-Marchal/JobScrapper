@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "JobScrapper"
-version="0.3.0"
+version="0.4.0"
 description = "A simple library that dowload job offers from several instituts."
 authors = ["Marhal Florent <marchal.florent.pro@gmail.com>"]
 readme = "README.md"

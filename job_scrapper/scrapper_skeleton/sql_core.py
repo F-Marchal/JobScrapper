@@ -1,21 +1,25 @@
 import os
+import pathlib
 import sqlite3
 import time
 from contextlib import contextmanager
-from typing import Sequence
+from typing import Sequence, Union
 
 # pylint: disable=E0611
 from mypy.types_utils import AnyType
 
 from .object_core import ScrapperObjectCore
-import pathlib
+
 
 class ScrapperSQLightCore(ScrapperObjectCore):
     """
     Specialisation of ScrapperObjectCore that allows
     SQL exports and add the creation of an SQL database
     """
-    _sql_command_folder = pathlib.Path(__file__).parent.resolve().joinpath("sql")
+
+    _sql_command_folder = (
+        pathlib.Path(__file__).parent.resolve().joinpath("sql")
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -123,10 +127,10 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         """
         return (
             f"CREATE TABLE IF NOT EXISTS {cls.distances_table_name} ("
-            + "localisation1 TEXT NOT NULL,"
-            + "localisation2 TEXT NOT NULL,"
+            + "reference_localisation TEXT NOT NULL,"
+            + "job_localisation TEXT NOT NULL,"
             + "distance REAL NOT NULL,"
-            + "PRIMARY KEY(localisation1, localisation2)"
+            + "PRIMARY KEY(reference_localisation, job_localisation)"
             ");"
         )
 
@@ -145,16 +149,6 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             ");",
         ]
         return "\n".join(command)
-
-    @staticmethod
-    def sort_localisations(localisation1: str, localisation2: str) -> list[str]:
-        """
-        Sort two string by alphabetic order.
-        :param str localisation1: a string
-        :param str localisation2: another string
-        :return:
-        """
-        return sorted([localisation1, localisation2])
 
     @classmethod
     def ensure_tables_presences(cls, cursor):
@@ -284,7 +278,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         # Prepare sql command
         command = [
-            f"INSERT OR REPLACE INTO {self.distances_table_name}(localisation1, localisation2, distance)",
+            f"INSERT OR REPLACE INTO {self.distances_table_name}(reference_localisation, job_localisation, distance)",
             "VALUES",
         ]
         format_list = []
@@ -295,10 +289,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 # Do not flood database with useless values
                 continue
 
-            loc1, loc2 = self.sort_localisations(
-                self.localisation, localisation
-            )
-            format_list.extend([loc1, loc2, distance])
+            format_list.extend([localisation, self.localisation, distance])
             command.append("(?, ?, ?),")
 
         return self._sql_finalise_export(command, format_list)
@@ -347,13 +338,13 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     # --- --- Exports --- ---
     # --- --- Requests --- ---
     @classmethod
-    def sql_run(cls, command, *args) -> list[tuple[str | int | None]]:
+    def sql_run(cls, command, *args) -> list[tuple[Union[str, int, None], ...]]:
         with cls.write_in_database() as cursor:
             cursor.execute(command, args)
             return cursor.fetchall()
 
     @classmethod
-    def sql_run_file(cls, name: str) -> list[tuple[str | int | None]]:
+    def sql_run_file(cls, name: str) -> list[tuple[Union[str, int, None], ...]]:
         sql_file = cls._sql_command_folder.joinpath(name)
         with open(sql_file, "r", encoding="utf-8") as f:
             command = f.read()
@@ -371,24 +362,26 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         return [str(tup[0]) for tup in cls.sql_run(command)]
 
     @classmethod
-    def sql_table_details(cls, table: str) -> list[tuple[str | int | None]]:
+    def sql_table_details(
+        cls, table: str
+    ) -> list[tuple[Union[str, int, None], ...]]:
         command = f"PRAGMA table_info('{table}');"
         return cls.sql_run(command)
 
     @classmethod
     def sql_table_column_name(cls, table: str) -> list[str]:
-        return [str(tup[1]) for tup in cls.sql_table_details(table)]
+        return [str(tup[1]) for tup in cls.sql_table_details(table) if tup]
 
     @classmethod
-    def sql_column_content(cls, table: str, column: str, distinct: bool=False) -> list[str | None | int]:
+    def sql_column_content(
+        cls, table: str, column: str, distinct: bool = False
+    ) -> list[str | None | int]:
         distinct_kw = "DISTINCT" if distinct else ""
         command = f"SELECT {distinct_kw} {table}.{column} from jobs;"
         return [tup[0] for tup in cls.sql_run(command)]
 
-
     # --- --- Requests --- ---
     # --- --- --- --- Sqlite --- --- ---
-
 
 
 if __name__ == "__main__":
