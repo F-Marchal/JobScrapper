@@ -8,13 +8,15 @@ from typing import Sequence
 from mypy.types_utils import AnyType
 
 from .object_core import ScrapperObjectCore
-
+import pathlib
 
 class ScrapperSQLightCore(ScrapperObjectCore):
     """
     Specialisation of ScrapperObjectCore that allows
     SQL exports and add the creation of an SQL database
     """
+    _sql_command_folder = pathlib.Path(__file__).parent.resolve().joinpath("sql")
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -235,8 +237,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         true_command = " ".join(command) + ";"
 
-        with self.write_in_database() as cursor:
-            cursor.execute(true_command, format_list)
+        self.sql_run(true_command, *format_list)
 
     def _sql_export_metadata(self):
         if not self.metadata:
@@ -267,7 +268,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         # Fill command / format_list
         for keyword, occurrences in self.keywords.items():
-            if occurrences == -1:
+            if occurrences == -1 or occurrences == 0:
                 # Do not flood database with useless values
                 continue
 
@@ -330,10 +331,8 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         true_command = "\n".join(command)
 
-        with self.write_in_database() as cursor:
-            cursor.execute(true_command, format_list)
+        self.sql_run(true_command, *format_list)
 
-    # --- --- Exports --- ---
     @classmethod
     def list_to_sql(cls, jobs: Sequence["ScrapperSQLightCore"]):
         """
@@ -345,7 +344,51 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         for job_obj in jobs:
             job_obj.sql_export()
 
+    # --- --- Exports --- ---
+    # --- --- Requests --- ---
+    @classmethod
+    def sql_run(cls, command, *args) -> list[tuple[str | int | None]]:
+        with cls.write_in_database() as cursor:
+            cursor.execute(command, args)
+            return cursor.fetchall()
+
+    @classmethod
+    def sql_run_file(cls, name: str) -> list[tuple[str | int | None]]:
+        sql_file = cls._sql_command_folder.joinpath(name)
+        with open(sql_file, "r", encoding="utf-8") as f:
+            command = f.read()
+
+        return cls.sql_run(command)
+
+    @classmethod
+    def sql_table_names(cls) -> list[str]:
+        command = """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table'
+            ORDER BY name;
+        """
+        return [str(tup[0]) for tup in cls.sql_run(command)]
+
+    @classmethod
+    def sql_table_details(cls, table: str) -> list[tuple[str | int | None]]:
+        command = f"PRAGMA table_info('{table}');"
+        return cls.sql_run(command)
+
+    @classmethod
+    def sql_table_column_name(cls, table: str) -> list[str]:
+        return [str(tup[1]) for tup in cls.sql_table_details(table)]
+
+    @classmethod
+    def sql_column_content(cls, table: str, column: str, distinct: bool=False) -> list[str | None | int]:
+        distinct_kw = "DISTINCT" if distinct else ""
+        command = f"SELECT {distinct_kw} {table}.{column} from jobs;"
+        return [tup[0] for tup in cls.sql_run(command)]
+
+
+    # --- --- Requests --- ---
     # --- --- --- --- Sqlite --- --- ---
+
 
 
 if __name__ == "__main__":
