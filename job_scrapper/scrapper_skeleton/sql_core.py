@@ -1,21 +1,39 @@
+import logging
 import os
 import pathlib
 import sqlite3
 import time
 from contextlib import contextmanager
 from typing import Sequence, Union
-
+import re
 # pylint: disable=E0611
 from mypy.types_utils import AnyType
 
 from .object_core import ScrapperObjectCore
-
+from dataclasses import dataclass, field
 
 class ScrapperSQLightCore(ScrapperObjectCore):
     """
     Specialisation of ScrapperObjectCore that allows
     SQL exports and add the creation of an SQL database
     """
+
+    database_file_name = "AllJobs"
+
+    main_table_name = "Jobs"
+    metadata_table_name = "Metadata"
+    keywords_table_name = "KeywordsCount"
+    distances_table_name = "Distances"
+    time_stamps_table_name = "TimeStamps"
+
+    # TODO: Utiliser dans creation / export ?
+    _tables = {
+        main_table_name: [],
+        metadata_table_name: [],
+        keywords_table_name: [],
+        distances_table_name: [],
+        time_stamps_table_name: [],
+    }
 
     _sql_command_folder = (
         pathlib.Path(__file__).parent.resolve().joinpath("sql")
@@ -74,7 +92,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         :param str keyword: a string
         :return:
         """
-        return keyword.lower().replace("#", "")
+        if keyword[0] == '#':
+            keyword = keyword[1:]
+        return re.sub(r'[^0-9a-zA-Z_]', '_', keyword.strip()).replace("__", "_")
 
     # --- --- Names and paths --- ---
     # --- --- Databases --- ---
@@ -92,6 +112,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         database_definition.append(")")
 
         database_command = "\n".join(database_definition)
+        print(database_command)
         return database_command
 
     @classmethod
@@ -339,12 +360,14 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     # --- --- Requests --- ---
     @classmethod
     def sql_run(cls, command, *args) -> list[tuple[Union[str, int, None], ...]]:
+        cls.logger.debug("Running : %s", command)
         with cls.write_in_database() as cursor:
             cursor.execute(command, args)
             return cursor.fetchall()
 
     @classmethod
     def sql_run_file(cls, name: str) -> list[tuple[Union[str, int, None], ...]]:
+        cls.logger.debug("Opening as SQL command : %s", name)
         sql_file = cls._sql_command_folder.joinpath(name)
         with open(sql_file, "r", encoding="utf-8") as f:
             command = f.read()
@@ -377,13 +400,190 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         cls, table: str, column: str, distinct: bool = False
     ) -> list[str | None | int]:
         distinct_kw = "DISTINCT" if distinct else ""
-        command = f"SELECT {distinct_kw} {table}.{column} from jobs;"
+        command = f"SELECT {distinct_kw} {table}.{column} from {table};"
         return [tup[0] for tup in cls.sql_run(command)]
+
+
+    @classmethod
+    def get_sql_reference_places(cls):
+        return cls.sql_column_content("Distances", "reference_localisation", distinct=True)
+
+
+    @classmethod
+    def parse_distances(cls, *distances: str):
+        reference_localisations = cls.get_sql_reference_places()
+        pattern = re.compile("|".join(reference_localisations))
+        cls.logger.debug("Parsing distances : %s", distances)
+
+        result = []
+        for strings in distances:
+            pattern_found = re.findall(pattern, strings)
+            if not pattern_found:
+                logging.warning("Ignoring unknown localisation : '%s'", strings)
+                continue
+
+            reference = pattern_found[0]
+            condition = strings[len(reference):]
+
+            if not condition:
+                result.append((reference, None, None))
+                continue
+
+
+            if condition[0] in (">", "<"):
+                operator = condition[0]
+            else:
+                cls.logger.warning("Ignoring localisation ('%s') : "
+                                   "Unknown operator ('%s'). (Use '<', '>')", strings, condition[0])
+                continue
+
+
+            if len(condition) == 1:
+                cls.logger.warning("Ignoring localisation ('%s') : Missing value after '%s'", strings, operator)
+                continue
+
+
+            try:
+                value = float(condition[1:])
+            except ValueError as error:
+                cls.logger.warning("Can not parse '%s' : %s", condition[1:], error)
+                continue
+
+            result.append((reference, operator, value))
+
+        return result
+
+    @dataclass
+    class SQLCommandFormater:
+        select_command: list[str] = field(default_factory=list)
+        join_command: list[str] = field(default_factory=list)
+        having_command: list[str] = field(default_factory=list)
+        select_arguments: list[str] = field(default_factory=list)
+        join_arguments: list[str] = field(default_factory=list)
+        having_arguments: list[str] = field(default_factory=list)
+
+        def construct(self):
+            print(""
+            + "\n\t".join(self.select_command)
+            + "\n\t".join(self.join_command)
+            + "\n\t".join(self.having_command)
+            )
+
+    @classmethod
+    def _sql_main_generate_distance_command(
+            cls,
+            distances_from: list[str],
+            scf: 'SQLCommandFormater'
+    ):
+        result = cls.parse_distances(*distances_from)
+        tab = cls.distances_table_name
+        # Select
+        renaming = f"MAX(CASE WHEN {tab}.reference_localisation = ? THEN {tab}.distance END) AS ?"
+
+        for (reference, operator, value) in result:
+            # Select
+            reference_column_name = cls.sql_compatible_header_keyword(f"{reference}_km")
+            scf.select_command.append(renaming)
+            scf.select_arguments.append(reference)
+
+            # Join
+            scf.join_arguments.append(reference)
+
+            if operator:
+                # Having
+                scf.having_command.append(f"{reference_column_name} {operator} ?")
+                scf.having_arguments.append(value)
+
+
+        scf.join_command.extend([
+            "LEFT JOIN Distances",
+            f"\tON Jobs.localisation = {tab}.job_localisation",
+            f"\tAND Distances.reference_localisation IN ({', '.join(['?'] * len(result))})"
+        ])
+
+    # TODO Dict tab format
+
+    @classmethod
+    def sql_main(cls, distances_from: list[str]):
+        import pprint
+        command_formater = cls.SQLCommandFormater()
+        command_formater.select_command.append(f"Select {cls.main_table_name}.*")
+        cls._sql_main_generate_distance_command(distances_from, command_formater)
+        command_formater.construct()
+
+        # Conclude
+        command_formater.select_command.append(f"FROM {cls.main_table_name}")
+
+
+    """
+        @classmethod
+        def sql_main_generate_distance_command(cls, distances_from: list[str]):
+            result = cls.parse_distances(*distances_from)
+    
+            # Select
+            renaming = "MAX(CASE WHEN Distances.reference_localisation = ? THEN Distances.distance END) AS {}"
+            reference_translation = {}
+            select_arguments = []
+            select_command = []
+    
+            # Join
+            join_arguments = []
+    
+            # Having
+            having_command = []
+            having_arguments = []
+    
+    
+            for (reference, operator, value) in result:
+                # Select
+                reference_column_name = cls.sql_compatible_header_keyword(f"{reference}_km")
+                reference_translation[reference] = reference_column_name
+                select_command.append(renaming.format(reference_column_name))
+                select_arguments.append(reference)
+    
+                # Join
+                join_arguments.append(reference)
+    
+                if operator:
+                    # Having
+                    having_command.append(f"{reference_column_name} {operator} ?")
+                    having_arguments.append(value)
+    
+    
+            join_string_command = (
+                "LEFT JOIN Distances\n"
+                "ON Jobs.localisation = Distances.job_localisation\n"
+                f"AND Distances.reference_localisation IN ({', '.join(['?'] * len(join_arguments))})\n"
+            )
+    
+            return {
+                "select": (",\n\t".join(select_command), select_arguments),
+                "join": (join_string_command, join_arguments),
+                "having": (" AND\n\t".join(having_command), having_arguments)
+            }
+    
+    
+        @classmethod
+        def sql_main(cls, distances_from: list[str]):
+            distance_command_parts = cls.sql_main_generate_distance_command(distances_from)
+    
+            comm = "SELECT Jobs.*, " + \
+                distance_command_parts["select"][0] + \
+                " FROM Jobs " + \
+                distance_command_parts["join"][0] + \
+                "GROUP BY Jobs.url HAVING " + \
+                distance_command_parts["having"][0] + \
+                ";"
+    
+            print(comm)
+    
+            print(cls.sql_run(comm, *[*distance_command_parts["select"][1], *distance_command_parts["join"][1], *distance_command_parts["having"][1]]))
+    """
 
     # --- --- Requests --- ---
     # --- --- --- --- Sqlite --- --- ---
 
-
+# TODO Dict tab format
 if __name__ == "__main__":
     # test = ScrapperObjectCore("Test1'", 'Paris"', "https://google.com", "CDD", "Biology", fake='True', second="3")
     # test.keywords["Alpha'"] = 34

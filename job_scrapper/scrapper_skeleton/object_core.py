@@ -17,13 +17,6 @@ class ScrapperObjectCore(CoreLogger):
     this object.
     """
 
-    database_file_name = "AllJobs"
-    main_table_name = "Jobs"
-    metadata_table_name = "Metadata"
-    keywords_table_name = "KeywordsCount"
-    distances_table_name = "Distances"
-    time_stamps_table_name = "TimeStamps"
-
     workdir = "./JobScrapperWorkDir/"
 
     def __init__(

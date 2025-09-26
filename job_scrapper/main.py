@@ -114,10 +114,10 @@ def database(ctx, after):
     else:
         ctx.obj["after"] = datetime.min
 
-
+@click.option( '-m', '--message', multiple=True)
 @database.command()
-def seek(ctx):
-    print(ctx)
+def seek(message):
+    print(message)
 
 
 # --- --- --- Database --- --- ---
