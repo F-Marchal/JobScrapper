@@ -26,15 +26,6 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     distances_table_name = "Distances"
     time_stamps_table_name = "TimeStamps"
 
-    # TODO: Utiliser dans creation / export ?
-    _tables = {
-        main_table_name: [],
-        metadata_table_name: [],
-        keywords_table_name: [],
-        distances_table_name: [],
-        time_stamps_table_name: [],
-    }
-
     _sql_command_folder = (
         pathlib.Path(__file__).parent.resolve().joinpath("sql")
     )
@@ -112,7 +103,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         database_definition.append(")")
 
         database_command = "\n".join(database_definition)
-        print(database_command)
+
         return database_command
 
     @classmethod
@@ -360,10 +351,17 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     # --- --- Requests --- ---
     @classmethod
     def sql_run(cls, command, *args) -> list[tuple[Union[str, int, None], ...]]:
-        cls.logger.debug("Running : %s", command)
+        cls.logger.debug("Running : \n%s",  cls._format_sql(command, args))
         with cls.write_in_database() as cursor:
             cursor.execute(command, args)
             return cursor.fetchall()
+
+    @classmethod
+    def sql_run_with_header(cls, command, *args) -> list[tuple[Union[str, int, None, bool], ...]]:
+        cls.logger.debug("Running : \n%s",  cls._format_sql(command, args))
+        with cls.write_in_database() as cursor:
+            cursor.execute(command, args)
+            return [cursor.description, *cursor.fetchall()]
 
     @classmethod
     def sql_run_file(cls, name: str) -> list[tuple[Union[str, int, None], ...]]:
@@ -385,7 +383,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         return [str(tup[0]) for tup in cls.sql_run(command)]
 
     @classmethod
-    def sql_table_details(
+    def sql_describe_table(
         cls, table: str
     ) -> list[tuple[Union[str, int, None], ...]]:
         command = f"PRAGMA table_info('{table}');"
@@ -393,7 +391,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     @classmethod
     def sql_table_column_name(cls, table: str) -> list[str]:
-        return [str(tup[1]) for tup in cls.sql_table_details(table) if tup]
+        return [str(tup[1]) for tup in cls.sql_describe_table(table) if tup]
 
     @classmethod
     def sql_column_content(
@@ -410,36 +408,65 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
 
     @classmethod
-    def parse_distances(cls, *distances: str):
-        reference_localisations = cls.get_sql_reference_places()
-        pattern = re.compile("|".join(reference_localisations))
-        cls.logger.debug("Parsing distances : %s", distances)
+    def parse_sql_generate_command_from_list(cls, table: str, column: str, *items: str, no_condition_allowed: bool = True,):
+        legal_names = cls.sql_column_content(table, column, distinct=True)
+        pattern = re.compile("|".join(legal_names))
+        cls.logger.debug("Parsing : %s", items)
 
         result = []
-        for strings in distances:
-            pattern_found = re.findall(pattern, strings)
+        for strings in items:
+            pattern_found = re.search(pattern, strings)
             if not pattern_found:
-                logging.warning("Ignoring unknown localisation : '%s'", strings)
+                cls.logger.warning(f"Ignoring unknown {table}.{column}'s value: '%s'\n"
+                                   f"Valid values are %s", strings, legal_names)
                 continue
 
-            reference = pattern_found[0]
-            condition = strings[len(reference):]
+            pos1, pos2 = pattern_found.span()
 
+
+            reference = strings[pos1:pos2]
+            if pos1 != 1:
+                sql_condition = "OR"
+
+            else:
+                if strings[0].upper() in ("&", "A"):
+                    sql_condition = "AND"
+
+                elif strings[0].upper() in ("|", "O"):
+                    sql_condition = "OR"
+
+                elif strings[0].upper() in ("^", "X"):
+                    sql_condition = "XOR"
+
+                else:
+                    cls.logger.warning("Unknown condition replaced by OR : '%s'."
+                                    "Please ues '&', 'A' (AND), '|', 'O' (OR), '^', 'X' (WOR) ",  strings[0])
+                    sql_condition = "OR"
+
+            condition = strings[pos2:]
+
+
+            if condition and no_condition_allowed:
+                cls.logger.warning(f"%s.%s does not support condition. Ignoring condition : %s", table, column, strings)
+                result.append((reference, None, None, None))
+                continue
             if not condition:
-                result.append((reference, None, None))
+                result.append((reference, None, None, None))
                 continue
 
 
-            if condition[0] in (">", "<"):
+            if condition[0] == "!":
+                operator = "<>"
+            elif condition[0] in (">", "<", "="):
                 operator = condition[0]
             else:
-                cls.logger.warning("Ignoring localisation ('%s') : "
-                                   "Unknown operator ('%s'). (Use '<', '>')", strings, condition[0])
+                cls.logger.warning("Ignoring condition ('%s') : "
+                                   "Unknown operator ('%s'). (Use '<', '>', '=', '!')", strings, condition[0])
                 continue
 
 
             if len(condition) == 1:
-                cls.logger.warning("Ignoring localisation ('%s') : Missing value after '%s'", strings, operator)
+                cls.logger.warning("Ignoring condition ('%s') : Missing value after '%s'", strings, operator)
                 continue
 
 
@@ -449,7 +476,8 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 cls.logger.warning("Can not parse '%s' : %s", condition[1:], error)
                 continue
 
-            result.append((reference, operator, value))
+
+            result.append((reference, operator, value, sql_condition))
 
         return result
 
@@ -457,62 +485,317 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     class SQLCommandFormater:
         select_command: list[str] = field(default_factory=list)
         join_command: list[str] = field(default_factory=list)
+        where_command: list[str] = field(default_factory=list)
         having_command: list[str] = field(default_factory=list)
-        select_arguments: list[str] = field(default_factory=list)
-        join_arguments: list[str] = field(default_factory=list)
-        having_arguments: list[str] = field(default_factory=list)
+        group_by_command:  list[str] = field(default_factory=list)
 
-        def construct(self):
-            print(""
-            + "\n\t".join(self.select_command)
-            + "\n\t".join(self.join_command)
-            + "\n\t".join(self.having_command)
+        select_command_conclusion: list[str] = field(default_factory=list)
+        join_command_conclusion: list[str] = field(default_factory=list)
+        having_command_conclusion: list[str] = field(default_factory=list)
+
+        select_arguments: list[str | int | None] = field(default_factory=list)
+        join_arguments: list[str | int | None] = field(default_factory=list)
+        where_arguments: list[str | int | None] = field(default_factory=list)
+        having_arguments: list[str | int | None] = field(default_factory=list)
+
+        @staticmethod
+        def _construct(
+                command,
+                end_command,
+                start_keyword="",
+                end_keyword="",
+                start_join=",\n\t",
+                end_join=" "
+        ) -> str:
+            return (f"{start_keyword}"
+                    f"{start_join.join(command)}"
+                    f"\n{end_keyword}"
+                    f"{end_join.join(end_command)}\n")
+
+
+        def _construct_select(self, command: str, command_arg: list, select=True, from_=True):
+            command += self._construct(
+                self.select_command,
+                self.select_command_conclusion,
+                start_keyword= "SELECT\n\t" if select else "",
+                end_keyword="FROM\n\t" if from_ and self.select_command_conclusion else "",
+            )
+            command_arg.extend(self.select_arguments)
+            return command
+
+        def _construct_join(self, command: str, command_arg: list):
+            command += self._construct(
+                self.join_command,
+                self.join_command_conclusion,
+                start_keyword= "",
+                end_keyword="",
+                start_join="\n\t",
+                end_join="",
+            )
+            command_arg.extend(self.join_arguments)
+            return command
+
+        def _construct_where(self, command: str, command_arg: list, where=True):
+            command += self._construct(
+                self.join_command,
+                self.join_command_conclusion,
+                start_keyword="WHERE\n\t" if where else "",
+                end_keyword="",
+                start_join="",
+                end_join="",
+            )
+            command_arg.extend(self.join_arguments)
+            return command
+
+        def _construct_having(self, command: str, command_arg: list, having=True):
+            command +=  self._construct(
+                self.having_command,
+                self.having_command_conclusion,
+                start_keyword= "HAVING\n\t" if having else "",
+                end_keyword="",
+                start_join = "\n\t",
+            )
+            command_arg.extend(self.having_arguments)
+            return command
+
+        def construct(self, select=True, from_=True, where=True, having=True,):
+            command = ""
+            command_arg = []
+
+            # Select
+            command = self._construct_select(
+                command,
+                command_arg,
+                select,
+                from_
             )
 
-    @classmethod
-    def _sql_main_generate_distance_command(
-            cls,
-            distances_from: list[str],
-            scf: 'SQLCommandFormater'
-    ):
-        result = cls.parse_distances(*distances_from)
-        tab = cls.distances_table_name
-        # Select
-        renaming = f"MAX(CASE WHEN {tab}.reference_localisation = ? THEN {tab}.distance END) AS ?"
+            if self.join_command:
+                # Join
+                command = self._construct_join(
+                    command,
+                    command_arg,
+                )
 
-        for (reference, operator, value) in result:
+            if self.where_command:
+                command = self._construct_where(
+                    command,
+                    command_arg,
+                    where
+                )
+
+            # Group by is mandatory for Having close
+            if not self.group_by_command:
+                return command, command_arg
+
+
+            command += "GROUP BY " + ",\n\t".join(self.group_by_command) + "\n"
+
+            if self.having_command:
+                command = self._construct_having(
+                    command,
+                    command_arg,
+                    having
+                )
+
+            return command, command_arg
+
+    @staticmethod
+    def _format_sql(command: str, args: list | tuple) -> str:
+        result = command
+        for val in args:
+            if isinstance(val, str):
+                val_str = "'" + val.replace("'", "''") + "'"  # échappe les quotes SQL
+            elif val is None:
+                val_str = "NULL"
+            else:
+                val_str = str(val)
+            result = result.replace("?", val_str, 1)
+        return result
+
+    @classmethod
+    def _sql_generate_command_from_list(
+            cls,
+            conditions: list[str],
+            scf: 'SQLCommandFormater',
+            main_table: str,
+            main_join_on: str,
+            second_table: str,
+            second_join_on: str,
+            column_to_check :str,
+            column_to_keep: str,
+            relax: bool = False,
+            suffix: str = "_col",
+            first_operator_exist: bool = False,
+            having_condition: str = "",
+            no_condition_allowed: bool = False,
+    ):
+        result = cls.parse_sql_generate_command_from_list(second_table, column_to_check, *conditions, no_condition_allowed=no_condition_allowed)
+        opened_parenthesis = False
+        # Select
+        renaming = f"MAX(CASE WHEN {second_table}.{column_to_check} = ? THEN {second_table}.{column_to_keep} END) AS"
+
+        for (reference, operator, value, sql_condition) in result:
             # Select
-            reference_column_name = cls.sql_compatible_header_keyword(f"{reference}_km")
-            scf.select_command.append(renaming)
-            scf.select_arguments.append(reference)
+            reference_column_name = cls.sql_compatible_header_keyword(f"{reference}{suffix}")
+            scf.select_command.append(f'{renaming} {reference_column_name}')
 
             # Join
             scf.join_arguments.append(reference)
+            scf.select_arguments.append(reference)
 
-            if operator:
-                # Having
-                scf.having_command.append(f"{reference_column_name} {operator} ?")
-                scf.having_arguments.append(value)
+            if not operator:
+                continue
+
+            # Having
+            if not first_operator_exist:
+                sql_condition = ""
+                first_operator_exist = True
+
+            if not opened_parenthesis:
+                if having_condition:
+                    scf.having_command.append(having_condition)
+                scf.having_command.append("(")
+                opened_parenthesis = True
+
+            if relax:
+                having_command = f"{sql_condition} ({reference_column_name} {operator} ? OR {reference_column_name} IS NULL)"
+            else:
+                having_command = f"{sql_condition} {reference_column_name} {operator} ?"
+
+            scf.having_command.append(having_command)
+            scf.having_arguments.append(value)
+
+        if opened_parenthesis:
+            scf.having_command.append(")")
 
 
         scf.join_command.extend([
-            "LEFT JOIN Distances",
-            f"\tON Jobs.localisation = {tab}.job_localisation",
-            f"\tAND Distances.reference_localisation IN ({', '.join(['?'] * len(result))})"
+            f"LEFT JOIN {second_table}",
+            f"ON {main_table}.{main_join_on} = {second_table}.{second_join_on}",
+            f"AND {second_table}.{column_to_check} IN ({', '.join(['?'] * len(result))})"
         ])
 
-    # TODO Dict tab format
+        return first_operator_exist
+
 
     @classmethod
-    def sql_main(cls, distances_from: list[str]):
-        import pprint
+    def _sql_generate_command_select(
+            cls,
+            columns: list[str],
+            scf: 'SQLCommandFormater',
+    ):
+        valid_column_name = set(cls.sql_table_column_name(cls.main_table_name))
+        if len(columns) != len(set(columns)):
+            raise IndexError(f"<columns> isn't allowed to contain any duplicates. {columns}")
+
+        for column_name in columns:
+            if column_name not in valid_column_name:
+                cls.logger.warning(
+                    f"Invalid column name for %s. Column ignored : %s."
+                    f"\nValid names are %s", cls.main_table_name, column_name, valid_column_name
+                )
+                columns.remove(column_name)
+                continue
+
+            scf.select_command.append(f"{cls.main_table_name}.{column_name}")
+
+    @classmethod
+    def sql_generate_command(
+            cls,
+            columns: list[str] = None,
+            columns_filters: list[str] = None,
+            distances_from: list[str]=None,
+            keywords: list[str]=None,
+            metadata: list[str] = None,
+            distance_relax: bool=False,
+            keyword_relax: bool=False,
+            metadata_relax: bool = False,
+    ):
+
+        #
+        if not columns:
+            columns = [cls.sql_compatible_header_keyword(item).lower() for item in cls.default_header]
+
         command_formater = cls.SQLCommandFormater()
-        command_formater.select_command.append(f"Select {cls.main_table_name}.*")
-        cls._sql_main_generate_distance_command(distances_from, command_formater)
-        command_formater.construct()
+        cls._sql_generate_command_select(columns, command_formater)
+
+        command_formater.select_command_conclusion.append(f"{cls.main_table_name}")
+        command_formater.group_by_command.append(f"{cls.main_table_name}.url")
+
+        having_condition = ""
+
+        if keywords:
+            cls._sql_generate_command_from_list(
+                keywords,
+                command_formater,
+                main_table=cls.main_table_name,
+                main_join_on="url",
+                second_table=cls.keywords_table_name,
+                second_join_on="url",
+                column_to_check="keyword",
+                column_to_keep="occurrence",
+                relax=keyword_relax,
+                suffix="_occurence",
+                having_condition=having_condition
+            )
+            having_condition = "AND"
+
+
+        if distances_from:
+            cls._sql_generate_command_from_list(
+                distances_from,
+                command_formater,
+                main_table=cls.main_table_name,
+                main_join_on="localisation",
+                second_table=cls.distances_table_name,
+                second_join_on="job_localisation",
+                column_to_check="reference_localisation",
+                column_to_keep="distance",
+                relax=distance_relax,
+                suffix="_km",
+                having_condition=having_condition
+            )
+            having_condition = "AND"
+
+        if metadata:
+            cls._sql_generate_command_from_list(
+                metadata,
+                command_formater,
+                main_table=cls.main_table_name,
+                main_join_on="url",
+                second_table=cls.metadata_table_name,
+                second_join_on="url",
+                column_to_check="key",
+                column_to_keep="value",
+                relax=keyword_relax,
+                suffix="_metadata",
+                having_condition=having_condition,
+                no_condition_allowed=True,
+            )
+            having_condition = "AND"
+
+
 
         # Conclude
-        command_formater.select_command.append(f"FROM {cls.main_table_name}")
+
+
+        command, args = command_formater.construct()
+        print(len(cls.sql_run(command, *args)))
+
+    @classmethod
+    def sql_run_display_command(cls, command: str, *args, sep="\t"):
+        results = cls.sql_run_with_header(command, *args)
+
+        print("#Command :")
+        print(cls._format_sql(command, args))
+        print()
+        print("#Results :")
+        print(len(results) -1, "jobs")
+        print()
+        print("#" + sep.join([header[0] for header in results[0]]))
+        for job in results[1:]:
+            print(sep.join([str(item) for item in job]))
 
 
     """
@@ -583,7 +866,6 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     # --- --- Requests --- ---
     # --- --- --- --- Sqlite --- --- ---
 
-# TODO Dict tab format
 if __name__ == "__main__":
     # test = ScrapperObjectCore("Test1'", 'Paris"', "https://google.com", "CDD", "Biology", fake='True', second="3")
     # test.keywords["Alpha'"] = 34
