@@ -1,10 +1,10 @@
-import logging
 import os.path
 import time
 from datetime import datetime
 
 import click
 import cloup
+from click import pass_context
 
 from job_scrapper import (
     CHUMtpScrapper,
@@ -20,6 +20,7 @@ from job_scrapper import (
     SFBIScrapper,
 )
 
+JobScrapperSkeleton.set_logging_level("CRITICAL")
 
 @cloup.group()
 @cloup.option(
@@ -80,181 +81,236 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
 
 
 # --- --- --- Database --- --- ---
-def _parse_date_or_datetime(_, __, value):
-    if value is None:
-        return None
-
-    formats = ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S"]
-    for fmt in formats:
-        try:
-            return datetime.strptime(value, fmt)
-        except ValueError:
-            continue
-
-    raise click.BadParameter(
-        f"Invalid date format: {value}. Expected 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'."
-    )
-
-
 @cli.group()
-@cloup.pass_context
+def database():
+    """A small set of command that can be used to interact with the database."""
+    if not os.path.exists(JobScrapperSkeleton.get_database_path()):
+        JobScrapperSkeleton.logger.critical(
+            "Can not find the database ('%s'). "
+            "Please run `job-scrapper scrap [target]` at least once to create it.",
+            JobScrapperSkeleton.get_database_path()
+        )
+        exit(1)
+
+@database.command()
+def job_columns():
+    """Display each column of the 'job' table."""
+    for col in JobScrapperSkeleton.get_sql_job_columns():
+        print(col)
+
+@database.command()
+def tables_names():
+    """Displays each table's names in the database"""
+    for names in JobScrapperSkeleton.sql_table_names():
+        print(names)
+
+@database.command()
+@click.argument(
+    "table",
+    type=click.Choice(list(JobScrapperSkeleton.sql_table_names()), case_sensitive=True),
+)
+def table_columns(table):
+    """Displays columns names attached to a table."""
+    for vals in JobScrapperSkeleton.sql_table_column_name(table):
+        print(vals)
+
+@database.command()
+@click.option(
+    "-c", "--columns",
+    multiple=True,
+    type=click.Choice(list(JobScrapperSkeleton.get_sql_job_columns()),
+                      case_sensitive=True),
+    help=(
+        "A list of column names. Each selected column will be displayed in the final result. "
+        "By default, all column are displayed."
+    )
+)
+@click.option(
+    "-d", "--distances-from",
+    multiple=True,
+    help=(
+        "Display distances from reference places. Places can be any place contained in the list "
+        "at the end of this text. You can use them to filter results "
+        "by formatting Them as follows: [operator][Place][condition] : Operator should be '&', 'A' (AND), '|', 'O' (OR), '^', 'X' (XOR); "
+        "The condition can be '<', '>', '=', '!' followed by a float."
+        f"Places : {JobScrapperSkeleton.get_sql_reference_places()}"
+    )
+)
+@click.option(
+    "-k", "--keywords",
+    multiple=True,
+    help=(
+        "Display keywords occurrence in a job offer. keywords can be any string  contained in the list  "
+        "at the end of this text. You can use them to filter results "
+        "by formatting Them as follows: [operator][keywords][condition] : Operator should be '&', 'A' (AND), '|', 'O' (OR), '^', 'X' (XOR); "
+        "The condition can be '<', '>', '=', '!' followed by a float."
+        f"Keywords : {JobScrapperSkeleton.get_sql_keywords()}"
+    )
+)
+@click.option(
+    "-m", "--metadata",
+    multiple=True,
+    help=(
+        "Display metadata attached to a job offer. metadata can be any string contained "
+        "in the key of cls.metadata_table_name. You can not use them to filter results."
+        f"Metadata : {JobScrapperSkeleton.get_sql_metadata()}"
+    )
+)
+@click.option(
+    "-o", "--order-by",
+    multiple=True,
+    help=(
+        "Order columns and sort results using those columns."
+    )
+)
+@click.option(
+    "--distance-relax",
+    is_flag=True,
+    help="Do jobs with null values pass all distance filter?"
+)
+@click.option(
+    "-ob", "--origin-blacklist",
+    multiple=True,
+    help=(
+        "A list of patterns that should **not** be contained in the job's 'origin' field."
+        "(use `%` to represent zero or more unknown characters and `_` "
+        "to represent a single unknown character)"
+    )
+)
+@click.option(
+    "-ow", "--origin-whitelist",
+    multiple=True,
+    help=(
+        "A list of patterns that **must** be contained in the job's 'origin' field."
+        "(use `%` to represent zero or more unknown characters and `_` "
+        "to represent a single unknown character)"
+    )
+)
+@click.option(
+    "-fb", "--field-blacklist",
+    multiple=True,
+    help=(
+        "A list of patterns that should **not** appear in the job's 'field' field."
+        "(use `%` to represent zero or more unknown characters and `_` "
+        "to represent a single unknown character)"
+    )
+)
+@click.option(
+    "-fw", "--field-whitelist",
+    multiple=True,
+    help=(
+        "A list of patterns that **must** appear in the job's 'field' field."
+        "(use `%` to represent zero or more unknown characters and `_` "
+        "to represent a single unknown character)"
+    )
+)
+@click.option(
+    "-cb", "--contract-blacklist",
+    multiple=True,
+    help=(
+        "A list of patterns that should **not** appear in the job's 'contract' field."
+        "(use `%` to represent zero or more unknown characters and `_` "
+        "to represent a single unknown character)"
+    )
+)
+@click.option(
+    "-cw", "--contract-whitelist",
+    multiple=True,
+    help=(
+        "A list of patterns that **must** appear in the job's 'contract' field."
+        "(use `%` to represent zero or more unknown characters and `_` "
+        "to represent a single unknown character)"
+    )
+)
+@click.option(
+    "-tb", "--title-blacklist",
+    multiple=True,
+    help=(
+        "A list of patterns that should **not** appear in the job's 'title' field."
+        "(use `%` to represent zero or more unknown characters and `_` "
+        "to represent a single unknown character)"
+    )
+)
+@click.option(
+    "-tw", "--title-whitelist",
+    multiple=True,
+    help=(
+        "A list of patterns that **must** appear in the job's 'title' field."
+        "(use `%` to represent zero or more unknown characters and `_` "
+        "to represent a single unknown character)"
+    )
+)
 @click.option(
     "-a",
     "--after",
-    callback=_parse_date_or_datetime,
-    default=None,
-    help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' When applicable, ensure that returned values comes from "
-    "job that hava a time stamp older (>=) than this date. This mean that this job offer has been seen "
-    "on a website after this date",
+    type=click.DateTime(formats=["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]),
+    default="0001-01-01 00:00:00",
+    show_default=True,
+    help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' Ensure that returned values comes from "
+    "job that hava a time stamp newer (>=) than this date. Meaning that this job offer has been seen "
+    f"on a website after this date.'"
 )
-def database(ctx, after):
-    """A small set of command that can be used to interact with the database."""
-    if after:
-        ctx.obj["after"] = after
-    else:
-        ctx.obj["after"] = datetime.min
+@click.option(
+    "-b",
+    "--before",
+    type=click.DateTime(formats=["%Y-%m-%d %H:%M:%S"]),
+    default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    show_default=True,
+    help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' Ensure that returned values comes from "
+    "job that hava a time stamp older (>=) than this date. Meaning that this job offer has been seen "
+    f"on a website before this date. Default is now ('{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}')."
+)
 
-@click.option( '-m', '--message', multiple=True)
-@database.command()
-def seek(message):
-    print(message)
-
-
-# --- --- --- Database --- --- ---
-
-
-'''
-# --- --- --- Database --- --- ---
-def _parse_date_or_datetime(_, __, value):
-    if value is None:
-        return None
-
-    formats = ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S"]
-    for fmt in formats:
-        try:
-            return datetime.strptime(value, fmt)
-        except ValueError:
-            continue
-
-    raise click.BadParameter(
-        f"Invalid date format: {value}. Expected 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'."
+@click.option(
+    "-f",
+    "--file",
+    type=click.Path(file_okay=True, dir_okay=False, resolve_path=True),
+    help="A file to export the result."
+)
+@click.option(
+    "--no-display",
+    is_flag=True,
+    help="Do not display the result.",
+)
+def request(
+    columns=None,
+    distances_from=None,
+    keywords=None,
+    metadata=None,
+    order_by=None,
+    distance_relax=None,
+    after=None,
+    before=None,
+    origin_blacklist=None,
+    origin_whitelist=None,
+    field_blacklist=None,
+    field_whitelist=None,
+    contract_blacklist=None,
+    contract_whitelist=None,
+    title_blacklist=None,
+    title_whitelist=None,
+    file=None,
+    no_display=False,
+):
+    command, args = JobScrapperSkeleton.sql_generate_command(
+        columns=columns,
+        distances_from=distances_from,
+        keywords=keywords,
+        metadata=metadata,
+        order_by=order_by,
+        distance_relax=distance_relax,
+        after=after,
+        before=before,
+        origin_blacklist=origin_blacklist,
+        origin_whitelist=origin_whitelist,
+        field_blacklist=field_blacklist,
+        field_whitelist=field_whitelist,
+        contract_blacklist=contract_blacklist,
+        contract_whitelist=contract_whitelist,
+        title_blacklist=title_blacklist,
+        title_whitelist=title_whitelist,
     )
-
-def _execute_sql_command(command: str, format_list: None | list = None) -> str:
-    if format_list is None:
-        format_list = []
-
-    JobScrapperSkeleton.logger.debug("Executing sql command : %s\nFormat list : %s", command, format_list)
-
-    with JobScrapperSkeleton.write_in_database() as cursor:
-        cursor.execute(command, format_list)
-        result = cursor.fetchall()
-
-    logging.debug("Result : %", result)
-    return result
-
-
-@cli.group()
-@cloup.pass_context
-@click.option(
-    "-a",
-    "--after",
-    callback=_parse_date_or_datetime,
-    default=None,
-    help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' When applicable, ensure that returned values comes from "
-         "job that hava a time stamp older (>=) than this date. This mean that this job offer has been seen "
-         "on a website after this date",
-)
-
-def database(ctx, after):
-    """A small set of command that can be used to interact with the database."""
-    if after:
-        ctx.obj["after"] = after
-    else:
-        ctx.obj["after"] = datetime.min
-
-@database.command()
-@cloup.argument(
-    'command',
-    help="An sqlite command that will be executed on scrapper's database."
-)
-def execute(command):
-    """Execute sqlite code."""
-    for line in _execute_sql_command(
-        command
-    ):
-        print(line)
-
-
-@database.command()
-@cloup.argument(
-    'job-url',
-    help="Job's url"
-)
-def get_job_page(job_url):
-    """If it exists, will return a path that lead to a .zip / .pdf that contain the offer."""
-    print("#url")
-    for line in _execute_sql_command(
-        f"""
-        SELECT * FROM Metadata 
-        where url="{job_url}"
-        and key="job_page";
-        """
-    ):
-        print(os.path.abspath(line[2]))
-
-
-@database.command()
-@cloup.pass_context
-@cloup.argument(
-    'localisation',
-    help="A localisation (e.g. 'Paris, France')"
-)
-@click.option(
-    "-m",
-    "--max-distance",
-    type=float,
-    default=100,
-    help="Jobs returned by this command can not be further away than this value (km). default : 100",
-)
-def get_job_near(ctx, localisation, max_distance):
-    """Displays all job near enough a localisation. /!\\ Some jobs have missing / non-standard location
-     and thus will be excluded from this command ! """
-    print(f"#Job_localisation\tdistance_to_{localisation}\tlast_sighting\turl")
-    for line in _execute_sql_command(
-        f"""
-        SELECT localisation, distances.distances, time_stamp, url
-        FROM Jobs
-        JOIN distances
-          ON (Jobs.localisation = distances.localisation1  OR Jobs.localisation = distances.localisation2)
-          WHERE (distances.localisation1 == "{localisation}" or distances.localisation2 == "{localisation}")
-          AND time_stamp >= '{ctx.obj["after"]}'
-          AND distances.distances <= {max_distance}
-          ORDER BY distances.distances ASC, time_stamp DESC;
-        """
-    ):
-        print("\t".join([str(c) for c in line]))
-
-@database.command()
-def known_localisation():
-    """Displays a list of all localisations that can be used into get_job_near"""
-    print(f"#Places")
-    for line in _execute_sql_command(
-        """
-        SELECT DISTINCT place
-        FROM (
-            SELECT localisation1 AS place
-            FROM distances
-            UNION
-            SELECT localisation2 AS place
-            FROM distances
-        );
-        """
-    ):
-        print("\t".join(line))
-
-# --- --- ---Database --- --- ---
-'''
+    JobScrapperSkeleton.sql_run_display_command(command, *args, file=file, display=not no_display)
 
 
 # --- --- --- SCRAP group --- --- ---

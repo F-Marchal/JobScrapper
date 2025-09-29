@@ -9,6 +9,8 @@ import re
 # pylint: disable=E0611
 from mypy.types_utils import AnyType
 
+import datetime
+
 from .object_core import ScrapperObjectCore
 from dataclasses import dataclass, field
 
@@ -404,11 +406,31 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     @classmethod
     def get_sql_reference_places(cls):
-        return cls.sql_column_content("Distances", "reference_localisation", distinct=True)
+        return cls.sql_column_content(cls.distances_table_name, "reference_localisation", distinct=True)
+
+    @classmethod
+    def get_sql_keywords(cls):
+        return cls.sql_column_content(cls.keywords_table_name, "keyword", distinct=True)
+
+    @classmethod
+    def get_sql_metadata(cls):
+        return cls.sql_column_content(cls.metadata_table_name, "key", distinct=True)
+
+    @classmethod
+    def get_sql_job_columns(cls):
+        return cls.sql_table_column_name(cls.main_table_name)
 
 
     @classmethod
-    def parse_sql_generate_command_from_list(cls, table: str, column: str, *items: str, no_condition_allowed: bool = True,):
+    def parse_sql_generate_command_from_list(
+            cls,
+            table: str,
+            column: str,
+            *items: str,
+            no_condition_allowed: bool = True,
+    ):
+
+
         legal_names = cls.sql_column_content(table, column, distinct=True)
         pattern = re.compile("|".join(legal_names))
         cls.logger.debug("Parsing : %s", items)
@@ -440,7 +462,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
                 else:
                     cls.logger.warning("Unknown condition replaced by OR : '%s'."
-                                    "Please ues '&', 'A' (AND), '|', 'O' (OR), '^', 'X' (WOR) ",  strings[0])
+                                    "Please ues '&', 'A' (AND), '|', 'O' (OR), '^', 'X' (XOR) ",  strings[0])
                     sql_condition = "OR"
 
             condition = strings[pos2:]
@@ -481,137 +503,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         return result
 
-    @dataclass
-    class SQLCommandFormater:
-        select_command: list[str] = field(default_factory=list)
-        join_command: list[str] = field(default_factory=list)
-        where_command: list[str] = field(default_factory=list)
-        having_command: list[str] = field(default_factory=list)
-        group_by_command:  list[str] = field(default_factory=list)
 
-        select_command_conclusion: list[str] = field(default_factory=list)
-        join_command_conclusion: list[str] = field(default_factory=list)
-        having_command_conclusion: list[str] = field(default_factory=list)
-
-        select_arguments: list[str | int | None] = field(default_factory=list)
-        join_arguments: list[str | int | None] = field(default_factory=list)
-        where_arguments: list[str | int | None] = field(default_factory=list)
-        having_arguments: list[str | int | None] = field(default_factory=list)
-
-        @staticmethod
-        def _construct(
-                command,
-                end_command,
-                start_keyword="",
-                end_keyword="",
-                start_join=",\n\t",
-                end_join=" "
-        ) -> str:
-            return (f"{start_keyword}"
-                    f"{start_join.join(command)}"
-                    f"\n{end_keyword}"
-                    f"{end_join.join(end_command)}\n")
-
-
-        def _construct_select(self, command: str, command_arg: list, select=True, from_=True):
-            command += self._construct(
-                self.select_command,
-                self.select_command_conclusion,
-                start_keyword= "SELECT\n\t" if select else "",
-                end_keyword="FROM\n\t" if from_ and self.select_command_conclusion else "",
-            )
-            command_arg.extend(self.select_arguments)
-            return command
-
-        def _construct_join(self, command: str, command_arg: list):
-            command += self._construct(
-                self.join_command,
-                self.join_command_conclusion,
-                start_keyword= "",
-                end_keyword="",
-                start_join="\n\t",
-                end_join="",
-            )
-            command_arg.extend(self.join_arguments)
-            return command
-
-        def _construct_where(self, command: str, command_arg: list, where=True):
-            command += self._construct(
-                self.join_command,
-                self.join_command_conclusion,
-                start_keyword="WHERE\n\t" if where else "",
-                end_keyword="",
-                start_join="",
-                end_join="",
-            )
-            command_arg.extend(self.join_arguments)
-            return command
-
-        def _construct_having(self, command: str, command_arg: list, having=True):
-            command +=  self._construct(
-                self.having_command,
-                self.having_command_conclusion,
-                start_keyword= "HAVING\n\t" if having else "",
-                end_keyword="",
-                start_join = "\n\t",
-            )
-            command_arg.extend(self.having_arguments)
-            return command
-
-        def construct(self, select=True, from_=True, where=True, having=True,):
-            command = ""
-            command_arg = []
-
-            # Select
-            command = self._construct_select(
-                command,
-                command_arg,
-                select,
-                from_
-            )
-
-            if self.join_command:
-                # Join
-                command = self._construct_join(
-                    command,
-                    command_arg,
-                )
-
-            if self.where_command:
-                command = self._construct_where(
-                    command,
-                    command_arg,
-                    where
-                )
-
-            # Group by is mandatory for Having close
-            if not self.group_by_command:
-                return command, command_arg
-
-
-            command += "GROUP BY " + ",\n\t".join(self.group_by_command) + "\n"
-
-            if self.having_command:
-                command = self._construct_having(
-                    command,
-                    command_arg,
-                    having
-                )
-
-            return command, command_arg
-
-    @staticmethod
-    def _format_sql(command: str, args: list | tuple) -> str:
-        result = command
-        for val in args:
-            if isinstance(val, str):
-                val_str = "'" + val.replace("'", "''") + "'"  # échappe les quotes SQL
-            elif val is None:
-                val_str = "NULL"
-            else:
-                val_str = str(val)
-            result = result.replace("?", val_str, 1)
-        return result
 
     @classmethod
     def _sql_generate_command_from_list(
@@ -629,7 +521,11 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             first_operator_exist: bool = False,
             having_condition: str = "",
             no_condition_allowed: bool = False,
+            new_columns: list[str] = None,
     ):
+
+
+
         result = cls.parse_sql_generate_command_from_list(second_table, column_to_check, *conditions, no_condition_allowed=no_condition_allowed)
         opened_parenthesis = False
         # Select
@@ -638,6 +534,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         for (reference, operator, value, sql_condition) in result:
             # Select
             reference_column_name = cls.sql_compatible_header_keyword(f"{reference}{suffix}")
+
+            if new_columns is not None:
+                new_columns.append(reference_column_name)
             scf.select_command.append(f'{renaming} {reference_column_name}')
 
             # Join
@@ -703,20 +602,82 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     @classmethod
     def sql_generate_command(
             cls,
-            columns: list[str] = None,
-            columns_filters: list[str] = None,
-            distances_from: list[str]=None,
-            keywords: list[str]=None,
-            metadata: list[str] = None,
+            columns: list[str] | None = None,
+            distances_from: list[str] | None =None,
+            keywords: list[str] | None =None,
+            metadata: list[str] | None  = None,
+            order_by: list[str] | None = None,
             distance_relax: bool=False,
-            keyword_relax: bool=False,
-            metadata_relax: bool = False,
-    ):
 
+
+            after: datetime.datetime=None,
+            before: datetime.datetime=None,
+
+            origin_blacklist: list[str] | None  = None,
+            origin_whitelist: list[str] | None  = None,
+
+            field_blacklist: list[str] | None  = None,
+            field_whitelist: list[str] | None  = None,
+
+            contract_blacklist: list[str] | None  = None,
+            contract_whitelist: list[str] | None  = None,
+
+            title_blacklist: list[str] | None  = None,
+            title_whitelist: list[str] | None  = None,
+
+    ):
+        """
+        :param list[str] | None  columns: A list of column names. Each selected column will be displayed
+            in the final result. By default, all column are displayed.
+            (Values returned by sql_table_column_name(cls.main_table_name))
+        :param list[str] | None  distances_from:
+            Display distances from reference places. Places  can be any place contained
+            in the reference_localisation of cls.distance_table_name. You can use them to filter results
+            by formatting Them as follows:
+            [operator][Place][condition] : Operator should be'&', 'A' (AND), '|', 'O' (OR), '^', 'X' (XOR) ;
+            The condition can be '<', '>', '=', '!' followed by a float.
+        :param list[str] | None keywords:
+            Display keywords occurrence in a job offer. keywords can be any string contained
+            in the key of cls.keyword_table_name. You can use them to filter results
+            by formatting Them as follows:
+            [operator][keywords][condition] : Operator should be'&', 'A' (AND), '|', 'O' (OR), '^', 'X' (XOR) ;
+            The condition can be '<', '>', '=', '!' followed by a float.
+        :param list[str] | None metadata: Display metadata attached to a job offer. metadata can be any string contained
+            in the key of cls.metadata_table_name. You can not use them to filter results.
+        :param list[str] | None order_by: List of column name. Fill the 'ORDER BY' statement
+        :param bool distance_relax: Do jobs with null values pass all distance filter ?
+        :param datetime.datetime after: Only shows job that have last been seen after a date.
+        :param datetime.datetime before: Only shows job that have last been seen before a date.
+        :param list[str] | None origin_blacklist:
+            A list of patterns (use `%` to represent zero or more unknown characters and `_`
+            to represent a single unknown character)
+            that should **not** be contained in the job's 'origin' field.
+        :param list[str] | None origin_whitelist:
+            A list of patterns (use `%` to represent zero or more unknown characters and `_`
+            to represent a single unknown character)  that **must** be contained in the job's 'origin' field.
+        :param list[str] | None field_blacklist: 
+            A list of patterns (use `%` to represent zero or more unknown characters and `_`
+             to represent a single unknown character)  that should **not** appear in the job's 'field' field.
+        :param list[str] | None field_whitelist: 
+            A list of patterns (use `%` to represent zero or more unknown characters and `_`
+            to represent a single unknown character)  that **must** appear in the job's 'field' field.
+        :param list[str] | None contract_blacklist: 
+            A list of patterns (use `%` to represent zero or more unknown characters and `_`
+            to represent a single unknown character)  that should **not** appear in the job's 'contract' field.
+        :param list[str] | None contract_whitelist: 
+            A list of patterns (use `%` to represent zero or more unknown characters and `_`
+             to represent a single unknown character)  that **must** appear in the job's 'contract' field.
+        :param list[str] | None title_blacklist: 
+            A list of patterns (use `%` to represent zero or more unknown characters and `_`
+             to represent a single unknown character)  that should **not** appear in the job's 'title' field.
+        :param list[str] | None title_whitelist: 
+            A list of patterns (use `%` to represent zero or more unknown characters and `_`
+            to represent a single unknown character)  that **must** appear in the job's 'title' field.
+        """
         #
         if not columns:
             columns = [cls.sql_compatible_header_keyword(item).lower() for item in cls.default_header]
-
+        new_columns = []
         command_formater = cls.SQLCommandFormater()
         cls._sql_generate_command_select(columns, command_formater)
 
@@ -735,9 +696,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 second_join_on="url",
                 column_to_check="keyword",
                 column_to_keep="occurrence",
-                relax=keyword_relax,
                 suffix="_occurence",
-                having_condition=having_condition
+                having_condition=having_condition,
+                new_columns=new_columns,
             )
             having_condition = "AND"
 
@@ -754,7 +715,8 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 column_to_keep="distance",
                 relax=distance_relax,
                 suffix="_km",
-                having_condition=having_condition
+                having_condition=having_condition,
+                new_columns=new_columns,
             )
             having_condition = "AND"
 
@@ -768,100 +730,349 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 second_join_on="url",
                 column_to_check="key",
                 column_to_keep="value",
-                relax=keyword_relax,
                 suffix="_metadata",
                 having_condition=having_condition,
                 no_condition_allowed=True,
+                new_columns=new_columns
             )
-            having_condition = "AND"
 
 
+        first_condition = cls._sql_generate_command_where(
+            cls.main_table_name,
+            "contract",
+            command_formater,
+            contract_whitelist,
+            blacklist=False,
+            first_condition=True
+        )
+        first_condition = cls._sql_generate_command_where(
+            cls.main_table_name,
+            "contract",
+            command_formater,
+            contract_blacklist,
+            blacklist=True,
+            first_condition=first_condition
+        )
 
-        # Conclude
+        first_condition = cls._sql_generate_command_where(
+            cls.main_table_name,
+            "field",
+            command_formater,
+            field_whitelist,
+            blacklist=False,
+            first_condition=first_condition
+        )
+        first_condition = cls._sql_generate_command_where(
+            cls.main_table_name,
+            "field",
+            command_formater,
+            field_blacklist,
+            blacklist=True,
+            first_condition=first_condition
+        )
 
+        first_condition = cls._sql_generate_command_where(
+            cls.main_table_name,
+            "origin",
+            command_formater,
+            origin_whitelist,
+            blacklist=False,
+            first_condition=first_condition
+        )
+        first_condition = cls._sql_generate_command_where(
+            cls.main_table_name,
+            "origin",
+            command_formater,
+            origin_blacklist,
+            blacklist=True,
+            first_condition=first_condition
+        )
+
+        first_condition = cls._sql_generate_command_where(
+            cls.main_table_name,
+            "title",
+            command_formater,
+            title_whitelist,
+            blacklist=False,
+            first_condition=first_condition
+        )
+
+        first_condition = cls._sql_generate_command_where(
+            cls.main_table_name,
+            "title",
+            command_formater,
+            title_blacklist,
+            blacklist=True,
+            first_condition=first_condition
+        )
+
+        if before:
+            if first_condition:
+                operator = "   "
+                first_condition = False
+            else:
+                operator = "AND"
+
+            command_formater.where_command.append(f"{operator} {cls.main_table_name}.time_stamp <= ?")
+            command_formater.where_arguments.append(before)
+
+        if after:
+            if first_condition:
+                operator = "   "
+                first_condition = False
+            else:
+                operator = "AND"
+            command_formater.where_command.append(f"{operator} {cls.main_table_name}.time_stamp >= ?")
+            command_formater.where_arguments.append(after)
+
+        if order_by:
+            cls._order_by(order_by, columns, new_columns, command_formater)
 
         command, args = command_formater.construct()
-        print(len(cls.sql_run(command, *args)))
+
+        return command, args
 
     @classmethod
-    def sql_run_display_command(cls, command: str, *args, sep="\t"):
+    def _order_by(cls, order_by, columns, new_columns, sfc):
+        valid_column_names = {*columns, *new_columns}
+
+        i = 0
+        for columns in order_by:
+            if columns not in valid_column_names:
+                logging.warning("Unknown column name (for this command) (ORDER BY) : "
+                                "'%s' Ignored. For this command, valid columns names are : %s",
+                                columns, valid_column_names)
+                continue
+
+            sfc.order_by_command.append(columns)
+            i += 1
+
+    @classmethod
+    def _sql_generate_command_where(
+            cls,
+            table,
+            column,
+            scf,
+            sql_like_regex_list: list[str] | None = None,
+            blacklist=True,
+            first_condition=True,
+    ):
+        if not sql_like_regex_list:
+            return first_condition
+
+        if blacklist:
+            b_condition = "NOT"
+        else:
+            b_condition = "   "
+
+        for items in sql_like_regex_list:
+            if first_condition:
+                condition = "   "
+                first_condition = False
+            else:
+                condition = "AND"
+            scf.where_command.append(
+                f"{condition} {b_condition} {table}.{column} LIKE ? COLLATE NOCASE"
+            )
+            scf.where_arguments.append(items)
+
+        return first_condition
+
+    @classmethod
+    def sql_run_display_command(cls, command: str, *args, sep="\t", display, file):
         results = cls.sql_run_with_header(command, *args)
 
-        print("#Command :")
-        print(cls._format_sql(command, args))
-        print()
-        print("#Results :")
-        print(len(results) -1, "jobs")
-        print()
-        print("#" + sep.join([header[0] for header in results[0]]))
-        for job in results[1:]:
-            print(sep.join([str(item) for item in job]))
+        if file:
+            flux = open(file, "w", encoding="utf-8")
+        else:
+            flux = None
 
+        header = (
+            "#Command :\n"
+            f"{cls._format_sql(command, args)}\n"
+            f"\n"
+            f"#Line number :\n"
+            f"{len(results) - 1} lines\n"
+        )
 
-    """
-        @classmethod
-        def sql_main_generate_distance_command(cls, distances_from: list[str]):
-            result = cls.parse_distances(*distances_from)
-    
-            # Select
-            renaming = "MAX(CASE WHEN Distances.reference_localisation = ? THEN Distances.distance END) AS {}"
-            reference_translation = {}
-            select_arguments = []
-            select_command = []
-    
-            # Join
-            join_arguments = []
-    
-            # Having
-            having_command = []
-            having_arguments = []
-    
-    
-            for (reference, operator, value) in result:
-                # Select
-                reference_column_name = cls.sql_compatible_header_keyword(f"{reference}_km")
-                reference_translation[reference] = reference_column_name
-                select_command.append(renaming.format(reference_column_name))
-                select_arguments.append(reference)
-    
-                # Join
-                join_arguments.append(reference)
-    
-                if operator:
-                    # Having
-                    having_command.append(f"{reference_column_name} {operator} ?")
-                    having_arguments.append(value)
-    
-    
-            join_string_command = (
-                "LEFT JOIN Distances\n"
-                "ON Jobs.localisation = Distances.job_localisation\n"
-                f"AND Distances.reference_localisation IN ({', '.join(['?'] * len(join_arguments))})\n"
+        if cls.log_file:
+            header += (
+                "\n#Logs :\n"
+                f"{cls.log_file.name}\n\n"
             )
-    
-            return {
-                "select": (",\n\t".join(select_command), select_arguments),
-                "join": (join_string_command, join_arguments),
-                "having": (" AND\n\t".join(having_command), having_arguments)
-            }
-    
-    
-        @classmethod
-        def sql_main(cls, distances_from: list[str]):
-            distance_command_parts = cls.sql_main_generate_distance_command(distances_from)
-    
-            comm = "SELECT Jobs.*, " + \
-                distance_command_parts["select"][0] + \
-                " FROM Jobs " + \
-                distance_command_parts["join"][0] + \
-                "GROUP BY Jobs.url HAVING " + \
-                distance_command_parts["having"][0] + \
-                ";"
-    
-            print(comm)
-    
-            print(cls.sql_run(comm, *[*distance_command_parts["select"][1], *distance_command_parts["join"][1], *distance_command_parts["having"][1]]))
-    """
+
+        header += (
+            f"#{sep.join([header[0] for header in results[0]])}\n"
+        )
+
+        if flux:
+            flux.write(header)
+
+        if display:
+            print(header, end="")
+
+        for job in results[1:]:
+            line = sep.join([str(item) for item in job])
+
+            if display:
+                print(line)
+
+            if flux:
+                flux.write(line)
+                flux.write("\n")
+
+        if flux:
+            flux.close()
+
+
+
+    @dataclass
+    class SQLCommandFormater:
+        select_command: list[str] = field(default_factory=list)
+        join_command: list[str] = field(default_factory=list)
+        where_command: list[str] = field(default_factory=list)
+        having_command: list[str] = field(default_factory=list)
+        group_by_command: list[str] = field(default_factory=list)
+        order_by_command: list[str] = field(default_factory=list)
+
+        select_command_conclusion: list[str] = field(default_factory=list)
+        join_command_conclusion: list[str] = field(default_factory=list)
+        having_command_conclusion: list[str] = field(default_factory=list)
+
+        select_arguments: list[str | int | None] = field(default_factory=list)
+        join_arguments: list[str | int | None] = field(default_factory=list)
+        where_arguments: list[str | int | None | datetime.datetime] = field(default_factory=list)
+        having_arguments: list[str | int | None] = field(default_factory=list)
+
+        @staticmethod
+        def _construct(
+                command,
+                end_command,
+                start_keyword="",
+                end_keyword="",
+                start_join=",\n\t",
+                end_join=" "
+        ) -> str:
+            return (f"{start_keyword}"
+                    f"{start_join.join(command)}"
+                    f"\n{end_keyword}"
+                    f"{end_join.join(end_command)}\n")
+
+        def _construct_select(self, command: str, command_arg: list, select=True, from_=True):
+            command += self._construct(
+                self.select_command,
+                self.select_command_conclusion,
+                start_keyword="SELECT\n\t" if select else "",
+                end_keyword="FROM\n\t" if from_ and self.select_command_conclusion else "",
+            )
+            command_arg.extend(self.select_arguments)
+            return command
+
+        def _construct_join(self, command: str, command_arg: list):
+            command += self._construct(
+                self.join_command,
+                self.join_command_conclusion,
+                start_keyword="",
+                end_keyword="",
+                start_join="\n\t",
+                end_join="",
+            )
+            command_arg.extend(self.join_arguments)
+            return command
+
+        def _construct_where(self, command: str, command_arg: list, where=True):
+
+            command += self._construct(
+                self.where_command,
+                [],
+                start_keyword="WHERE\n\t" if where else "",
+                end_keyword="",
+                start_join="\n\t",
+                end_join="",
+            )
+            command_arg.extend(self.where_arguments)
+            return command
+
+        def _construct_having(self, command: str, command_arg: list, having=True):
+            command += self._construct(
+                self.having_command,
+                self.having_command_conclusion,
+                start_keyword="HAVING\n\t" if having else "",
+                end_keyword="",
+                start_join="\n\t",
+            )
+            command_arg.extend(self.having_arguments)
+            return command
+
+        def _construct_order_by(self, command: str, order_by=True):
+            command += self._construct(
+                self.order_by_command,
+                [],
+                start_keyword="ORDER BY\n\t" if order_by else "",
+                end_keyword="",
+                start_join="\n\t",
+            )
+            return command
+
+        def construct(self, select=True, from_=True, where=True, having=True, order_by=True):
+            command = ""
+            command_arg = []
+
+            # Select
+            command = self._construct_select(
+                command,
+                command_arg,
+                select,
+                from_
+            )
+
+            if self.join_command:
+                # Join
+                command = self._construct_join(
+                    command,
+                    command_arg,
+                )
+
+            if self.where_command:
+                command = self._construct_where(
+                    command,
+                    command_arg,
+                    where
+                )
+
+            # Group by is mandatory for Having close
+            if self.group_by_command:
+                command += "GROUP BY " + ",\n\t".join(self.group_by_command) + "\n"
+
+                if self.having_command:
+                    command = self._construct_having(
+                        command,
+                        command_arg,
+                        having
+                    )
+
+            if self.order_by_command:
+                command = self._construct_order_by(
+                    command,
+                    order_by
+                )
+
+            return command, command_arg
+
+    @staticmethod
+    def _format_sql(command: str, args: list | tuple) -> str:
+        result = command
+
+        for val in args:
+            if isinstance(val, (str, datetime.datetime)):
+                val_str = "'" + str(val).replace("'", "''") + "'"  # échappe les quotes SQL
+            elif val is None:
+                val_str = "NULL"
+            else:
+                val_str = str(val)
+            result = result.replace("?", val_str, 1)
+
+        return result
 
     # --- --- Requests --- ---
     # --- --- --- --- Sqlite --- --- ---

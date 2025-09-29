@@ -6,8 +6,8 @@ FLAT_PATH = ./Workdir/flat_jobs_files
 DATE = $(shell date +%Y-%m-%d-%H-%M-%S)
 
 CMD = mkdir -p $(FLAT_PATH) && \
-      poetry run job-scrapper -w $(WORKDIR) scrap --save-job-page \
-      --result-file "$(FLAT_PATH)/$(@:scrap-%=%)-$(DATE).job" $(@:scrap-%=%)
+	 poetry run job-scrapper -w $(WORKDIR) scrap --save-job-page \
+	 --result-file "$(FLAT_PATH)/$(@:scrap-%=%)-$(DATE).job" $(@:scrap-%=%)
 
 scrap-chu-mpt: ; $(CMD)
 scrap-cirad: ; $(CMD)
@@ -29,3 +29,11 @@ cleancode:
 	poetry run isort  ./job_scrapper/  # Sort dependances
 	poetry run mypy  ./job_scrapper/  # statick typing
 	poetry run pylint  ./job_scrapper/  # Coding Standard
+
+example_request:
+	poetry run job-scrapper database request \
+		-c origin -c contract -c url\
+		-d 'Montpellier, France' \
+		-cb '%CHERCHEUR%' -cb '%STAGE%' -cb '%DOCTOR%' -cb '%POSTDOC%' \
+		--file "last_request.tsv" \
+		-o Montpellier_France_km
