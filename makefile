@@ -33,7 +33,8 @@ cleancode:
 example_request:
 	poetry run job-scrapper database request \
 		-c origin -c contract -c url\
-		-d 'Montpellier, France' \
-		-cb '%CHERCHEUR%' -cb '%STAGE%' -cb '%DOCTOR%' -cb '%POSTDOC%' \
+		-d 'Montpellier, France<100' \
+		-cb '%CHERCHEUR%' -cb '%STAGE%' -cb '%DOCTOR%' -cb '%POSTDOC%' -cb "%THÈSE%" \
 		--file "last_request.tsv" \
-		-o Montpellier_France_km
+		-o "Montpellier_France_km" -o contract  -o "Bioinformatic_enhanced_occurence" -o "Bioinformatic_occurence" \
+		-k "Bioinformatic" -k "Bioinformatic_enhanced>0"

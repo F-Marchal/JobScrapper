@@ -1010,13 +1010,63 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 [],
                 start_keyword="ORDER BY\n\t" if order_by else "",
                 end_keyword="",
-                start_join="\n\t",
+                start_join=",\n\t",
             )
             return command
+
+        def _select_order_clean(self, to_clean: list[str | int | None | float | datetime.datetime]):
+            return [element for _, interest in sorted(to_clean)
+                for element in (interest if isinstance(interest, list) else [interest])]
+
+
+        def _select_order(self):
+            arg_i = 0
+            new_select_argument1 = []
+            new_select_argument2 = []
+            new_select_command1 = []
+            new_select_command2 = []
+            
+            for command_line in self.select_command:
+                nb_of_argument_expected = command_line.count("?")
+                associated_args = self.select_arguments[arg_i:arg_i + nb_of_argument_expected]
+                column_name_tmp = (
+                    command_line.strip()
+                    .replace('"', '')
+                    .replace("'", "")
+                    .replace(".", " ")
+                )
+                column_name = column_name_tmp.split(" ")[-1]
+
+                if column_name in self.order_by_command:
+                    new_select_argument1.append([self.order_by_command.index(column_name), associated_args])
+                    new_select_command1.append([self.order_by_command.index(column_name), command_line])
+
+                else:
+                    new_select_argument2.extend(associated_args)
+                    new_select_command2.append(command_line)
+
+
+                arg_i += nb_of_argument_expected
+
+            self.select_command.clear()
+            self.select_command.extend(self._select_order_clean(new_select_command1))
+            self.select_command.extend(new_select_command2)
+            
+            self.select_arguments.clear()
+            self.select_arguments.extend([*self._select_order_clean(new_select_argument1)])
+            self.select_arguments.extend([*new_select_argument2])
+
+            print("_1", self.select_command)
+            print("_2", self.select_arguments)
+            print(self._select_order_clean(new_select_argument1))
+            print(new_select_argument2)
 
         def construct(self, select=True, from_=True, where=True, having=True, order_by=True):
             command = ""
             command_arg = []
+
+            if self.order_by_command:
+                self._select_order()
 
             # Select
             command = self._construct_select(
