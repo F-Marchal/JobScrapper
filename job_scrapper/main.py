@@ -157,6 +157,18 @@ def table_columns(table):
     )
 )
 @click.option(
+    "-t", "--time-stamps",
+    multiple=True,
+    help=(
+        "Display time-stamps linked to import event during job offer parsing. time-stamps can be any string contained "
+        "in the list at the end of this text. You can use them to filter results "
+        "by formatting Them as follows: [operator][keyword][condition] : Operator should be '&', 'A' (AND), '|', 'O' (OR), '^', 'X' (XOR); "
+        "The condition can be '<', '>', '=', '!' followed by a float. Date should be formated as "
+        "'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD' "
+        f"Keywords : {JobScrapperSkeleton.get_sql_timestamps()}"
+    )
+)
+@click.option(
     "-o", "--order-by",
     multiple=True,
     help=(
@@ -253,7 +265,7 @@ def table_columns(table):
 @click.option(
     "-b",
     "--before",
-    type=click.DateTime(formats=["%Y-%m-%d %H:%M:%S"]),
+    type=click.DateTime(formats=["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]),
     default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     show_default=True,
     help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' Ensure that returned values comes from "
@@ -277,6 +289,7 @@ def request(
     distances_from=None,
     keywords=None,
     metadata=None,
+    time_stamps=None,
     order_by=None,
     distance_relax=None,
     after=None,
@@ -297,6 +310,7 @@ def request(
         distances_from=distances_from,
         keywords=keywords,
         metadata=metadata,
+        time_stamp=time_stamps,
         order_by=order_by,
         distance_relax=distance_relax,
         after=after,

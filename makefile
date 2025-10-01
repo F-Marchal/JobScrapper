@@ -4,6 +4,7 @@ ORGS = chu-mpt cirad cnrs france-genomique ifremer inrae inserm ird sanofi sfbi
 WORKDIR = ./Workdir
 FLAT_PATH = ./Workdir/flat_jobs_files
 DATE = $(shell date +%Y-%m-%d-%H-%M-%S)
+YESTERDAY = $(shell date -d "yesterday" "+%Y-%m-%d")
 
 CMD = mkdir -p $(FLAT_PATH) && \
 	 poetry run job-scrapper -w $(WORKDIR) scrap --save-job-page \
@@ -30,11 +31,21 @@ cleancode:
 	poetry run mypy  ./job_scrapper/  # statick typing
 	poetry run pylint  ./job_scrapper/  # Coding Standard
 
-example_request:
-	poetry run job-scrapper database request \
-		-c origin -c contract -c url\
+example_cmd = 	poetry run job-scrapper database request \
+		-a $(YESTERDAY) \
+		-c origin -c contract -c title -c url\
 		-d 'Montpellier, France<100' \
 		-cb '%CHERCHEUR%' -cb '%STAGE%' -cb '%DOCTOR%' -cb '%POSTDOC%' -cb "%THÈSE%" \
 		--file "last_request.tsv" \
 		-o "Montpellier_France_km" -o contract  -o "Bioinformatic_enhanced_occurence" -o "Bioinformatic_occurence" \
 		-k "Bioinformatic" -k "Bioinformatic_enhanced>0"
+
+
+
+my_request:
+	$(example_cmd)
+
+my_request_new_results:
+	$(example_cmd) -t 'first_sighting>$(YESTERDAY)'
+
+scrap_and_my_request: full_scraping my_request_new_results

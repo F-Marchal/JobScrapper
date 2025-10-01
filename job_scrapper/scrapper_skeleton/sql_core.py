@@ -413,12 +413,34 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         return cls.sql_column_content(cls.keywords_table_name, "keyword", distinct=True)
 
     @classmethod
+    def get_sql_timestamps(cls):
+        return cls.sql_column_content(cls.time_stamps_table_name, "keyword", distinct=True)
+
+    @classmethod
     def get_sql_metadata(cls):
         return cls.sql_column_content(cls.metadata_table_name, "key", distinct=True)
 
     @classmethod
     def get_sql_job_columns(cls):
         return cls.sql_table_column_name(cls.main_table_name)
+
+    @staticmethod
+    def _parse_datetime(date_str: str):
+        formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
+        i = 0
+        result = None
+        last_error = None
+        while i < len(formats) and result is None:
+            try:
+                result = datetime.datetime.strptime(date_str, formats[i])
+            except ValueError as error:
+                i += 1
+                last_error = error
+                continue
+
+        if result:
+            return result
+        raise last_error
 
 
     @classmethod
@@ -494,9 +516,12 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
             try:
                 value = float(condition[1:])
-            except ValueError as error:
-                cls.logger.warning("Can not parse '%s' : %s", condition[1:], error)
-                continue
+            except ValueError as error1:
+                try:
+                    value = cls._parse_datetime(condition[1:])
+                except ValueError as error2:
+                    cls.logger.warning("Can not parse '%s' : '%s' & '%s'", condition[1:], error1, error2)
+                    continue
 
 
             result.append((reference, operator, value, sql_condition))
@@ -607,7 +632,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             keywords: list[str] | None =None,
             metadata: list[str] | None  = None,
             order_by: list[str] | None = None,
+            time_stamp: list[str] | None = None,
             distance_relax: bool=False,
+
 
 
             after: datetime.datetime=None,
@@ -644,6 +671,11 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             The condition can be '<', '>', '=', '!' followed by a float.
         :param list[str] | None metadata: Display metadata attached to a job offer. metadata can be any string contained
             in the key of cls.metadata_table_name. You can not use them to filter results.
+        :param list[str] | None time_stamp:
+            Display time_stamp intel related to job offer.  You can use them to filter results
+            by formatting Them as follows:
+            [operator][time stamp name][condition] : Operator should be'&', 'A' (AND), '|', 'O' (OR), '^', 'X' (XOR) ;
+            The condition can be '<', '>', '=', '!' followed by a date (YYYY-MM-JJ or YYYY-MM-JJ HH:MM:SS).
         :param list[str] | None order_by: List of column name. Fill the 'ORDER BY' statement
         :param bool distance_relax: Do jobs with null values pass all distance filter ?
         :param datetime.datetime after: Only shows job that have last been seen after a date.
@@ -735,7 +767,23 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 no_condition_allowed=True,
                 new_columns=new_columns
             )
+            having_condition = "AND"
 
+        if time_stamp:
+            cls._sql_generate_command_from_list(
+                time_stamp,
+                command_formater,
+                main_table=cls.main_table_name,
+                main_join_on="url",
+                second_table=cls.time_stamps_table_name,
+                second_join_on="url",
+                column_to_check="keyword",
+                column_to_keep="time_stamp",
+                suffix="_ts",
+                having_condition=having_condition,
+                no_condition_allowed=False,
+                new_columns=new_columns
+            )
 
         first_condition = cls._sql_generate_command_where(
             cls.main_table_name,
