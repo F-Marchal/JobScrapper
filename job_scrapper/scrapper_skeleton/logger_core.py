@@ -92,12 +92,13 @@ class CoreLogger:
     log_file = None
 
     @classmethod
-    def start_file_logging(cls, path: str, level: str | None | int = None):
+    def start_file_logging(cls, path: str, level: str | None | int = None) -> bool:
         """
         Redirect logs into a file.
         :param path: A path that lead to a file
         :param level: Level of logging see : cls.logger_levels
-        """ ""
+        :return bool: Do the function succeed ?
+        """
         if not (cls.file_log_handler is None and cls.log_file is None):
             cls.logger.warning(
                 "Can not start file logging. file_log_handler or log_file"
@@ -105,7 +106,7 @@ class CoreLogger:
                 cls.file_log_handler,
                 cls.log_file,
             )
-            return
+            return False
 
         cls.log_file = open(path, "w", encoding="UTF-8")
 
@@ -122,6 +123,8 @@ class CoreLogger:
         )
 
         cls.logger.addHandler(cls.file_log_handler)
+
+        return True
 
     @classmethod
     def stop_file_logging(cls):
