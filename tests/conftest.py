@@ -6,6 +6,8 @@ import datetime
 import typing
 import re
 import difflib
+from inspect import getfile
+import types
 
 def pytest_addoption(parser):
     """Add --keep-test-dir option to keep  test folder even when they succeed"""
@@ -34,7 +36,13 @@ class BaseTest:
 
     In addition, a number of tool method are contained inside this class.
     """
-    _test_folder = "./.tests/"
+    @property
+    def get_test_folder_parent(self):
+        folder = os.path.dirname(getfile(self.__class__))
+        abs_folder = os.path.abspath(folder)
+        return os.path.join(abs_folder, ".tests/")
+
+
 
     @pytest.fixture(autouse=True)
     def _setup_tempdir(self, request):
@@ -46,7 +54,7 @@ class BaseTest:
         test_dir_name_failed = f"FAILED-{type(self).__name__}-{test_name}-{start_date}"
 
         # ---- Generate folder ----
-        test_abs_parent_folder = os.path.abspath(self._test_folder)
+        test_abs_parent_folder = self.get_test_folder_parent
         self.test_folder = os.path.join(test_abs_parent_folder, test_dir_name_in_progress)
         os.makedirs(self.test_folder, exist_ok=True)
         os.chdir(self.test_folder)
@@ -98,22 +106,26 @@ class BaseTest:
     @staticmethod
     def file_exist(path: str) -> bool:
         """os.path.isfile wrapper"""
-        raise os.path.isfile(path)
+        return os.path.isfile(path)
 
     @staticmethod
     def folder_exist(path: str) -> bool:
         """os.path.isdir wrapper"""
-        raise os.path.isdir(path)
+        return os.path.isdir(path)
 
     @staticmethod
     def path_exist(path: str) -> bool:
         """os.path.exists wrapper"""
-        raise os.path.exists(path)
+        return os.path.exists(path)
 
     # ---- ---- os wrapper ---- ----
     @staticmethod
     def contains_pattern(pattern, string):
         return re.search(pattern, string) is not None
+
+    @staticmethod
+    def get_fresh_class(class_):
+        return types.new_class(class_.__name__ + "ForTest", (class_,))
 
 class LogFile:
     """
