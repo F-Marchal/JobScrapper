@@ -54,3 +54,8 @@ init-hook = "import sys; sys.path.append('jobfrom')"
 disable = ["C0114", "C0113", "R0903"]
 init-hook = "import sys; sys.path.append('jobfrom')"
 max-line-length = 880
+
+[tool.pytest.ini_options]
+markers = [
+    "logs: Test logging functions",
+]
