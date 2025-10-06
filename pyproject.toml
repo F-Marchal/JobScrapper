@@ -57,5 +57,6 @@ max-line-length = 880
 
 [tool.pytest.ini_options]
 markers = [
-    "logs: Test logging functions",
+    "logs: Test logging functions.",
+    "testModules: Test module only used during test runs."
 ]
