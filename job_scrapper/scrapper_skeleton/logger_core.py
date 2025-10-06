@@ -1,5 +1,8 @@
 """
-This file contain a class that should be inherited by others in order to standardize log format
+This file contain a class that should be inherited by others in order to standardize log format.
+Add a context manager `redirect_logs_to_file` Redirect logs into a file.
+Add a _ColorFormatter that format logger output.
+Add a CoreLogger file that can be used
 """
 
 import logging
@@ -9,7 +12,7 @@ from typing import Generator
 
 
 @contextmanager
-def redirect_logs_to_file(logger, file, level: str | None = None) -> Generator:
+def redirect_logs_to_file(logger, file, level: str | None | int = None) -> Generator:
     """
     Redirect log into a file
     :param logger: A logger
@@ -133,6 +136,7 @@ class CoreLogger:
 
         if cls.log_file:
             cls.log_file.close()
+            cls.log_file = None
 
     @classmethod
     def set_logging_level(cls, level: str):
@@ -147,6 +151,23 @@ class CoreLogger:
                 f"Logging level should be one of the following : {list(cls.logger_levels)}"
             )
         cls.stream_handler.setLevel(cls.logger_levels[level])
+
+    @classmethod
+    @contextmanager
+    def redirect_logs_to_file(cls, file, level: str | None = None) -> Generator:
+        """
+        Hijack class logger to redirect logs into a file. Logs still shows
+        in terminal. Should be used with the `with` statement.
+        For long term log redirection, please see `start_file_logging` and `stop_file_logging`.
+        :param file: An opened file in which logs will be written.
+        :param level: The level of logging (DEBUG, INFO ...)
+        :return:
+        """
+        if level is None:
+            level = list(cls.logger_levels)[0]
+
+        with redirect_logs_to_file(cls.logger, file=file, level=cls.logger_levels[level]):
+            yield
 
 
 if "__main__" == __name__:
