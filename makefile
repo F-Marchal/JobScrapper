@@ -31,6 +31,12 @@ cleancode:
 	poetry run mypy  ./job_scrapper/  # statick typing
 	poetry run pylint  ./job_scrapper/  # Coding Standard
 
+cleantestcode:
+	poetry run black ./tests/ # Refomate code
+	poetry run isort  ./tests/  # Sort dependances
+	poetry run mypy  ./tests/  # statick typing
+	poetry run pylint  ./tests/  # Coding Standard
+
 example_cmd = 	poetry run job-scrapper database request \
 		-a $(YESTERDAY) \
 		-c origin -c contract -c title -c url\
