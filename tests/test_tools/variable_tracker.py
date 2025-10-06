@@ -2,11 +2,11 @@ import difflib
 import os
 import pprint
 import typing
-import re
 
-class LogFileForTest:
+
+class VariableTracker:
     """
-    A small class that represent a file that contains logs.
+    A small class that represent a file that intel related to a tracked variable.
     Using this class, you can watch the evolution of a variable
     by screening it with <screen> and <re_screen>.
     """
@@ -16,10 +16,10 @@ class LogFileForTest:
         A class that contains an object and that extract debug information from it.
         """
 
-        def __init__(self, opened_file, name, obj, screen_now: bool = True):
+        def __init__(self, tracker, name, obj, screen_now: bool = True):
             self.name = name
             self.obj = obj
-            self.opened_file = opened_file
+            self.tracker = tracker
             self._old_screen = None
             self.content = None
             self.size = None
@@ -65,14 +65,15 @@ class LogFileForTest:
                 self.content_dict
             )
 
-            self.opened_file.write(f"\n[Start {self.name}]\n")
+            self.tracker.write(f"[Start {self.name}]")
 
             if self._old_screen:
-                self.opened_file.write(self._diff(self._old_screen, new_screen))
+                self.tracker.write(self._diff(self._old_screen, new_screen))
             else:
-                self.opened_file.write(new_screen)
+                self.tracker.write(new_screen)
 
-            self.opened_file.write(f"\n[End {self.name}]\n")
+            self.tracker.write(f"[End {self.name}]")
+
             self._old_screen = new_screen
 
         def _screen(self):
@@ -98,7 +99,7 @@ class LogFileForTest:
         :param str file_path: Where logs should be written (no file allowed)
         """
         self.path = os.path.abspath(file_path)
-        self.screen_vars: dict[str, LogFileForTest.ScreenVar] = {}
+        self.screen_vars: dict[str, VariableTracker.ScreenVar] = {}
 
         if os.path.exists(file_path):
             raise FileExistsError(
@@ -122,6 +123,7 @@ class LogFileForTest:
 
     def get_content(self):
         """Return log content."""
+        self.flux.seek(0)
         return self.flux.readlines()
 
     def screen(self, name: str, obj: typing.Any) -> ScreenVar:
@@ -130,7 +132,7 @@ class LogFileForTest:
         :param str name: name of the variable in log file
         :param obj: any object / var to screen
         """
-        sv = self.ScreenVar(self.flux, name, obj)
+        sv = self.ScreenVar(self, name, obj)
         self.screen_vars[name] = sv
         return sv
 
