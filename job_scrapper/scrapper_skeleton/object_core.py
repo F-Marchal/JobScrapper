@@ -3,7 +3,8 @@ import time
 from typing import Sequence, Any
 
 from .logger_core import CoreLogger
-
+import unicodedata
+import re
 
 # pylint: disable=R0902
 # This is the amount of  instance attributes that I need
@@ -231,20 +232,31 @@ class ScrapperObjectCore(CoreLogger):
     @staticmethod
     def clean_string(string: str | None) -> str | None:
         """
-        Clean a string by stripping it, replacing every "\t" and "\n" by " " and by
-        removing consecutive spaces. Spacing are replaced by "_".
+        Clean a string to make it safe to use as filename.
+        - Transform \s cars to spaces
+        - Replace accented characters with unaccented versions
+        - Remove invalid filename characters
+        - Replace underscores with spaces
+        - Remove consecutive spaces
+
         :param string: A string that should be cleaned
-        :return str: The new string
+        :return str: The cleaned and filename-safe string
         """
         if string is None:
             return ""
 
-        string = string.strip()
-        string = string.replace("\n", " ").replace("\t", " ")
+        # replace è, ê, è, ô... by e, o...
+        string = unicodedata.normalize('NFD', string)
+        string = string.encode('ascii', 'ignore').decode('utf-8')
 
-        while "  " in string:
-            string = string.replace("  ", " ")
-        return string.strip().title()
+        # remove cars that can not be contained inside file name,
+        # blanc spaces, consecutive underscores and consecutive spaces
+        string = re.sub(r'[<>:"/\\|?*]', '', string)
+        string = re.sub(r'\s+', '_', string)
+        string = re.sub(r'_+', '_', string)
+        string = string.strip('_')
+
+        return string.replace("_", "")
 
     # --- --- title --- ----
     @property
