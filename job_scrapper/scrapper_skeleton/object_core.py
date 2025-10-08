@@ -35,7 +35,7 @@ class ScrapperObjectCore(CoreLogger):
         self.localisation = localisation
         self.contract_type = contract_type
         self.field = field
-        self._metadata = metadata
+        self._metadata: dict[str, str] = metadata
 
         self._distances: dict[str, float] = {}
         self._keywords: dict[str, int] = {}
@@ -318,17 +318,26 @@ class ScrapperObjectCore(CoreLogger):
         """Set the field of this offer (Bioinformatics, biology, management...)"""
         self._field = self.clean_string(value)
 
+
     # --- --- metadata --- ----
     @property
     def metadata(self) -> dict[str, str]:
         """Returns a copy of all metadata"""
         return self._metadata.copy()
 
+    def add_metadata(self, name: str, value: str):
+        """Add an entry inside this job metadata"""
+        self._metadata[name] = value
+
     # --- --- time_stamps --- ----
     @property
     def time_stamps(self) -> dict[str, time.struct_time]:
         """Returns a dictionary that contained one or multiple time stamp."""
-        return self._time_stamps
+        return self._time_stamps.copy()
+
+    def add_time_stamps(self, name: str, value: time.struct_time):
+        """Add an entry inside this job time stamps"""
+        self._time_stamps[name] = value
 
     # --- --- distances --- ----
     @property
@@ -336,7 +345,11 @@ class ScrapperObjectCore(CoreLogger):
         """Returns a dictionary with places as key
         and, as value, the distance that separate this job from
         this places"""
-        return self._distances
+        return self._distances.copy()
+
+    def add_distance_to(self, place: str, distance: float):
+        """Add an entry inside this job time stamps"""
+        self._distances[place] = distance
 
     # --- --- keywords --- ----
     @property
