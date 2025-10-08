@@ -70,8 +70,8 @@ class ScrapperObjectCore(CoreLogger):
         """
         # ---- Default dict ----
         items = [
-            time.strftime(
-                "%Y-%m-%d %H%M:%S", self._time_stamps[self.init_time_stamp_name]
+            self.strftime(
+                self._time_stamps[self.init_time_stamp_name]
             ),
             self.get_class_name(),
             self.localisation,
@@ -101,9 +101,15 @@ class ScrapperObjectCore(CoreLogger):
             header.append(places + self.distance_suffix)
             items.append(str(distances))
 
-        for places, distances in self._time_stamps.items():
-            header.append(places + self.distance_suffix)
-            items.append(str(distances))
+        for instant_name, time_struct in self._time_stamps.items():
+            if instant_name == self.init_time_stamp_name:
+                continue
+
+            parsed_time = self.strftime(
+                time_struct
+            ),
+            header.append(f"{instant_name}{self.time_stamp_suffix}")
+            items.append(str(parsed_time))
 
         # ---- Variable dict ----
         return dict(zip(header, items))
@@ -216,10 +222,17 @@ class ScrapperObjectCore(CoreLogger):
         """Returns cls.__name__"""
         return cls.__name__
 
-    @classmethod
-    def now(cls):
+    @staticmethod
+    def now():
         """Wrapper for time.localtime()"""
         return time.localtime()
+
+    @staticmethod
+    def strftime(instant: time.struct_time) -> str:
+        """Wrapper for time.strftime ("%Y-%m-%d %H%M:%S")"""
+        return time.strftime(
+                "%Y-%m-%d %H%M:%S", instant
+            )
 
     # --- --- --- --- Export managements --- --- ---
     # --- --- --- --- Utils --- --- ---
