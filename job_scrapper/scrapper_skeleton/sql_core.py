@@ -58,7 +58,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 )
         else:
             self._time_stamps["first_sighting"] = self._time_stamps[
-                "last_sighting"
+                self.init_time_stamp_name
             ]
 
     #  --- --- --- --- Sqlite --- --- --- ----

@@ -20,6 +20,23 @@ class ScrapperObjectCore(CoreLogger):
     """
 
     workdir = "./JobScrapperWorkDir/"
+    
+    # Default header is used both for flat file, display and sql main table.
+    default_header: Sequence[str] = {
+        "#Time_Stamp": "DATE",
+        "Origin": "TEXT",
+        "Localisation": "TEXT",
+        "Field": "TEXT",
+        "Contract": "TEXT",
+        "Title": "TEXT",
+        # "Metadata": "TEXT",
+        "Url": "TEXT PRIMARY KEY",
+    }
+    
+    distance_suffix = " (km)"
+    keyword_suffix = " (#)"
+    time_stamp_suffix = " (Y-M-D H:M:S)"
+    init_time_stamp_name = "last_sighting"
 
     def __init__(
         self,
@@ -41,23 +58,10 @@ class ScrapperObjectCore(CoreLogger):
         self._keywords: dict[str, int] = {}
 
         self._time_stamps: dict[str, time.struct_time] = {
-            "last_sighting": self.now(),
+            self.init_time_stamp_name: self.now(),
         }
 
     # --- --- --- --- Export managements --- --- ---
-    # Default header is used both for flat file, display and sql main table.
-    default_header: Sequence[str] = {
-        "#Time_Stamp": "DATE",
-        "Origin": "TEXT",
-        "Localisation": "TEXT",
-        "Field": "TEXT",
-        "Contract": "TEXT",
-        "Title": "TEXT",
-        # "Metadata": "TEXT",
-        "Url": "TEXT PRIMARY KEY",
-    }
-    distance_suffix = " (km)"
-    keyword_suffix = " (#)"
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -67,7 +71,7 @@ class ScrapperObjectCore(CoreLogger):
         # ---- Default dict ----
         items = [
             time.strftime(
-                "%Y-%m-%d %H:%M:%S", self._time_stamps["last_sighting"]
+                "%Y-%m-%d %H%M:%S", self._time_stamps[self.init_time_stamp_name]
             ),
             self.get_class_name(),
             self.localisation,
@@ -94,6 +98,10 @@ class ScrapperObjectCore(CoreLogger):
             items.append(str(occurrences))
 
         for places, distances in self._distances.items():
+            header.append(places + self.distance_suffix)
+            items.append(str(distances))
+
+        for places, distances in self._time_stamps.items():
             header.append(places + self.distance_suffix)
             items.append(str(distances))
 
