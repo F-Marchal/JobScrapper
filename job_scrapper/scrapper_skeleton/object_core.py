@@ -39,10 +39,9 @@ class ScrapperObjectCore(CoreLogger):
 
         self._distances: dict[str, float] = {}
         self._keywords: dict[str, int] = {}
-        local_time = time.localtime()
 
         self._time_stamps: dict[str, time.struct_time] = {
-            "last_sighting": local_time,
+            "last_sighting": self.now(),
         }
 
     # --- --- --- --- Export managements --- --- ---
@@ -206,6 +205,11 @@ class ScrapperObjectCore(CoreLogger):
         """Returns cls.__name__"""
         return cls.__name__
 
+    @classmethod
+    def now(cls):
+        """Wrapper for time.localtime()"""
+        return time.localtime()
+
     @staticmethod
     def get_unique_file_name(file_path: str, ext: str) -> str:
         """
@@ -256,7 +260,7 @@ class ScrapperObjectCore(CoreLogger):
         string = re.sub(r'_+', '_', string)
         string = string.strip('_')
 
-        return string.replace("_", "")
+        return string.replace("_", " ").capitalize()
 
     # --- --- title --- ----
     @property
@@ -273,7 +277,7 @@ class ScrapperObjectCore(CoreLogger):
     @property
     def localisation(self) -> str:
         """Returns the location of this job"""
-        return str(self._localisation)
+        return str(self._localisation).title()
 
     @localisation.setter
     def localisation(self, value: str | None):
