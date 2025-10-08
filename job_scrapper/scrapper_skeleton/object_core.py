@@ -1,6 +1,6 @@
 import os.path
 import time
-from typing import Sequence
+from typing import Sequence, Any
 
 from .logger_core import CoreLogger
 
@@ -15,37 +15,38 @@ class ScrapperObjectCore(CoreLogger):
     """
     Basis of JobScrapperSkeleton. Define all attributes, getters, setters and methods to export
     this object.
+    This class represent a job offer and define basic way to export them.
     """
 
     workdir = "./JobScrapperWorkDir/"
 
     def __init__(
         self,
-        title: str,
-        localisation: str | None,
         url: str,
-        contract_type: str | None,
-        field: str | None,
+        title: str | None = None,
+        localisation: str | None = None,
+        contract_type: str | None = None,
+        field: str | None = None,
         **metadata,
     ):
-
-        self.field = field
-        self.contract_type = contract_type
         self.url = url
-        self.localisation = localisation
         self.title = title
+        self.localisation = localisation
+        self.contract_type = contract_type
+        self.field = field
         self._metadata = metadata
 
         self._distances: dict[str, float] = {}
         self._keywords: dict[str, int] = {}
         local_time = time.localtime()
+
         self._time_stamps: dict[str, time.struct_time] = {
             "last_sighting": local_time,
         }
 
     # --- --- --- --- Export managements --- --- ---
     # Default header is used both for flat file, display and sql main table.
-    default_header = {
+    default_header: Sequence[str] = {
         "#Time_Stamp": "DATE",
         "Origin": "TEXT",
         "Localisation": "TEXT",
@@ -56,11 +57,12 @@ class ScrapperObjectCore(CoreLogger):
         "Url": "TEXT PRIMARY KEY",
     }
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """
-        :return dcit: A dictionary that represent this object. keywords and localisations
+        :return dict: A dictionary that represent this object. keywords and localisations
         are directly contained inside the dictionary.
         """
+        # ---- Default dict ----
         items = [
             time.strftime(
                 "%Y-%m-%d %H:%M:%S", self._time_stamps["last_sighting"]
@@ -74,7 +76,9 @@ class ScrapperObjectCore(CoreLogger):
         ]
 
         header = [*self.default_header]
+        # ---- Default dict ----
 
+        # ---- Variable dict ----
         metadata = []
         for pairs in self._metadata.items():
             metadata.append("=".join([str(items) for items in pairs]))
@@ -90,7 +94,7 @@ class ScrapperObjectCore(CoreLogger):
         for places, distances in self._distances.items():
             header.append(places + " (km)")
             items.append(str(distances))
-
+        # ---- Variable dict ----
         return dict(zip(header, items))
 
     def flat(self, sep="\t", with_header=True) -> str:
@@ -112,13 +116,26 @@ class ScrapperObjectCore(CoreLogger):
 
     @classmethod
     def _list_to_flat_file(
-        cls, jobs: Sequence["ScrapperObjectCore"], sep: str = "\t"
+        cls, jobs: Sequence["ScrapperObjectCore"], sep: str = "\t",
     ):
         """
         turn a list of jobs to a generator. This generator output the content of .job file.
+
+        When jobs have different headers, the header will be displayed again :
+        ```
+        #Time_Stamp         Origin Localisation Field    Contract Title Url      Metadata
+        2025-09-29 11:45:12 CHU    Paris        Biology  CDD      Title https... A=1|B=2
+        2025-09-29 11:45:12 INRAE  Montpellier  Biology  CDI      Title https... A=41|B=20
+
+        #Time_Stamp         Origin Localisation Field    Contract Title Url      Informatic (#) Paris, France (km)
+        2025-09-29 11:45:12 CHU   Montpellier  Biology  CDI      Title https... 15             748
+        ```
         :param ScrapperObjectCore jobs: A list of ScrapperObjectCore
         :param str sep: Column delimiter. Do not use "|"
         """
+        if sep == "|":
+            raise ValueError("'|' is not supported as <sep>.")
+
         last_header = None
         for job_object in jobs:
             header, line = job_object.flat(sep=sep).split("\n")
@@ -136,7 +153,17 @@ class ScrapperObjectCore(CoreLogger):
         sep: str = "\t",
     ):
         """
-        Export a list of job inside a jobfile.
+        Export a list of job inside a jobfile by .
+        When jobs have different headers, the header will be displayed again :
+        ```
+        #Time_Stamp         Origin Localisation Field    Contract Title Url      Metadata
+        2025-09-29 11:45:12 CHU    Paris        Biology  CDD      Title https... A=1|B=2
+        2025-09-29 11:45:12 INRAE  Montpellier  Biology  CDI      Title https... A=41|B=20
+
+        #Time_Stamp         Origin Localisation Field    Contract Title Url      Informatic (#) Paris, France (km)
+        2025-09-29 11:45:12 CHU   Montpellier  Biology  CDI      Title https... 15             748
+        ```
+
         :param str file_path: A file in which all will be written
         :param ScrapperObjectCore jobs: A list of ScrapperObjectCore
         :param str sep: Column delimiter. Do not use "|"
@@ -156,7 +183,7 @@ class ScrapperObjectCore(CoreLogger):
         """
         print a list of job inside the terminal as if it was a jobfile.
         :param list[ScrapperObjectCore] jobs: A list of ScrapperObjectCore
-        :param str sep: Column delimiter. Do not use "|"
+        :param str sep: Column delimiter. Do not use "|".
         :return:
         """
         for lines in cls._list_to_flat_file(jobs, sep=sep):
