@@ -289,6 +289,10 @@ class ScrapperObjectCore(CoreLogger):
 
         return string.replace("_", " ").capitalize()
 
+    @classmethod
+    def is_a_cleaned_string(cls, string: str | None) -> bool:
+        return  cls.clean_string(string) == string
+
     # --- --- title --- ----
     @property
     def title(self) -> str:
@@ -353,8 +357,27 @@ class ScrapperObjectCore(CoreLogger):
         return self._metadata.copy()
 
     def add_metadata(self, name: str, value: str):
-        """Add an entry inside this job metadata"""
+        """Add an entry inside this job metadata
+        :param name: Will be passed inside clean_string
+        :param value: Can not contain any pipe '|', any \s will be replaced by _"""
+        if "|" in value:
+            raise ValueError("No pipe ('|') allowed as metadata value.")
+
+        name = self.clean_string(name)
+        value = re.sub(r'\s+', '_', value)
+        value = re.sub(r'_+', '_', value)
+
         self._metadata[name] = value
+
+    def retrieve_metadata(self, name: str) -> str:
+        """Retrieve an entry inside this job metadata"""
+        name = self.clean_string(name)
+        return self._metadata[name]
+
+
+    def metadata_exist(self, name: str) -> bool:
+        """Says if a metadata with the same <name> is defined in <self.metadata>"""
+        return self.clean_string(name) in self._metadata
 
     # --- --- time_stamps --- ----
     @property
@@ -363,8 +386,21 @@ class ScrapperObjectCore(CoreLogger):
         return self._time_stamps.copy()
 
     def add_time_stamps(self, name: str, value: time.struct_time):
-        """Add an entry inside this job time stamps"""
+        """Add an entry inside this job time stamps
+        If <name> contains <self.time_stamp_suffix> as suffix it will be removed"""
+        name = self.clean_string(name.removesuffix(self.time_stamp_suffix))
         self._time_stamps[name] = value
+
+    def retrieve_time_stamps(self, name: str) -> time.struct_time:
+        """Retrieve an entry inside this job time stamps
+        If <name> contains <self.time_stamp_suffix> as suffix it will be removed"""
+        name = self.clean_string(name.removesuffix(self.time_stamp_suffix))
+        return self._time_stamps[name]
+
+    def time_stamps_exist(self, name: str) -> bool:
+        """Says if a time stamp with the same <name> is defined in <self.time_stamps>
+        If <name> contains <self.time_stamp_suffix> as suffix it will be removed"""
+        return self.clean_string(name.removesuffix(self.time_stamp_suffix)) in self._time_stamps
 
     # --- --- distances --- ----
     @property
@@ -375,16 +411,53 @@ class ScrapperObjectCore(CoreLogger):
         return self._distances.copy()
 
     def add_distance_to(self, place: str, distance: float):
-        """Add an entry inside this job time stamps"""
-        self._distances[place] = distance
+        """Add a distances that separate this offer from a <place>.
+         If <place> contains <self.distance_suffix> as suffix it will be removed"""
+        place = self.clean_string(place.removesuffix(self.distance_suffix))
+        self._distances[place] = float(distance)
+
+    def retrieve_distance_to(self, place: str) -> float:
+        """Retrieves distances that separate this offer from a <place>.
+         If <place> contains <self.distance_suffix> as suffix it will be removed"""
+        place = self.clean_string(place.removesuffix(self.distance_suffix))
+        return self._distances[place]
+
+    def distance_to_exist(self, place: str, default_value_do_not_count: bool=True) -> bool:
+        """Says if the distance that separate self.localisation and a <place>
+        is defined in <self._distances>
+         If <place> contains <self.distance_suffix> as suffix it will be removed"""
+        place = self.clean_string(place.removesuffix(self.distance_suffix))
+        if default_value_do_not_count:
+            return place in self._distances and self._distances[place] != -1
+        return place in self._distances
 
     # --- --- keywords --- ----
     @property
     def keywords(self) -> dict[str, int]:
-        """A dictionary with keywords as ket and integers
+        """Returns a dictionary with keywords as ket and integers
         as key. Each value is the number of occurrences inside
         this offer of a key."""
-        return self._keywords
+        return self._keywords.copy()
+
+    def add_keyword_count(self, keyword: str, count: int):
+        """Add the number or occurrences of a keyword in job offer
+         If <keyword> contains <self.keyword_suffix> as suffix it will be removed"""
+        keyword = self.clean_string(keyword.removesuffix(self.keyword_suffix))
+        self._keywords[keyword] = int(count)
+
+    def retrieve_keyword_count(self, keyword: str) -> int:
+        """Retrieve the number or occurrences of a keyword in job offer
+         If <keyword> contains <self.keyword_suffix> as suffix it will be removed"""
+        keyword = self.clean_string(keyword.removesuffix(self.keyword_suffix))
+        return self._keywords[keyword]
+
+    def keyword_exist(self, keyword: str, default_value_do_not_count: bool=True) -> bool:
+        """Says if the number of occurrence contained in this offer is known.
+        If <keyword> contains <self.keyword_suffix> as suffix it will be removed"""
+        keyword = self.clean_string(keyword.removesuffix(self.keyword_suffix))
+        if default_value_do_not_count:
+            return keyword in self._keywords and self._keywords[keyword] != -1
+        return keyword in self._keywords
 
     # --- --- --- --- Attributes managements --- --- --- ----
 
