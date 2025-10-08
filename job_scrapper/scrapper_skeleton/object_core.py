@@ -146,7 +146,7 @@ class ScrapperObjectCore(CoreLogger):
             yield line + "\n"
 
     @classmethod
-    def list_to_flat_file(
+    def export_to_flat_file(
         cls,
         file_path: str | None,
         jobs: Sequence["ScrapperObjectCore"],
