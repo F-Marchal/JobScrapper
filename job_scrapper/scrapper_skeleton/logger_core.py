@@ -37,27 +37,27 @@ def redirect_logs_to_file(logger, file, level: str | None | int = None) -> Gener
         logger.removeHandler(file_log_handler)
 
 
-RESET = "\033[0m"
-COLORS = {
-    logging.DEBUG: "\033[38;5;67m",  # "\033[94m",
-    logging.INFO: "\033[92m",
-    logging.WARNING: "\033[93m",
-    logging.ERROR: "\033[91m",
-    logging.CRITICAL: "\033[95m",
-}
 
 
 class _ColorFormatter(logging.Formatter):
     """
     Class used to format logger output.
     """
+    log_reset_color = "\033[0m"
+    log_colors = {
+        logging.DEBUG: "\033[38;5;67m",
+        logging.INFO: "\033[92m",
+        logging.WARNING: "\033[93m",
+        logging.ERROR: "\033[91m",
+        logging.CRITICAL: "\033[95m",
+    }
 
     def format(self, record):
-        log_color = COLORS.get(record.levelno, RESET)
+        log_color = self.log_colors.get(record.levelno, self.log_reset_color)
         message = super().format(record)
         local_time = time.localtime()
         formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
-        return f"{log_color}[{formatted_time}] {message}{RESET}"
+        return f"{log_color}[{formatted_time}] {message}{self.log_reset_color}"
 
 
 class CoreLogger:
@@ -70,9 +70,10 @@ class CoreLogger:
     logger = logging.getLogger("CoreLogger")
     logger.setLevel(logging.DEBUG)
 
+    # Class-level stream handler
+    # (Part that format logs)
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(logging.DEBUG)
-
     formatter = _ColorFormatter("[%(levelname)s] %(message)s")
     stream_handler.setFormatter(formatter)
 
@@ -80,6 +81,7 @@ class CoreLogger:
     logger.propagate = (
         False  # Prevent double logging if root logger also configured
     )
+
     logger_levels = {
         "DEBUG": logging.DEBUG,
         "INFO": logging.INFO,
@@ -88,6 +90,8 @@ class CoreLogger:
         "CRITICAL": logging.CRITICAL,
     }
 
+    # Class-level file handler (Use start_file_logging / stop_file_logging)
+    # to configure it
     file_log_handler = None
     log_file = None
 
