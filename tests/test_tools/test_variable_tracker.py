@@ -1,21 +1,17 @@
-from tests.conftest import BaseTest
+import typing
+
 import pytest
-from job_scrapper.scrapper_skeleton.logger_core import CoreLogger
+from tests.conftest import BaseTest
+
 
 @pytest.mark.testModules
 class TestVariableTracker(BaseTest):
     """Test VariableTracker using the BaseTest.tracker's VariableTracker. (As the uniq purpose
     of VariableTracker is to be used through)"""
-    @pytest.mark.parametrize(
-        "value", [
-            "Hello",
-            42,
-            19.76514,
-            False,
-            None
-        ]
-    )
-    def test_screen_basic_type(self, value):
+
+    @pytest.mark.parametrize("value", ["Hello", 42, 19.76514, False, None])
+    def test_screen_basic_type(self, value: str | int | float | bool | None):
+        """Test <self.tracker.screen> of a dictionary"""
         name = f"Test {type(value).__name__}"
         self.tracker.screen(name, value)
 
@@ -29,13 +25,15 @@ class TestVariableTracker(BaseTest):
         assert self.contains_pattern(type_pattern, content)
 
     @pytest.mark.parametrize(
-        "value", [
+        "value",
+        [
             ["A", None, 34, True],
             {"A", None, 34, True},
             ("A", None, 34, True),
-        ]
+        ],
     )
-    def test_screen_sequence_type(self, value):
+    def test_screen_sequence_type(self, value: typing.Sequence):
+        """Test <self.tracker.screen> of a list / set / tuple"""
         name = f"Test-{type(value)}"
         self.tracker.screen(name, value)
         content = "\n".join(self.tracker.get_content())
@@ -50,14 +48,10 @@ class TestVariableTracker(BaseTest):
         assert self.contains_pattern(type_pattern, content)
 
     def test_screen_dict_and_rescreen(self):
-        dict_ = {
-            "a": 2,
-            None: True,
-            45.0: "string"
-        }
+        """Test <self.tracker.screen> of a dictionary"""
+        dict_ = {"a": 2, None: True, 45.0: "string"}
         name = f"Test-{type(dict_)}"
         self.tracker.screen(name, dict_)
-
 
         del dict_["a"]
         del dict_[None]
@@ -68,13 +62,22 @@ class TestVariableTracker(BaseTest):
 
         content = "".join(self.tracker.get_content())
 
-        assert self.contains_pattern(r"{'content': {None: True, 45.0: 'string', 'a': 2},", content)
-        assert self.contains_pattern(r"- {'content': {None: True, 45.0: 'string', 'a': 2},", content)
-        assert self.contains_pattern(r"\+ {'content': {4: 55, '44': 11},", content)
+        assert self.contains_pattern(
+            r"{'content': {None: True, 45.0: 'string', 'a': 2},", content
+        )
+        assert self.contains_pattern(
+            r"- {'content': {None: True, 45.0: 'string', 'a': 2},", content
+        )
+        assert self.contains_pattern(
+            r"\+ {'content': {4: 55, '44': 11},", content
+        )
 
     def test_screen_custom_class(self):
+        """Test <self.tracker.screen> of a CustomClass (Object + class)"""
+
         class CustomClass:
             cls_arg = 775
+
             def __init__(self):
                 self.s_arg = 44
 

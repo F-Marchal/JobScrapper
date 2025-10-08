@@ -49,6 +49,10 @@ class VariableTracker:
 
         @property
         def content_dict(self) -> dict:
+            """
+            :return dict: Returns a dictionary that contain all
+            information related to <self.content>
+            """
             return {
                 "name": self.name,
                 "type": self.type,
@@ -61,9 +65,7 @@ class VariableTracker:
             Export debug intel from self.obj to the log file.
             """
 
-            new_screen = pprint.pformat(
-                self.content_dict
-            )
+            new_screen = pprint.pformat(self.content_dict)
 
             self.tracker.write(f"[Start {self.name}]")
 
@@ -91,6 +93,10 @@ class VariableTracker:
                 self.content = (
                     self.obj.__dict__
                     if "__dict__" in obj_attr
+                    # pylint: disable=C2801
+                    # Call of __repr__ is Necessary when we work on class types
+                    # E.g. ScreenVar.__repr__ gives a method-wrapper and ScreenVar.__repr__() gives a
+                    # mappingproxy that contains class attributes (and methods)
                     else self.obj.__repr__()
                 )
 

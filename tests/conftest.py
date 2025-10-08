@@ -7,6 +7,7 @@ import typing
 from inspect import getfile
 
 import pytest
+
 from .test_tools.variable_tracker import VariableTracker
 
 
@@ -82,7 +83,9 @@ class BaseTest:
         os.chdir(self.test_folder)
 
         # ---- Generate logs ----
-        self.tracker = VariableTracker(os.path.join(self.test_folder, "tests.logs"))
+        self.tracker = VariableTracker(
+            os.path.join(self.test_folder, "tests.logs")
+        )
 
         # ---- Yield access to test function ----
         yield self.test_folder
