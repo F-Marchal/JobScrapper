@@ -56,6 +56,8 @@ class ScrapperObjectCore(CoreLogger):
         # "Metadata": "TEXT",
         "Url": "TEXT PRIMARY KEY",
     }
+    distance_suffix = " (km)"
+    keyword_suffix = " (#)"
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -88,12 +90,13 @@ class ScrapperObjectCore(CoreLogger):
             items.append("|".join(metadata))
 
         for keywords, occurrences in self._keywords.items():
-            header.append(keywords + " (#)")
+            header.append(keywords + self.keyword_suffix)
             items.append(str(occurrences))
 
         for places, distances in self._distances.items():
-            header.append(places + " (km)")
+            header.append(places + self.distance_suffix)
             items.append(str(distances))
+
         # ---- Variable dict ----
         return dict(zip(header, items))
 
@@ -210,6 +213,9 @@ class ScrapperObjectCore(CoreLogger):
         """Wrapper for time.localtime()"""
         return time.localtime()
 
+    # --- --- --- --- Export managements --- --- ---
+    # --- --- --- --- Utils --- --- ---
+
     @staticmethod
     def get_unique_file_name(file_path: str, ext: str) -> str:
         """
@@ -231,7 +237,7 @@ class ScrapperObjectCore(CoreLogger):
 
         return filename.format(counter)
 
-    # --- --- --- --- Export managements --- --- --- ----
+    # --- --- --- --- Utils --- --- ---
     # --- --- --- --- Attributes managements --- --- --- ----
     @staticmethod
     def clean_string(string: str | None) -> str | None:
