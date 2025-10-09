@@ -380,6 +380,72 @@ class ScrapperObjectCore(CoreLogger):
     def is_a_cleaned_string(cls, string: str | None) -> bool:
         return  cls.clean_string(string) == string
 
+    def __eq__(self, other):
+        """Strict equality between two ScrapperObjectCore"""
+        if not isinstance(other, ScrapperObjectCore):
+            return NotImplemented
+
+        return (
+            self.url == other.url
+            and self.title == other.title
+            and self.localisation == other.localisation
+            and self.contract_type == other.contract_type
+            and self.field == other.field
+            and self._metadata == other._metadata
+            and self._distances == other._distances
+            and self._keywords == other._keywords
+            and self.compare_two_time_stamps_dict(self._time_stamps, other._time_stamps)
+        )
+
+    def __ne__(self, other):
+        """Strict inequality between two ScrapperObjectCore"""
+        eq = self.__eq__(other)
+        if eq is NotImplemented:
+            return NotImplemented
+        return not eq
+
+    @staticmethod
+    def compare_two_time_stamps(t1: time.struct_time, t2: time.struct_time) -> bool:
+        """Does two time stamp are equals ? (do not take into account tm_isdst)"""
+        if t1.tm_isdst == t2.tm_isdst:
+            return t1 == t2
+
+        if t2.tm_isdst != -1:
+            t2 = time.struct_time((
+                t2.tm_year, t2.tm_mon, t2.tm_mday,
+                t2.tm_hour, t2.tm_min, t2.tm_sec,
+                t2.tm_wday, t2.tm_yday, t1.tm_isdst  # tm_isdst
+            ))
+
+        return t1 == t2
+
+    @classmethod
+    def compare_two_time_stamps_dict(
+            cls,
+            d1: dict[str, time.struct_time],
+            d2: dict[str, time.struct_time]
+    ) -> bool:
+        """Does two ScrapperObjectCore's time stamps dict are equal.
+         Uses compare_two_time_stamps to compare time stamps"""
+        if d1.keys() != d2.keys():
+            return False
+
+        keys = list(d1.keys())
+        i = 0
+        equal_time_stamps = True
+        while equal_time_stamps and i < len(keys):
+            key = keys[i]
+            if not cls.compare_two_time_stamps(d1[key], d2[key]):
+                equal_time_stamps = False
+            i += 1
+
+        return equal_time_stamps
+
+
+    def equivalent_to(self, other: 'ScrapperObjectCore') -> bool:
+        """Returns true when other have the same url as self"""
+        return self.url == other.url
+
     # --- --- title --- ----
     @property
     def title(self) -> str:
