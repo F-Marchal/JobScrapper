@@ -1,6 +1,6 @@
 import os.path
 import time
-from typing import Sequence, Any
+from typing import Sequence
 
 from .logger_core import CoreLogger
 import unicodedata
@@ -125,11 +125,12 @@ class ScrapperObjectCore(CoreLogger):
 
         unflat = cls("tmp")
 
-        for column_index, column in enumerate(split_header):
-            column_value = split_line[column_index]
+        for column_index, column_name in enumerate(split_header):
+            column_name = column_name.strip()
+            column_value = split_line[column_index].strip()
 
-            if column in cls.default_header:
-                default_index = list_default_header.index(column)
+            if column_name in cls.default_header:
+                default_index = list_default_header.index(column_name)
 
                 if default_index == 0:
                     unflat.add_time_stamps(cls.init_time_stamp_name, cls.unstrftime(column_value))
@@ -147,19 +148,19 @@ class ScrapperObjectCore(CoreLogger):
                 elif default_index == 6:
                     unflat.url = column_value
 
-            elif column == "Metadata":
+            elif column_name == "Metadata":
                 for pairs in column_value.split("|"):
                     name, value = pairs.split("=")
                     unflat.add_metadata(name, value)
 
-            elif column[-len(cls.distance_suffix):] == cls.distance_suffix:
-                unflat.add_distance_to(column, float(column_value))
+            elif column_name[-len(cls.distance_suffix):] == cls.distance_suffix:
+                unflat.add_distance_to(column_name, float(column_value))
 
-            elif column[-len(cls.keyword_suffix):] == cls.keyword_suffix:
-                unflat.add_keyword_count(column, int(column_value))
+            elif column_name[-len(cls.keyword_suffix):] == cls.keyword_suffix:
+                unflat.add_keyword_count(column_name, int(column_value))
 
-            elif column[-len(cls.time_stamp_suffix):] == cls.time_stamp_suffix:
-                unflat.add_time_stamps(column, cls.unstrftime(column_value))
+            elif column_name[-len(cls.time_stamp_suffix):] == cls.time_stamp_suffix:
+                unflat.add_time_stamps(column_name, cls.unstrftime(column_value))
 
         return unflat
 
@@ -234,13 +235,41 @@ class ScrapperObjectCore(CoreLogger):
         :param ScrapperObjectCore jobs: A list of ScrapperObjectCore
         :param str sep: Column delimiter. Do not use "|"
         """
-        cls.logger.debug("Exporting %s jobs to %s", len(jobs), file_path)
         if file_path is None:
-            file_path = os.path.join(cls.workdir, "JobFiles")
+            file_path = os.path.join(cls.workdir, "JobFiles.job")
+
+        cls.logger.debug("Exporting %s jobs to %s", len(jobs), file_path)
 
         with open(file_path, "w", encoding="utf-8") as f:
             for lines in cls._list_to_flat_file(jobs, sep=sep):
                 f.write(lines)
+
+    @classmethod
+    def import_from_flat_file(
+            cls,
+            file_path: str | None,
+            sep: str = "\t",
+        ):
+        if file_path is None:
+            file_path = os.path.join(cls.workdir, "JobFiles.job")
+
+        cls.logger.debug(f"Loading jobs from {file_path}")
+
+        with open(file_path, "r", encoding="utf-8") as flux:
+            last_header = None
+            for lines in flux:
+                if not lines.strip():
+                    continue
+
+                if lines[0] == "#":
+                    last_header = lines
+                    continue
+                elif not last_header:
+                    continue
+
+                obj = cls.unflat(last_header, lines, sep=sep)
+                obj.flat(with_header=False)
+                yield obj
 
     @classmethod
     def complete_display_list_of_offers(
