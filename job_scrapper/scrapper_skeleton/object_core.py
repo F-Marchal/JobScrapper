@@ -19,7 +19,7 @@ class ScrapperObjectCore(CoreLogger):
     This class represent a job offer and define basic way to export them.
     """
 
-    workdir = "./JobScrapperWorkDir/"
+    _workdir = "./JobScrapperWorkDir/"
     
     # Default header is used both for flat file, display and sql main table.
     default_header: Sequence[str] = {
@@ -37,6 +37,18 @@ class ScrapperObjectCore(CoreLogger):
     keyword_suffix = " (#)"
     time_stamp_suffix = " (Y-M-D H:M:S)"
     init_time_stamp_name = "Last sighting" # Should be a clean_string() output.
+
+    @classmethod
+    def set_workdir(cls, path: str):
+        cls._workdir = path
+
+    @classmethod
+    def get_workdir(cls):
+        if not os.path.exists(cls._workdir):
+            os.makedirs(cls._workdir, exist_ok=True)
+
+        return cls._workdir
+
 
     def __init__(
         self,
@@ -236,7 +248,7 @@ class ScrapperObjectCore(CoreLogger):
         :param str sep: Column delimiter. Do not use "|"
         """
         if file_path is None:
-            file_path = os.path.join(cls.workdir, "JobFiles.job")
+            file_path = os.path.join(cls.get_workdir(), "JobFiles.job")
 
         cls.logger.debug("Exporting %s jobs to %s", len(jobs), file_path)
 
@@ -251,7 +263,7 @@ class ScrapperObjectCore(CoreLogger):
             sep: str = "\t",
         ):
         if file_path is None:
-            file_path = os.path.join(cls.workdir, "JobFiles.job")
+            file_path = os.path.join(cls.get_workdir(), "JobFiles.job")
 
         cls.logger.debug(f"Loading jobs from {file_path}")
 

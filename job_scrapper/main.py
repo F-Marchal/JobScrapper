@@ -60,7 +60,7 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
         os.mkdir(workdir)
 
     ctx.obj["workdir"] = workdir
-    JobScrapperSkeleton.workdir = workdir
+    JobScrapperSkeleton.set_workdir(workdir)
 
     # --- Logging file ---
     if not no_log_file:
@@ -70,7 +70,7 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
 
         formatted_time = time.strftime("%Y-%m-%d_%H:%M:%S")
         logg_file = os.path.join(log_dir, f"{formatted_time}")
-        complete_log_file = JobScrapperSkeleton.get_unique_file_name(
+        complete_log_file = JobScrapperSkeleton.get_unique_path(
             logg_file, "log"
         )
 

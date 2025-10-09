@@ -71,7 +71,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         :return str: A path that lead to a database file.
         """
         if not workdir:
-            workdir = cls.workdir
+            workdir = cls.get_workdir()
 
         return os.path.abspath(
             os.path.join(workdir, cls.database_file_name + ".db")
