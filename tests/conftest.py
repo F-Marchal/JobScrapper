@@ -8,7 +8,7 @@ from inspect import getfile
 
 import pytest
 
-from .test_tools.variable_tracker import VariableTracker
+from tools.variable_tracker import VariableTracker
 
 
 def pytest_addoption(parser):
