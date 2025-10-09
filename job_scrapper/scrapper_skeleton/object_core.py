@@ -36,7 +36,7 @@ class ScrapperObjectCore(CoreLogger):
     distance_suffix = " (km)"
     keyword_suffix = " (#)"
     time_stamp_suffix = " (Y-M-D H:M:S)"
-    init_time_stamp_name = "last_sighting"
+    init_time_stamp_name = "Last sighting" # Should be a clean_string() output.
 
     def __init__(
         self,
@@ -114,6 +114,55 @@ class ScrapperObjectCore(CoreLogger):
         # ---- Variable dict ----
         return dict(zip(header, items))
 
+    @classmethod
+    def unflat(cls, header: str, line: str, sep: str = "\t") -> 'ScrapperObjectCore':
+        """
+        Recreate an object using the output of .flat()
+        """
+        split_header = header.split(sep)
+        split_line = line.split(sep)
+        list_default_header = list(cls.default_header)
+
+        unflat = cls("tmp")
+
+        for column_index, column in enumerate(split_header):
+            column_value = split_line[column_index]
+
+            if column in cls.default_header:
+                default_index = list_default_header.index(column)
+
+                if default_index == 0:
+                    unflat.add_time_stamps(cls.init_time_stamp_name, cls.unstrftime(column_value))
+
+                elif default_index == 1:
+                    continue
+                elif default_index == 2:
+                    unflat.localisation = column_value
+                elif default_index == 3:
+                    unflat.field = column_value
+                elif default_index == 4:
+                    unflat.contract_type = column_value
+                elif default_index == 5:
+                    unflat.title = column_value
+                elif default_index == 6:
+                    unflat.url = column_value
+
+            elif column == "Metadata":
+                for pairs in column_value.split("|"):
+                    name, value = pairs.split("=")
+                    unflat.add_metadata(name, value)
+
+            elif column[-len(cls.distance_suffix):] == cls.distance_suffix:
+                unflat.add_distance_to(column, float(column_value))
+
+            elif column[-len(cls.keyword_suffix):] == cls.keyword_suffix:
+                unflat.add_keyword_count(column, int(column_value))
+
+            elif column[-len(cls.time_stamp_suffix):] == cls.time_stamp_suffix:
+                unflat.add_time_stamps(column, cls.unstrftime(column_value))
+
+        return unflat
+
     def flat(self, sep: str="\t", with_header: bool=True) -> str:
         """
         Transform an offer to a line inside a flatfile.
@@ -124,7 +173,7 @@ class ScrapperObjectCore(CoreLogger):
         :param bool with_header: Do the first line contain the header of this offer.
         """
         self_dict = self.to_dict()
-        str_items = sep.join(self_dict.values())
+        str_items = sep.join([str(item) for item in self_dict.values()])
 
         if with_header:
             str_header = sep.join(self_dict.keys())
@@ -233,6 +282,11 @@ class ScrapperObjectCore(CoreLogger):
         return time.strftime(
             "%Y-%m-%d %H:%M:%S", instant
         )
+
+    @staticmethod
+    def unstrftime(date_str: str) -> time.struct_time:
+        """Inverse of strftime ("%Y-%m-%d %H:%M:%S")"""
+        return time.strptime(date_str, "%Y-%m-%d %H:%M:%S")
 
     # --- --- --- --- Export managements --- --- ---
     # --- --- --- --- Utils --- --- ---
