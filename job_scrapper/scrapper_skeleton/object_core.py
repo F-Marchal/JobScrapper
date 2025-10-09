@@ -292,7 +292,7 @@ class ScrapperObjectCore(CoreLogger):
     # --- --- --- --- Utils --- --- ---
 
     @staticmethod
-    def get_unique_file_name(file_path: str, ext: str) -> str:
+    def get_unique_path(file_path: str, ext: str = "") -> str:
         """
         Give a filename that does not exist.
         if <file_path>.<ext> exist, <file_path>-<#>.<ext> will be tested. <#> is incremented
@@ -301,13 +301,17 @@ class ScrapperObjectCore(CoreLogger):
         :param str ext: file extension that should be added to  folder/filename (-->  folder/filename.ext)
         :return:
         """
-        default_name = file_path + "." + ext
+        if ext and ext[0] != ".":
+            ext = "." + ext
+
+        default_name = file_path + ext
+
         if not os.path.exists(file_path + ext):
             return default_name
 
         counter = 1
-        filename = file_path + "-{}." + ext
-        while os.path.isfile(filename.format(counter)):
+        filename = file_path + "-{}" + ext
+        while os.path.exists(filename.format(counter)):
             counter += 1
 
         return filename.format(counter)
