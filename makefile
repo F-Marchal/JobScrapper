@@ -40,10 +40,10 @@ cleantestcode:
 example_cmd = 	poetry run job-scrapper database request \
 		-a $(YESTERDAY) \
 		-c origin -c contract -c title -c url\
-		-d 'Montpellier, France<100' \
+		-d 'Montpellier, France<150' \
 		-cb '%CHERCHEUR%' -cb '%STAGE%' -cb '%DOCTOR%' -cb '%POSTDOC%' -cb "%THÈSE%" \
 		--file "last_request.tsv" \
-		-o "Montpellier_France_km" -o contract  -o "Bioinformatic_enhanced_occurence" -o "Bioinformatic_occurence" \
+		-o "Montpellier_France_km" -o "Bioinformatic_occurence" -o "Bioinformatic_enhanced_occurence" -o contract \
 		-k "Bioinformatic" -k "Bioinformatic_enhanced>0"
 
 
