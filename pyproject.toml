@@ -61,6 +61,7 @@ markers = [
     "logs: Test logging functions.",
     "testModules: Test module only used during test runs."
 ]
+addopts = "-s"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
