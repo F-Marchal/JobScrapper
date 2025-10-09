@@ -427,6 +427,12 @@ class ScrapperObjectCore(CoreLogger):
 
         self._metadata[name] = value
 
+    def remove_metadata(self, name: str):
+        """Delete a metadata attached to this job offer."""
+        name = self.clean_string(name)
+        if name in self._metadata:
+            del self._metadata[name]
+
     def retrieve_metadata(self, name: str) -> str:
         """Retrieve an entry inside this job metadata"""
         name = self.clean_string(name)
@@ -448,6 +454,16 @@ class ScrapperObjectCore(CoreLogger):
         If <name> contains <self.time_stamp_suffix> as suffix it will be removed"""
         name = self.clean_string(name.removesuffix(self.time_stamp_suffix))
         self._time_stamps[name] = value
+
+    def remove_time_stamps(self, name: str):
+        """Delete a time stamp from the list of known time stamps."""
+        name = self.clean_string(name.removesuffix(self.time_stamp_suffix))
+
+        if name == self.init_time_stamp_name:
+            raise ValueError(f"'{self.init_time_stamp_name}' can not be removed from time stamps !")
+
+        elif name in self._time_stamps:
+            del self._time_stamps[name]
 
     def retrieve_time_stamps(self, name: str) -> time.struct_time:
         """Retrieve an entry inside this job time stamps
@@ -473,6 +489,12 @@ class ScrapperObjectCore(CoreLogger):
          If <place> contains <self.distance_suffix> as suffix it will be removed"""
         place = self.clean_string(place.removesuffix(self.distance_suffix))
         self._distances[place] = float(distance)
+
+    def remove_distance_to(self, place: str):
+        """Delete a place from the list known places in the distance dictionary."""
+        place = self.clean_string(place.removesuffix(self.distance_suffix))
+        if place in self._distances:
+            del self._distances[place]
 
     def retrieve_distance_to(self, place: str) -> float:
         """Retrieves distances that separate this offer from a <place>.
@@ -502,6 +524,12 @@ class ScrapperObjectCore(CoreLogger):
          If <keyword> contains <self.keyword_suffix> as suffix it will be removed"""
         keyword = self.clean_string(keyword.removesuffix(self.keyword_suffix))
         self._keywords[keyword] = int(count)
+
+    def remove_keyword_count(self, keyword: str):
+        """Delete keyword from the list of known keywords attached to this job offer."""
+        keyword = self.clean_string(keyword.removesuffix(self.keyword_suffix))
+        if keyword in self._keywords:
+            del self._keywords[keyword]
 
     def retrieve_keyword_count(self, keyword: str) -> int:
         """Retrieve the number or occurrences of a keyword in job offer
