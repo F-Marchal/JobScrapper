@@ -63,13 +63,13 @@ class ScrapperObjectCore(CoreLogger):
 
     # --- --- --- --- Export managements --- --- ---
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, str | int | float]:
         """
         :return dict: A dictionary that represent this object. keywords and localisations
         are directly contained inside the dictionary.
         """
         # ---- Default dict ----
-        items = [
+        items: list[str | int | float] = [
             self.strftime(
                 self._time_stamps[self.init_time_stamp_name]
             ),
@@ -95,11 +95,11 @@ class ScrapperObjectCore(CoreLogger):
 
         for keywords, occurrences in self._keywords.items():
             header.append(keywords + self.keyword_suffix)
-            items.append(str(occurrences))
+            items.append(occurrences)
 
         for places, distances in self._distances.items():
             header.append(places + self.distance_suffix)
-            items.append(str(distances))
+            items.append(distances)
 
         for instant_name, time_struct in self._time_stamps.items():
             if instant_name == self.init_time_stamp_name:
@@ -107,14 +107,14 @@ class ScrapperObjectCore(CoreLogger):
 
             parsed_time = self.strftime(
                 time_struct
-            ),
+            )
             header.append(f"{instant_name}{self.time_stamp_suffix}")
             items.append(str(parsed_time))
 
         # ---- Variable dict ----
         return dict(zip(header, items))
 
-    def flat(self, sep="\t", with_header=True) -> str:
+    def flat(self, sep: str="\t", with_header: bool=True) -> str:
         """
         Transform an offer to a line inside a flatfile.
         Since the header can vary due to configuration differences, you
@@ -231,8 +231,8 @@ class ScrapperObjectCore(CoreLogger):
     def strftime(instant: time.struct_time) -> str:
         """Wrapper for time.strftime ("%Y-%m-%d %H%M:%S")"""
         return time.strftime(
-                "%Y-%m-%d %H%M:%S", instant
-            )
+            "%Y-%m-%d %H:%M:%S", instant
+        )
 
     # --- --- --- --- Export managements --- --- ---
     # --- --- --- --- Utils --- --- ---
