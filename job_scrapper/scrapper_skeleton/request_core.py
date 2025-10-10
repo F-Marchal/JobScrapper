@@ -570,7 +570,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
         sanitized_name = re.sub(r'[<>"/\\|?*\x00-\x1F]', "", name)
         sanitized_name = sanitized_name.strip()
 
-        folder = os.path.join(self.workdir, self.get_class_name())
+        folder = os.path.join(self.get_workdir(), self.get_class_name())
         if not os.path.exists(folder):
             os.mkdir(folder)
         return folder, sanitized_name
@@ -586,7 +586,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
 
         folder, name = self._generate_job_file_name(ext)
         file_path = os.path.join(folder, name)
-        file_path = self.get_unique_file_name(file_path, "zip")
+        file_path = self.get_unique_path(file_path, "zip")
 
         self.logger.debug("Saving job in %s", file_path)
 
@@ -597,9 +597,9 @@ class ScrapperRequestCore(ScrapperSQLightCore):
             self.logger.error("Unable to save '%s' as zip : %s", self.url, fne)
 
         # Reduce path length when possible
-        if self.workdir in file_path:
+        if self.get_workdir() in file_path:
             self._metadata["job_page"] = os.path.relpath(
-                file_path, start=self.workdir
+                file_path, start=self.get_workdir()
             )
         else:
             self._metadata["job_page"] = file_path

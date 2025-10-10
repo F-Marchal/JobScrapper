@@ -58,7 +58,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 )
         else:
             self._time_stamps["first_sighting"] = self._time_stamps[
-                "last_sighting"
+                self.init_time_stamp_name
             ]
 
     #  --- --- --- --- Sqlite --- --- --- ----
@@ -71,7 +71,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         :return str: A path that lead to a database file.
         """
         if not workdir:
-            workdir = cls.workdir
+            workdir = cls.get_workdir()
 
         return os.path.abspath(
             os.path.join(workdir, cls.database_file_name + ".db")

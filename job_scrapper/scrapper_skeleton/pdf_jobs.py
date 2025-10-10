@@ -54,7 +54,7 @@ class PdfJobBaseScrapper(JobScrapperSkeleton):
         self.logger.debug("Exporting pfd...")
         folder, name = self._generate_job_file_name()
         final_path = str(os.path.join(folder, name))
-        final_path = self.get_unique_file_name(final_path, "pdf")
+        final_path = self.get_unique_path(final_path, "pdf")
         shutil.copy(path, final_path)
 
     # --- --- Download files  --- ---

@@ -24,6 +24,8 @@ black = "^25.1.0"
 isort = "^6.0.1"
 mypy = "^1.17.1"
 pylint = "^3.3.8"
+pytest = "^8.4.2"
+commitizen = "^4.9.1"
 
 [build-system]
 requires = ["poetry-core"]
@@ -53,3 +55,16 @@ init-hook = "import sys; sys.path.append('jobfrom')"
 disable = ["C0114", "C0113", "R0903"]
 init-hook = "import sys; sys.path.append('jobfrom')"
 max-line-length = 880
+
+[tool.pytest.ini_options]
+markers = [
+    "logs: Test logging functions.",
+    "testModules: Test module only used during test runs."
+]
+addopts = "-s"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+update_changelog_on_bump = true

@@ -137,34 +137,35 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         """
         # pylint: disable=R0914
         # Locals variables help me to understand my code
+        workdir = cls.get_workdir()
 
-        if not os.path.isdir(cls.workdir):
-            cls.logger.info("Creation of %s", cls.workdir)
-            os.mkdir(cls.workdir)
+        if not os.path.isdir(workdir):
+            cls.logger.info("Creation of %s", workdir)
+            os.mkdir(workdir)
 
         localisations_search_file = cls.ConfigurationFile(
             name="researched-localisation",
             path=localisations_to_search_json,
             logger=cls.logger,
-            workdir=cls.workdir,
+            workdir=workdir,
         )
         keywords_search_file = cls.ConfigurationFile(
             name="researched-keywords",
             path=keywords_to_search_json,
             logger=cls.logger,
-            workdir=cls.workdir,
+            workdir=workdir,
         )
         known_localisations_file = cls.ConfigurationFile(
             name="known-localisation",
             path=known_localisations_json,
             logger=cls.logger,
-            workdir=cls.workdir,
+            workdir=workdir,
         )
         known_urls_file = cls.ConfigurationFile(
             name="known-urls",
             path=known_urls_json,
             logger=cls.logger,
-            workdir=cls.workdir,
+            workdir=workdir,
         )
 
         tmp_lts: list[str] | None = localisations_search_file.load()
@@ -252,7 +253,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                     len(result),
                     flat_export,
                 )
-                cls.list_to_flat_file(flat_export, result)
+                cls.export_to_flat_file(flat_export, result)
 
         if display:
             cls.logger.info("Starting display of %s jobs", len(result))
