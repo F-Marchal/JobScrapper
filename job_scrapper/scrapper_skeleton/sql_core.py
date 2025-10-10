@@ -28,10 +28,6 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     distances_table_name = "Distances"
     time_stamps_table_name = "TimeStamps"
 
-    _sql_command_folder = (
-        pathlib.Path(__file__).parent.resolve().joinpath("sql")
-    )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
