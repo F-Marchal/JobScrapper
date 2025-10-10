@@ -10,7 +10,7 @@ import re
 from mypy.types_utils import AnyType
 
 import datetime
-
+import unicodedata
 from .object_core import ScrapperObjectCore
 from dataclasses import dataclass, field
 
@@ -78,16 +78,27 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         )
 
     @classmethod
-    def sql_compatible_header_keyword(cls, keyword: str):
+    def sql_header_compatible_string(cls, name: str):
         """
         Transform a string to ensure that a keyword can be used as
         header inside a sql table.
-        :param str keyword: a string
-        :return:
+        :param str name: the string you want to use.
+        :return str: a string that can be used as a sql table header
         """
-        if keyword[0] == '#':
-            keyword = keyword[1:]
-        return re.sub(r'[^0-9a-zA-Z_]', '_', keyword.strip()).replace("__", "_")
+        name = unicodedata.normalize('NFD', name)
+        name = name.encode('ascii', 'ignore').decode('utf-8')
+
+        if name[0] == '#':
+            name = name[1:]
+
+        name = re.sub(r'[^0-9a-zA-Z_]', '_', name.strip())
+        name = re.sub(r'_+', '_', name)
+        name = name.strip("_")
+
+        if not name:
+            return "Unable_to_use_as_header"
+
+        return name
 
     # --- --- Names and paths --- ---
     # --- --- Databases --- ---
@@ -97,7 +108,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             f"CREATE TABLE IF NOT EXISTS  {cls.main_table_name} (",
         ]
         for column_name, column_type in cls.default_header.items():
-            column_name = cls.sql_compatible_header_keyword(column_name)
+            column_name = cls.sql_header_compatible_string(column_name)
             database_definition.append(f"{column_name} {column_type},")
         database_definition[-1] = database_definition[-1].removesuffix(",")
 
@@ -226,7 +237,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         format_list = []
         self_dict = self.to_dict()
         for cat_name in self.default_header:
-            command[1] += self.sql_compatible_header_keyword(cat_name) + ", "
+            command[1] += self.sql_header_compatible_string(cat_name) + ", "
 
             if str(self_dict[cat_name]).lower() not in (
                 "",
@@ -558,7 +569,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         for (reference, operator, value, sql_condition) in result:
             # Select
-            reference_column_name = cls.sql_compatible_header_keyword(f"{reference}{suffix}")
+            reference_column_name = cls.sql_header_compatible_string(f"{reference}{suffix}")
 
             if new_columns is not None:
                 new_columns.append(reference_column_name)
@@ -708,7 +719,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         """
         #
         if not columns:
-            columns = [cls.sql_compatible_header_keyword(item).lower() for item in cls.default_header]
+            columns = [cls.sql_header_compatible_string(item).lower() for item in cls.default_header]
         new_columns = []
         command_formater = cls.SQLCommandFormater()
         cls._sql_generate_command_select(columns, command_formater)
