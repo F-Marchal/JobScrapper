@@ -19,11 +19,11 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     database_file_name = "AllJobs"
 
-    main_table_name = "Jobs"
-    metadata_table_name = "Metadata"
-    keywords_table_name = "KeywordsCount"
-    distances_table_name = "Distances"
-    time_stamps_table_name = "TimeStamps"
+    _main_table_name = "Jobs"
+    _metadata_table_name = "Metadata"
+    _keywords_table_name = "KeywordsCount"
+    _distances_table_name = "Distances"
+    _time_stamps_table_name = "TimeStamps"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -98,7 +98,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     @classmethod
     def _create_main_sql_table_command(cls) -> str:
         database_definition = [
-            f"CREATE TABLE IF NOT EXISTS  {cls.main_table_name} (",
+            f"CREATE TABLE IF NOT EXISTS  {cls._main_table_name} (",
         ]
         for column_name, column_type in cls.default_header.items():
             column_name = cls.sql_header_compatible_string(column_name)
@@ -115,12 +115,12 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     @classmethod
     def _create_metadata_sql_table_command(cls) -> str:
         command = [
-            f"CREATE TABLE IF NOT EXISTS {cls.metadata_table_name} (",
+            f"CREATE TABLE IF NOT EXISTS {cls._metadata_table_name} (",
             "url TEXT,",
             "key TEXT NOT NULL,",
             "value TEXT NOT NULL,",
             "PRIMARY KEY(url, key),"
-            f"FOREIGN KEY (url) REFERENCES {cls.main_table_name}(url)",
+            f"FOREIGN KEY (url) REFERENCES {cls._main_table_name}(url)",
             ");",
         ]
         return "\n".join(command)
@@ -128,12 +128,12 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     @classmethod
     def _create_keywords_sql_table_command(cls) -> str:
         command = [
-            f"CREATE TABLE IF NOT EXISTS {cls.keywords_table_name} (",
+            f"CREATE TABLE IF NOT EXISTS {cls._keywords_table_name} (",
             "url TEXT,",
             "keyword TEXT NOT NULL,",
             "occurrence INT,",
             "PRIMARY KEY(url, keyword),"
-            f"FOREIGN KEY (url) REFERENCES {cls.main_table_name}(url)",
+            f"FOREIGN KEY (url) REFERENCES {cls._main_table_name}(url)",
             ");",
         ]
         return "\n".join(command)
@@ -144,7 +144,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         :return str: The command that allow the creation of the distance table.
         """
         return (
-            f"CREATE TABLE IF NOT EXISTS {cls.distances_table_name} ("
+            f"CREATE TABLE IF NOT EXISTS {cls._distances_table_name} ("
             + "reference_localisation TEXT NOT NULL,"
             + "job_localisation TEXT NOT NULL,"
             + "distance REAL,"
@@ -158,12 +158,12 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         :return str: The command that allow the creation of the time stamps table.
         """
         command = [
-            f"CREATE TABLE IF NOT EXISTS {cls.time_stamps_table_name} (",
+            f"CREATE TABLE IF NOT EXISTS {cls._time_stamps_table_name} (",
             "url TEXT,",
             "keyword TEXT NOT NULL,",
             "time_stamp DATE NOT NULL,",
             "PRIMARY KEY(url, keyword),"
-            f"FOREIGN KEY (url) REFERENCES {cls.main_table_name}(url)",
+            f"FOREIGN KEY (url) REFERENCES {cls._main_table_name}(url)",
             ");",
         ]
         return "\n".join(command)
@@ -223,7 +223,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     def _sql_export_main(self):
         command = [
-            f"INSERT OR REPLACE INTO {self.main_table_name}",
+            f"INSERT OR REPLACE INTO {self._main_table_name}",
             "(",
             "VALUES (" + ", ".join(["?"] * len(self.default_header)) + ")",
         ]
@@ -257,7 +257,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         format_list = []
         command = [
-            f"INSERT OR REPLACE INTO {self.metadata_table_name}(url, key, value)",
+            f"INSERT OR REPLACE INTO {self._metadata_table_name}(url, key, value)",
             "VALUES",
         ]
         for key, value in self.metadata.items():
@@ -273,7 +273,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         # Prepare command
         command = [
-            f"INSERT OR REPLACE INTO {self.keywords_table_name}(url, keyword, occurrence)",
+            f"INSERT OR REPLACE INTO {self._keywords_table_name}(url, keyword, occurrence)",
             "VALUES",
         ]
         format_list = []
@@ -296,7 +296,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         # Prepare sql_core command
         command = [
-            f"INSERT OR REPLACE INTO {self.distances_table_name}(reference_localisation, job_localisation, distance)",
+            f"INSERT OR REPLACE INTO {self._distances_table_name}(reference_localisation, job_localisation, distance)",
             "VALUES",
         ]
         format_list = []
@@ -317,7 +317,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         format_list = []
         command = [
-            f"INSERT OR REPLACE INTO {self.time_stamps_table_name}(url, keyword, time_stamp)",
+            f"INSERT OR REPLACE INTO {self._time_stamps_table_name}(url, keyword, time_stamp)",
             "VALUES",
         ]
         for key, value in self.time_stamps.items():
@@ -405,27 +405,27 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     @classmethod
     def get_sql_column_jobs_table(cls):
         """Returns columns names attached to jobs table"""
-        return cls.get_sql_table_column_name(cls.main_table_name)
+        return cls.get_sql_table_column_name(cls._main_table_name)
 
     @classmethod
     def get_sql_column_metadata_table(cls):
         """Returns columns names attached to metadata table"""
-        return cls.get_sql_table_column_name(cls.metadata_table_name)
+        return cls.get_sql_table_column_name(cls._metadata_table_name)
 
     @classmethod
     def get_sql_column_distances_table(cls):
         """Returns columns names attached to distances table"""
-        return cls.get_sql_table_column_name(cls.distances_table_name)
+        return cls.get_sql_table_column_name(cls._distances_table_name)
 
     @classmethod
     def get_sql_column_time_stamps_table(cls):
         """Returns columns names attached to time stamps table"""
-        return cls.get_sql_table_column_name(cls.time_stamps_table_name)
+        return cls.get_sql_table_column_name(cls._time_stamps_table_name)
 
     @classmethod
     def get_sql_column_keywords_table(cls):
         """Returns columns names attached to keywords table"""
-        return cls.get_sql_table_column_name(cls.keywords_table_name)
+        return cls.get_sql_table_column_name(cls._keywords_table_name)
 
     # --- columns names ---
     # --- get commands ---
@@ -439,19 +439,19 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     @classmethod
     def get_sql_reference_places(cls):
-        return cls.get_sql_column_content(cls.distances_table_name, "reference_localisation", distinct=True)
+        return cls.get_sql_column_content(cls._distances_table_name, "reference_localisation", distinct=True)
 
     @classmethod
     def get_sql_keywords(cls):
-        return cls.get_sql_column_content(cls.keywords_table_name, "keyword", distinct=True)
+        return cls.get_sql_column_content(cls._keywords_table_name, "keyword", distinct=True)
 
     @classmethod
     def get_sql_timestamps(cls):
-        return cls.get_sql_column_content(cls.time_stamps_table_name, "time_stamp", distinct=True)
+        return cls.get_sql_column_content(cls._time_stamps_table_name, "time_stamp", distinct=True)
 
     @classmethod
     def get_sql_metadata(cls):
-        return cls.get_sql_column_content(cls.metadata_table_name, "key", distinct=True)
+        return cls.get_sql_column_content(cls._metadata_table_name, "key", distinct=True)
 
     # --- get commands ---
     # --- Helpers ---

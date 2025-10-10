@@ -158,7 +158,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             columns: list[str],
             scf: 'SQLCommandFormater',
     ):
-        valid_column_name = set(cls.get_sql_table_column_name(cls.main_table_name))
+        valid_column_name = set(cls.get_sql_table_column_name(cls._main_table_name))
         if len(columns) != len(set(columns)):
             raise IndexError(f"<columns> isn't allowed to contain any duplicates. {columns}")
 
@@ -166,12 +166,12 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             if column_name not in valid_column_name:
                 cls.logger.warning(
                     f"Invalid column name for %s. Column ignored : %s."
-                    f"\nValid names are %s", cls.main_table_name, column_name, valid_column_name
+                    f"\nValid names are %s", cls._main_table_name, column_name, valid_column_name
                 )
                 columns.remove(column_name)
                 continue
 
-            scf.select_command.append(f"{cls.main_table_name}.{column_name}")
+            scf.select_command.append(f"{cls._main_table_name}.{column_name}")
 
     @classmethod
     def sql_generate_command(
@@ -260,8 +260,8 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
         command_formater = SQLCommandFormater()
         cls._sql_generate_command_select(columns, command_formater)
 
-        command_formater.select_command_conclusion.append(f"{cls.main_table_name}")
-        command_formater.group_by_command.append(f"{cls.main_table_name}.url")
+        command_formater.select_command_conclusion.append(f"{cls._main_table_name}")
+        command_formater.group_by_command.append(f"{cls._main_table_name}.url")
 
         having_condition = ""
 
@@ -269,9 +269,9 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             cls._sql_generate_command_from_list(
                 keywords,
                 command_formater,
-                main_table=cls.main_table_name,
+                main_table=cls._main_table_name,
                 main_join_on="url",
-                second_table=cls.keywords_table_name,
+                second_table=cls._keywords_table_name,
                 second_join_on="url",
                 column_to_check="keyword",
                 column_to_keep="occurrence",
@@ -285,9 +285,9 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             cls._sql_generate_command_from_list(
                 distances_from,
                 command_formater,
-                main_table=cls.main_table_name,
+                main_table=cls._main_table_name,
                 main_join_on="localisation",
-                second_table=cls.distances_table_name,
+                second_table=cls._distances_table_name,
                 second_join_on="job_localisation",
                 column_to_check="reference_localisation",
                 column_to_keep="distance",
@@ -302,9 +302,9 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             cls._sql_generate_command_from_list(
                 metadata,
                 command_formater,
-                main_table=cls.main_table_name,
+                main_table=cls._main_table_name,
                 main_join_on="url",
-                second_table=cls.metadata_table_name,
+                second_table=cls._metadata_table_name,
                 second_join_on="url",
                 column_to_check="key",
                 column_to_keep="value",
@@ -319,9 +319,9 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             cls._sql_generate_command_from_list(
                 time_stamp,
                 command_formater,
-                main_table=cls.main_table_name,
+                main_table=cls._main_table_name,
                 main_join_on="url",
-                second_table=cls.time_stamps_table_name,
+                second_table=cls._time_stamps_table_name,
                 second_join_on="url",
                 column_to_check="keyword",
                 column_to_keep="time_stamp",
@@ -332,7 +332,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             )
 
         first_condition = cls._sql_generate_command_where(
-            cls.main_table_name,
+            cls._main_table_name,
             "contract",
             command_formater,
             contract_whitelist,
@@ -340,7 +340,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             first_condition=True
         )
         first_condition = cls._sql_generate_command_where(
-            cls.main_table_name,
+            cls._main_table_name,
             "contract",
             command_formater,
             contract_blacklist,
@@ -349,7 +349,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
         )
 
         first_condition = cls._sql_generate_command_where(
-            cls.main_table_name,
+            cls._main_table_name,
             "field",
             command_formater,
             field_whitelist,
@@ -357,7 +357,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             first_condition=first_condition
         )
         first_condition = cls._sql_generate_command_where(
-            cls.main_table_name,
+            cls._main_table_name,
             "field",
             command_formater,
             field_blacklist,
@@ -366,7 +366,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
         )
 
         first_condition = cls._sql_generate_command_where(
-            cls.main_table_name,
+            cls._main_table_name,
             "origin",
             command_formater,
             origin_whitelist,
@@ -374,7 +374,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             first_condition=first_condition
         )
         first_condition = cls._sql_generate_command_where(
-            cls.main_table_name,
+            cls._main_table_name,
             "origin",
             command_formater,
             origin_blacklist,
@@ -383,7 +383,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
         )
 
         first_condition = cls._sql_generate_command_where(
-            cls.main_table_name,
+            cls._main_table_name,
             "title",
             command_formater,
             title_whitelist,
@@ -392,7 +392,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
         )
 
         first_condition = cls._sql_generate_command_where(
-            cls.main_table_name,
+            cls._main_table_name,
             "title",
             command_formater,
             title_blacklist,
@@ -407,7 +407,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             else:
                 operator = "AND"
 
-            command_formater.where_command.append(f"{operator} {cls.main_table_name}.time_stamp <= ?")
+            command_formater.where_command.append(f"{operator} {cls._main_table_name}.time_stamp <= ?")
             command_formater.where_arguments.append(before)
 
         if after:
@@ -416,7 +416,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
                 first_condition = False
             else:
                 operator = "AND"
-            command_formater.where_command.append(f"{operator} {cls.main_table_name}.time_stamp >= ?")
+            command_formater.where_command.append(f"{operator} {cls._main_table_name}.time_stamp >= ?")
             command_formater.where_arguments.append(after)
 
         if order_by:

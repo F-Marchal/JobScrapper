@@ -22,11 +22,11 @@ class TestScrapperObjectCore(BaseTest):
     def test_class_variable(self):
         """Ensure that table names can be used as table name in sqlite."""
         sslq = ScrapperSQLightCore
-        assert sslq.main_table_name == sslq.sql_header_compatible_string(sslq.main_table_name)
-        assert sslq.metadata_table_name == sslq.sql_header_compatible_string(sslq.metadata_table_name)
-        assert sslq.keywords_table_name == sslq.sql_header_compatible_string(sslq.keywords_table_name)
-        assert sslq.distances_table_name == sslq.sql_header_compatible_string(sslq.distances_table_name)
-        assert sslq.time_stamps_table_name == sslq.sql_header_compatible_string(sslq.time_stamps_table_name)
+        assert sslq._main_table_name == sslq.sql_header_compatible_string(sslq._main_table_name)
+        assert sslq._metadata_table_name == sslq.sql_header_compatible_string(sslq._metadata_table_name)
+        assert sslq._keywords_table_name == sslq.sql_header_compatible_string(sslq._keywords_table_name)
+        assert sslq._distances_table_name == sslq.sql_header_compatible_string(sslq._distances_table_name)
+        assert sslq._time_stamps_table_name == sslq.sql_header_compatible_string(sslq._time_stamps_table_name)
 
     def test_database_creation(self):
         """ Ensure that a database is generated with write_in_database.
