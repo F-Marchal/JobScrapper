@@ -3,7 +3,7 @@ import os
 import pytest
 from tests.conftest import BaseTest
 
-from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
+from job_scrapper.scrapper_skeleton.sql_core.sql_core import ScrapperSQLightCore
 
 
 @pytest.mark.job_core
@@ -43,3 +43,50 @@ class TestScrapperObjectCore(BaseTest):
 
         assert os.path.exists(ScrapperSQLightCore.get_database_path())
 
+    def _generate_a_test_ssc(
+        self, instance_name: str = "SSC"
+    ) -> ScrapperSQLightCore:
+        ssc = ScrapperSQLightCore(
+            f"https://{instance_name}.fr",
+            title=f"Work in {instance_name}",
+            localisation="Rouen, france",
+            contract_type="CDI",
+            field="Biology",
+        )
+        now = ssc.now()
+        ssc.add_metadata("Message", "<3")
+        ssc.add_metadata("Account :", "9 \t000")
+        ssc.add_distance_to("Paris, france", 100.678)
+        ssc.add_time_stamps("Test time", now)
+        ssc.add_keyword_count("Informatics", 45)
+
+        # Collision and default value
+        ssc.add_keyword_count("Strasbourg", -1)
+        ssc.add_distance_to("Strasbourg", -1)
+        ssc.add_time_stamps("Strasbourg", now)
+
+        self.tracker.screen(instance_name, ssc)
+
+        return ssc
+
+    def test_export_import_object(self):
+        ssc1_a = self._generate_a_test_ssc("SSC1-B")
+        ssc2_a = self._generate_a_test_ssc("SSC2-B")
+        ssc2_a.field = None
+
+        # The null case !
+        ssc3_a = ScrapperSQLightCore("")
+        ssc3_a.add_keyword_count("", 5)
+        ssc3_a.add_distance_to("", 5)
+        ssc3_a.add_time_stamps("", ssc3_a.now())
+        ssc3_a.add_metadata("", "")
+        ssc3_a.add_metadata("o", "b")
+        self.screen_var("SSC3-A", ssc3_a)
+
+        ssc1_a.sql_export()
+        ssc2_a.sql_export()
+        ssc3_a.sql_export()
+
+        ssc1_a.logger.critical(ssc1_a.sql_run_with_header())
+
+        assert False
