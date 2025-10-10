@@ -22,7 +22,7 @@ class ScrapperObjectCore(CoreLogger):
     _workdir = "./JobScrapperWorkDir/"
     
     # Default header is used both for flat file, display and sql main table.
-    default_header: Sequence[str] = {
+    default_header: dict[str, str] = {
         "#Time_Stamp": "DATE",
         "Origin": "TEXT",
         "Localisation": "TEXT",

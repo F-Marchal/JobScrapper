@@ -199,10 +199,15 @@ class TestScrapperObjectCore(BaseTest):
         string = ScrapperObjectCore.init_time_stamp_name
         assert string == ScrapperObjectCore.clean_string(string)
 
-        # default_header do not contain
-        #     distance_suffix = " (km)"
-        #     keyword_suffix = " (#)"
-        #     time_stamp_suffix = " (Y-M-D H:M:S)"
+    def test_default_header_column_names(self):
+        distance_suffix = ScrapperObjectCore.distance_suffix
+        keyword_suffix = ScrapperObjectCore.keyword_suffix
+        time_stamp_suffix = ScrapperObjectCore.time_stamp_suffix
+
+        for values in ScrapperObjectCore.default_header:
+            assert values == values.removesuffix(distance_suffix)
+            assert values == values.removesuffix(keyword_suffix)
+            assert values == values.removesuffix(time_stamp_suffix)
 
     def test_get_unique_name(self):
         """Test ScrapperObjectCore.get_unique_path with file and folder"""
