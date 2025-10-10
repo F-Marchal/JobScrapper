@@ -253,7 +253,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                     len(result),
                     flat_export,
                 )
-                cls.export_to_flat_file(flat_export, result)
+                cls.export_to_flat_file(result, flat_export)
 
         if display:
             cls.logger.info("Starting display of %s jobs", len(result))

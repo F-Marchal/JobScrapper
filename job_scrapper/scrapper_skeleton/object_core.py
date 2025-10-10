@@ -138,8 +138,8 @@ class ScrapperObjectCore(CoreLogger):
         unflat = cls("tmp")
 
         for column_index, column_name in enumerate(split_header):
-            column_name = column_name.strip()
-            column_value = split_line[column_index].strip()
+            column_name = column_name.strip("\n")
+            column_value = split_line[column_index].strip("\n")
 
             if column_name in cls.default_header:
                 default_index = list_default_header.index(column_name)
@@ -227,8 +227,8 @@ class ScrapperObjectCore(CoreLogger):
     @classmethod
     def export_to_flat_file(
         cls,
-        file_path: str | None,
         jobs: Sequence["ScrapperObjectCore"],
+        file_path: str | None = None,
         sep: str = "\t",
     ):
         """
@@ -259,7 +259,7 @@ class ScrapperObjectCore(CoreLogger):
     @classmethod
     def import_from_flat_file(
             cls,
-            file_path: str | None,
+            file_path: str | None = None,
             sep: str = "\t",
         ):
         if file_path is None:

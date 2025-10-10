@@ -143,6 +143,24 @@ class TestScrapperObjectCore(BaseTest):
         )
         assert soc.keyword_exist("Strasbourg", default_value_do_not_count=False)
 
+    def test_full_empty_edge_case(self):
+        soc = ScrapperObjectCore("")
+        soc.add_keyword_count("", 5)
+        soc.add_distance_to("", 5)
+        soc.add_time_stamps("", soc.now())
+        soc.add_metadata("", "")
+        self.screen_var("soc", soc)
+
+        assert soc.url == ""
+        assert soc.title == ""
+        assert soc.localisation == ""
+        assert soc.contract_type == ""
+        assert soc.field == ""
+        assert soc.metadata_exist("")
+        assert soc.distance_to_exist("")
+        assert soc.keyword_exist("")
+        assert soc.time_stamps_exist("")
+
     def test_remove_value_from_dict(self):
         """Test remove_[dict name] methods.
         Uses uncleaned string to test those methods."""
@@ -245,24 +263,51 @@ class TestScrapperObjectCore(BaseTest):
         assert unflat.to_dict() == soc.to_dict()
         assert flat_unflat == flat_soc
 
+    def test_flat_unflat_edge_case(self):
+        soc = ScrapperObjectCore("")
+        soc.add_keyword_count("", 5)
+        soc.add_distance_to("", 5)
+        soc.add_time_stamps("", soc.now())
+        soc.add_metadata("", "")
+        soc.add_metadata("o", "b")
+        self.screen_var("soc3", soc)
+
+        flat_soc = soc.flat()
+        header, line, *_ = flat_soc.split("\n")
+        self.tracker.screen("header", header)
+        self.tracker.screen("line", line)
+
+        unflat = soc.unflat(header, line)
+        self.tracker.screen("unflat", unflat)
+
+        flat_unflat = soc.flat()
+        self.tracker.screen("flat_unflat", flat_unflat)
+
+        assert unflat.to_dict() == soc.to_dict()
+        assert flat_unflat == flat_soc
+
+
     def test_export_import_to_flat_file_and_equality(self):
         """Test ScrapperObjectCore.get_unique_path with file and folder"""
 
         soc1_a, _ = self._generate_a_test_soc(instance_name="SOC1-A")
         soc2_a, _ = self._generate_a_test_soc(instance_name="SOC2-A")
-        soc3_a, _ = self._generate_a_test_soc(instance_name="SOC3-A")
         soc1_a.url = "soc1"
         soc2_a.url = "soc2"
-        soc3_a.url = "soc3"
 
-        # soc2_a.remove_metadata("message for*/ you")
-        soc3_a.remove_distance_to("Paris, france")
+        soc3_a = ScrapperObjectCore("")
+        soc3_a.add_keyword_count("", 5)
+        soc3_a.add_distance_to("", 5)
+        soc3_a.add_time_stamps("", soc3_a.now())
+        soc3_a.add_metadata("", "")
+        soc3_a.add_metadata("o", "b")
+        self.screen_var("SOC3-A", soc3_a)
 
         self.tracker.re_screen_all()
 
-        ScrapperObjectCore.export_to_flat_file(None, [soc3_a, soc1_a, soc2_a])
+        ScrapperObjectCore.export_to_flat_file([soc3_a, soc1_a, soc2_a], None)
 
-        result = list(ScrapperObjectCore.import_from_flat_file(None))
+        result = list(ScrapperObjectCore.import_from_flat_file())
 
         assert len(result) == 3
 
