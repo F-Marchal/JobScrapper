@@ -428,6 +428,8 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         """Returns columns names attached to keywords table"""
         return cls.get_sql_table_column_name(cls.keywords_table_name)
 
+    # --- columns names ---
+    # --- get commands ---
     @classmethod
     def get_sql_column_content(
         cls, table: str, column: str, distinct: bool = False
@@ -436,8 +438,6 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         command = f"SELECT {distinct_kw} {table}.{column} from {table};"
         return [tup[0] for tup in cls.sql_run(command)]
 
-    # --- columns names ---
-    # --- get commands ---
     @classmethod
     def get_sql_reference_places(cls):
         return cls.get_sql_column_content(cls.distances_table_name, "reference_localisation", distinct=True)
@@ -448,7 +448,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     @classmethod
     def get_sql_timestamps(cls):
-        return cls.get_sql_column_content(cls.time_stamps_table_name, "keyword", distinct=True)
+        return cls.get_sql_column_content(cls.time_stamps_table_name, "time_stamp", distinct=True)
 
     @classmethod
     def get_sql_metadata(cls):
