@@ -407,7 +407,7 @@ def request(
 )
 @click.option(
     "-q",
-    "--no-sql_core-export",
+    "--no-sql-export",
     is_flag=True,
     help="The result will not be exported inside a database in the workdir.",
 )
