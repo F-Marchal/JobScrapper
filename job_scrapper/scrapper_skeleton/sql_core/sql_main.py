@@ -13,7 +13,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             no_condition_allowed: bool = True,
     ):
 
-        legal_names = cls.sql_column_content(table, column, distinct=True)
+        legal_names = cls.get_sql_column_content(table, column, distinct=True)
         pattern = re.compile("|".join(legal_names))
         cls.logger.debug("Parsing : %s", items)
 
@@ -73,7 +73,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
                 value = float(condition[1:])
             except ValueError as error1:
                 try:
-                    value = cls._parse_datetime(condition[1:])
+                    value = cls._parse_time(condition[1:])
                 except ValueError as error2:
                     cls.logger.warning("Can not parse '%s' : '%s' & '%s'", condition[1:], error1, error2)
                     continue
