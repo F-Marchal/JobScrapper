@@ -400,26 +400,32 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     # --- columns names ---
     @classmethod
     def get_sql_table_column_name(cls, table: str) -> list[str]:
+        """Returns columns names attached to a table"""
         return [str(tup[1]) for tup in cls.sql_describe_table(table) if tup]
 
     @classmethod
     def get_sql_column_jobs_table(cls):
+        """Returns columns names attached to jobs table"""
         return cls.get_sql_table_column_name(cls.main_table_name)
 
     @classmethod
     def get_sql_column_metadata_table(cls):
+        """Returns columns names attached to metadata table"""
         return cls.get_sql_table_column_name(cls.metadata_table_name)
 
     @classmethod
     def get_sql_column_distances_table(cls):
+        """Returns columns names attached to distances table"""
         return cls.get_sql_table_column_name(cls.distances_table_name)
 
     @classmethod
     def get_sql_column_time_stamps_table(cls):
+        """Returns columns names attached to time stamps table"""
         return cls.get_sql_table_column_name(cls.time_stamps_table_name)
 
     @classmethod
     def get_sql_column_keywords_table(cls):
+        """Returns columns names attached to keywords table"""
         return cls.get_sql_table_column_name(cls.keywords_table_name)
 
     @classmethod
