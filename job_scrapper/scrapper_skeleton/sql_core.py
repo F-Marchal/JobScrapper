@@ -372,9 +372,8 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             return [cursor.description, *cursor.fetchall()]
 
     @classmethod
-    def sql_run_file(cls, name: str) -> list[tuple[Union[str, int, None], ...]]:
-        cls.logger.debug("Opening as SQL command : %s", name)
-        sql_file = cls._sql_command_folder.joinpath(name)
+    def sql_run_file(cls, sql_file: str) -> list[tuple[Union[str, int, None], ...]]:
+        cls.logger.debug("Opening as SQL command : %s", sql_file)
         with open(sql_file, "r", encoding="utf-8") as f:
             command = f.read()
 
