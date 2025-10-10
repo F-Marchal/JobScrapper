@@ -76,6 +76,7 @@ class TestVariableTracker(BaseTest):
         """Test <self.tracker.screen> of a CustomClass (Object + class)"""
 
         class CustomClass:
+            """Test class"""
             cls_arg = 775
 
             def __init__(self):

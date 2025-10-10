@@ -3,15 +3,13 @@ import os
 import pytest
 from tests.conftest import BaseTest
 
-from job_scrapper.scrapper_skeleton.object_core import (
-    ScrapperObjectCore,
-    time
-)
+from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore, time
 
 
 @pytest.mark.job_core
 class TestScrapperObjectCore(BaseTest):
     """Test ScrapperObjectCore main functionalities."""
+
     # --- --- --- --- Attributes managements --- --- --- ----
     @pytest.mark.parametrize(
         "input_str, expected",
@@ -22,7 +20,7 @@ class TestScrapperObjectCore(BaseTest):
             ("Tést\tFile\nWith\nAccénts", "Test file with accents"),
             (None, ""),
             ("---***Invalid***---", "---invalid---"),
-        ]
+        ],
     )
     def test_clean_string(self, input_str, expected):
         """Test the ScrapperObjectCore.clean_string methods. should be tested first
@@ -50,15 +48,16 @@ class TestScrapperObjectCore(BaseTest):
         assert soc.contract_type == ""
         assert soc.field == ""
 
-        assert soc.metadata == {}
-        assert soc.distances == {}
+        assert not soc.metadata
+        assert not soc.distances
         assert ScrapperObjectCore.init_time_stamp_name in soc.time_stamps
 
         with pytest.raises(ValueError):
             soc.add_metadata("tmp", "Pi|pe value")
 
-
-    def _generate_a_test_soc(self, instance_name: str="SOC") -> tuple[ScrapperObjectCore, time.struct_time]:
+    def _generate_a_test_soc(
+        self, instance_name: str = "SOC"
+    ) -> tuple[ScrapperObjectCore, time.struct_time]:
         soc = ScrapperObjectCore(
             "AnyString",
             title="test offer",
@@ -70,8 +69,8 @@ class TestScrapperObjectCore(BaseTest):
         soc.add_metadata("message for*/ you", "<3")
         soc.add_metadata("your power is greater than :", "9 \t000")
         soc.add_distance_to(" pâris, france:\t" + soc.distance_suffix, 100.678)
-        soc.add_time_stamps(" test tîme"  + soc.time_stamp_suffix, now)
-        soc.add_keyword_count("informatics*"  + soc.keyword_suffix, 45)
+        soc.add_time_stamps(" test tîme" + soc.time_stamp_suffix, now)
+        soc.add_keyword_count("informatics*" + soc.keyword_suffix, 45)
 
         # Collision and default value
         soc.add_keyword_count("Strasbourg", -1)
@@ -114,25 +113,40 @@ class TestScrapperObjectCore(BaseTest):
         assert soc.metadata["Your power is greater than"] == "9_000"
 
         assert soc.distances["Paris, france"] == 100.678
-        assert soc.retrieve_distance_to("pâris, france:\t" + soc.distance_suffix) == 100.678
+        assert (
+            soc.retrieve_distance_to("pâris, france:\t" + soc.distance_suffix)
+            == 100.678
+        )
 
         assert soc.time_stamps["Test time"] == now
-        assert soc.retrieve_time_stamps(" test tîme" + soc.time_stamp_suffix) == now
-        assert  ScrapperObjectCore.init_time_stamp_name in soc.time_stamps
+        assert (
+            soc.retrieve_time_stamps(" test tîme" + soc.time_stamp_suffix)
+            == now
+        )
+        assert ScrapperObjectCore.init_time_stamp_name in soc.time_stamps
 
         assert soc.keywords["Informatics"] == 45
-        assert soc.retrieve_keyword_count("informatics*" + soc.keyword_suffix) == 45
+        assert (
+            soc.retrieve_keyword_count("informatics*" + soc.keyword_suffix)
+            == 45
+        )
 
         # Metadata exist default_value_do_not_count
-        assert not soc.distance_to_exist("Strasbourg", default_value_do_not_count=True)
-        assert soc.distance_to_exist("Strasbourg", default_value_do_not_count=False)
-        assert not soc.keyword_exist("Strasbourg", default_value_do_not_count=True)
+        assert not soc.distance_to_exist(
+            "Strasbourg", default_value_do_not_count=True
+        )
+        assert soc.distance_to_exist(
+            "Strasbourg", default_value_do_not_count=False
+        )
+        assert not soc.keyword_exist(
+            "Strasbourg", default_value_do_not_count=True
+        )
         assert soc.keyword_exist("Strasbourg", default_value_do_not_count=False)
 
     def test_remove_value_from_dict(self):
         """Test remove_[dict name] methods.
         Uses uncleaned string to test those methods."""
-        soc, now = self._generate_a_test_soc()
+        soc, _ = self._generate_a_test_soc()
 
         assert soc.metadata_exist("Message for you")
         assert soc.time_stamps_exist("Test time")
@@ -149,12 +163,10 @@ class TestScrapperObjectCore(BaseTest):
         assert not soc.distance_to_exist("Paris, france")
         assert not soc.keyword_exist("Informatics")
 
-
-
     # --- --- --- --- Attributes managements --- --- --- ----
     # --- --- --- --- Exports managements --- --- --- ----
     def test_to_dict(self):
-        """Test ScrapperObjectCore.to_dict() method """
+        """Test ScrapperObjectCore.to_dict() method"""
         soc, now = self._generate_a_test_soc()
         dict_ = soc.to_dict()
         self.tracker.screen("soc_to_dic", dict_)
@@ -167,20 +179,30 @@ class TestScrapperObjectCore(BaseTest):
         assert dict_["Title"] == soc.title
         assert dict_["Url"] == soc.url
 
-        assert dict_["Metadata"] == "Message for you=<3|Your power is greater than=9_000"
+        assert (
+            dict_["Metadata"]
+            == "Message for you=<3|Your power is greater than=9_000"
+        )
         assert dict_["Paris, france" + soc.distance_suffix] == 100.678
         assert dict_["Informatics" + soc.keyword_suffix] == 45
 
-        assert not  ScrapperObjectCore.init_time_stamp_name + soc.time_stamp_suffix in dict_
+        assert (
+            not ScrapperObjectCore.init_time_stamp_name + soc.time_stamp_suffix
+            in dict_
+        )
         assert dict_["Test time" + soc.time_stamp_suffix] == soc.strftime(now)
-
-
 
     def test_init_time_stamp_name_variable(self):
         """Ensure that init_time_stamp_name respect  ScrapperObjectCore.clean_string.
-        If this is not respected, to_dict() and time_stamps_exist can fail miserably."""
+        If this is not respected, to_dict() and time_stamps_exist can fail miserably.
+        """
         string = ScrapperObjectCore.init_time_stamp_name
         assert string == ScrapperObjectCore.clean_string(string)
+
+        # default_header do not contain
+        #     distance_suffix = " (km)"
+        #     keyword_suffix = " (#)"
+        #     time_stamp_suffix = " (Y-M-D H:M:S)"
 
     def test_get_unique_name(self):
         """Test ScrapperObjectCore.get_unique_path with file and folder"""
@@ -193,16 +215,18 @@ class TestScrapperObjectCore(BaseTest):
 
         # File test
         for i in range(0, 11):
-            test_file_path = ScrapperObjectCore.get_unique_path("./testdir", ".txt")
+            test_file_path = ScrapperObjectCore.get_unique_path(
+                "./testdir", ".txt"
+            )
             self.tracker.screen(f"test_file_path{i}", test_file_path)
             assert not os.path.exists(test_file_path)
-            with open(test_file_path, "w", encoding="UTF-8") as f:
+            with open(test_file_path, "w", encoding="UTF-8"):
                 pass
 
     def test_flat_unflat(self):
         """Test ScrapperObjectCore.unflat method."""
-        soc, now = self._generate_a_test_soc()
-        flat_soc =  soc.flat()
+        soc, _ = self._generate_a_test_soc()
+        flat_soc = soc.flat()
         header, line, *_ = flat_soc.split("\n")
         self.tracker.screen("header", header)
         self.tracker.screen("line", line)
@@ -225,21 +249,15 @@ class TestScrapperObjectCore(BaseTest):
         soc1_a.url = "soc1"
         soc2_a.url = "soc2"
         soc3_a.url = "soc3"
-        os.mkdir(soc3_a.workdir)
 
         # soc2_a.remove_metadata("message for*/ you")
         soc3_a.remove_distance_to("Paris, france")
 
         self.tracker.re_screen_all()
 
-        ScrapperObjectCore.export_to_flat_file(
-            None,
-            [soc3_a, soc1_a, soc2_a]
-        )
+        ScrapperObjectCore.export_to_flat_file(None, [soc3_a, soc1_a, soc2_a])
 
-        result = list(ScrapperObjectCore.import_from_flat_file(
-            None
-        ))
+        result = list(ScrapperObjectCore.import_from_flat_file(None))
 
         assert len(result) == 3
 
@@ -262,15 +280,4 @@ class TestScrapperObjectCore(BaseTest):
         assert soc1_b == soc1_a
         assert soc2_b == soc2_a
 
-
-
-
-
     # --- --- --- --- Exports managements --- --- --- ----
-    def import_from_string(self):
-        ...
-
-# default_header do not contain
-#     distance_suffix = " (km)"
-#     keyword_suffix = " (#)"
-#     time_stamp_suffix = " (Y-M-D H:M:S)"

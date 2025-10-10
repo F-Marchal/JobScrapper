@@ -7,7 +7,6 @@ import typing
 from inspect import getfile
 
 import pytest
-
 from tools.variable_tracker import VariableTracker
 
 
