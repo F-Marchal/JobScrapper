@@ -8,7 +8,6 @@ import re
 # pylint: disable=E0611
 from mypy.types_utils import AnyType
 
-import datetime
 import unicodedata
 from ..object_core import ScrapperObjectCore
 
@@ -457,14 +456,14 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     # --- get commands ---
     # --- Helpers ---
     @staticmethod
-    def _parse_datetime(date_str: str):
+    def _parse_time(date_str: str) -> time.struct_time:
         formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
         i = 0
         result = None
         last_error = None
         while i < len(formats) and result is None:
             try:
-                result = datetime.datetime.strptime(date_str, formats[i])
+                result = time.strptime(date_str, formats[i])
             except ValueError as error:
                 i += 1
                 last_error = error
@@ -479,7 +478,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         result = command
 
         for val in args:
-            if isinstance(val, (str, datetime.datetime)):
+            if isinstance(val, (str, time.struct_time)):
                 val_str = "'" + str(val).replace("'", "''") + "'"  # échappe les quotes SQL
             elif val is None:
                 val_str = "NULL"
