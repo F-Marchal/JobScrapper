@@ -27,3 +27,19 @@ class TestScrapperObjectCore(BaseTest):
         assert sslq.keywords_table_name == sslq.sql_header_compatible_string(sslq.keywords_table_name)
         assert sslq.distances_table_name == sslq.sql_header_compatible_string(sslq.distances_table_name)
         assert sslq.time_stamps_table_name == sslq.sql_header_compatible_string(sslq.time_stamps_table_name)
+
+    def test_database_creation(self):
+        """ Ensure that a database is generated with write_in_database.
+        Here to detect errors during the execution, not to test the content of the database"""
+        assert not os.path.exists(ScrapperSQLightCore.get_database_path())
+
+        # Database creation
+        with ScrapperSQLightCore.write_in_database():
+            pass
+
+        # Database reopened
+        with ScrapperSQLightCore.write_in_database():
+            pass
+
+        assert os.path.exists(ScrapperSQLightCore.get_database_path())
+
