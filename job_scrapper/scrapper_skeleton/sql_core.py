@@ -134,7 +134,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             f"CREATE TABLE IF NOT EXISTS {cls.keywords_table_name} (",
             "url TEXT,",
             "keyword TEXT NOT NULL,",
-            "occurrence INT NOT NULL,",
+            "occurrence INT,",
             "PRIMARY KEY(url, keyword),"
             f"FOREIGN KEY (url) REFERENCES {cls.main_table_name}(url)",
             ");",
@@ -150,7 +150,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             f"CREATE TABLE IF NOT EXISTS {cls.distances_table_name} ("
             + "reference_localisation TEXT NOT NULL,"
             + "job_localisation TEXT NOT NULL,"
-            + "distance REAL NOT NULL,"
+            + "distance REAL,"
             + "PRIMARY KEY(reference_localisation, job_localisation)"
             ");"
         )
@@ -283,9 +283,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         # Fill command / format_list
         for keyword, occurrences in self.keywords.items():
-            if occurrences == -1 or occurrences == 0:
+            if occurrences == -1:
                 # Do not flood database with useless values
-                continue
+                occurrences = None
 
             command.append("(?, ?, ?),")
             format_list.extend([self.url, keyword, occurrences])
@@ -307,8 +307,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         # Fill command / format_list
         for localisation, distance in self.distances.items():
             if distance == -1:
-                # Do not flood database with useless values
-                continue
+                distance = None
 
             format_list.extend([localisation, self.localisation, distance])
             command.append("(?, ?, ?),")
