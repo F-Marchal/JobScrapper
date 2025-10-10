@@ -132,7 +132,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     def _create_keywords_sql_table_command(cls) -> str:
         command = [
             f"CREATE TABLE IF NOT EXISTS {cls.keywords_table_name} (",
-            "url TEXT KEY,",
+            "url TEXT,",
             "keyword TEXT NOT NULL,",
             "occurrence INT NOT NULL,",
             "PRIMARY KEY(url, keyword),"
@@ -162,7 +162,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         """
         command = [
             f"CREATE TABLE IF NOT EXISTS {cls.time_stamps_table_name} (",
-            "url TEXT KEY,",
+            "url TEXT,",
             "keyword TEXT NOT NULL,",
             "time_stamp DATE NOT NULL,",
             "PRIMARY KEY(url, keyword),"
