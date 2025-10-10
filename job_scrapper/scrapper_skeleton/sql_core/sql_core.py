@@ -379,9 +379,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         return cls.sql_run(command)
 
     # --- run ---
-    # --- standard commands ---
+    # --- describe commands ---
     @classmethod
-    def sql_table_names(cls) -> list[str]:
+    def get_sql_table_names(cls) -> list[str]:
         command = """
             SELECT name
             FROM sqlite_master
@@ -396,40 +396,59 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     ) -> list[tuple[Union[str, int, None], ...]]:
         command = f"PRAGMA table_info('{table}');"
         return cls.sql_run(command)
-
+    # --- describe commands ---
+    # --- columns names ---
     @classmethod
-    def sql_table_column_name(cls, table: str) -> list[str]:
+    def get_sql_table_column_name(cls, table: str) -> list[str]:
         return [str(tup[1]) for tup in cls.sql_describe_table(table) if tup]
 
     @classmethod
-    def sql_column_content(
+    def get_sql_column_jobs_table(cls):
+        return cls.get_sql_table_column_name(cls.main_table_name)
+
+    @classmethod
+    def get_sql_column_metadata_table(cls):
+        return cls.get_sql_table_column_name(cls.metadata_table_name)
+
+    @classmethod
+    def get_sql_column_distances_table(cls):
+        return cls.get_sql_table_column_name(cls.distances_table_name)
+
+    @classmethod
+    def get_sql_column_time_stamps_table(cls):
+        return cls.get_sql_table_column_name(cls.time_stamps_table_name)
+
+    @classmethod
+    def get_sql_column_keywords_table(cls):
+        return cls.get_sql_table_column_name(cls.keywords_table_name)
+
+    @classmethod
+    def get_sql_column_content(
         cls, table: str, column: str, distinct: bool = False
     ) -> list[str | None | int]:
         distinct_kw = "DISTINCT" if distinct else ""
         command = f"SELECT {distinct_kw} {table}.{column} from {table};"
         return [tup[0] for tup in cls.sql_run(command)]
 
-
+    # --- columns names ---
+    # --- get commands ---
     @classmethod
     def get_sql_reference_places(cls):
-        return cls.sql_column_content(cls.distances_table_name, "reference_localisation", distinct=True)
+        return cls.get_sql_column_content(cls.distances_table_name, "reference_localisation", distinct=True)
 
     @classmethod
     def get_sql_keywords(cls):
-        return cls.sql_column_content(cls.keywords_table_name, "keyword", distinct=True)
+        return cls.get_sql_column_content(cls.keywords_table_name, "keyword", distinct=True)
 
     @classmethod
     def get_sql_timestamps(cls):
-        return cls.sql_column_content(cls.time_stamps_table_name, "keyword", distinct=True)
+        return cls.get_sql_column_content(cls.time_stamps_table_name, "keyword", distinct=True)
 
     @classmethod
     def get_sql_metadata(cls):
-        return cls.sql_column_content(cls.metadata_table_name, "key", distinct=True)
+        return cls.get_sql_column_content(cls.metadata_table_name, "key", distinct=True)
 
-    @classmethod
-    def get_sql_job_columns(cls):
-        return cls.sql_table_column_name(cls.main_table_name)
-    # --- standard commands ---
+    # --- get commands ---
     # --- Helpers ---
     @staticmethod
     def _parse_datetime(date_str: str):
@@ -463,7 +482,10 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             result = result.replace("?", val_str, 1)
 
         return result
+
     # --- Helpers ---
+    # --- --- Requests --- ---
+    # --- --- --- --- Sqlite --- --- ---
 
 if __name__ == "__main__":
     # test = ScrapperObjectCore("Test1'", 'Paris"', "https://google.com", "CDD", "Biology", fake='True', second="3")

@@ -95,30 +95,30 @@ def database():
 @database.command()
 def job_columns():
     """Display each column of the 'job' table."""
-    for col in JobScrapperSkeleton.get_sql_job_columns():
+    for col in JobScrapperSkeleton.get_sql_column_jobs_table():
         print(col)
 
 @database.command()
 def tables_names():
     """Displays each table's names in the database"""
-    for names in JobScrapperSkeleton.sql_table_names():
+    for names in JobScrapperSkeleton.get_sql_table_names():
         print(names)
 
 @database.command()
 @click.argument(
     "table",
-    type=click.Choice(list(JobScrapperSkeleton.sql_table_names()), case_sensitive=True),
+    type=click.Choice(list(JobScrapperSkeleton.get_sql_table_names()), case_sensitive=True),
 )
 def table_columns(table):
     """Displays columns names attached to a table."""
-    for vals in JobScrapperSkeleton.sql_table_column_name(table):
+    for vals in JobScrapperSkeleton.get_sql_table_column_name(table):
         print(vals)
 
 @database.command()
 @click.option(
     "-c", "--columns",
     multiple=True,
-    type=click.Choice(list(JobScrapperSkeleton.get_sql_job_columns()),
+    type=click.Choice(list(JobScrapperSkeleton.get_sql_column_jobs_table()),
                       case_sensitive=True),
     help=(
         "A list of column names. Each selected column will be displayed in the final result. "

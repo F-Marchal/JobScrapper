@@ -87,6 +87,8 @@ class TestScrapperObjectCore(BaseTest):
         ssc2_a.sql_export()
         ssc3_a.sql_export()
 
+
+
         ssc1_a.logger.critical(ssc1_a.sql_run_with_header())
 
         assert False

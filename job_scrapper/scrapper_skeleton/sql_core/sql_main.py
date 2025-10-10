@@ -4,7 +4,6 @@ import re
 import datetime
 
 class ScrapperSQLightRunner(ScrapperSQLightCore):
-    # --- Main command ---
     @classmethod
     def parse_sql_generate_command_from_list(
             cls,
@@ -159,7 +158,7 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             columns: list[str],
             scf: 'SQLCommandFormater',
     ):
-        valid_column_name = set(cls.sql_table_column_name(cls.main_table_name))
+        valid_column_name = set(cls.get_sql_table_column_name(cls.main_table_name))
         if len(columns) != len(set(columns)):
             raise IndexError(f"<columns> isn't allowed to contain any duplicates. {columns}")
 
@@ -518,9 +517,3 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
 
         if flux:
             flux.close()
-
-
-
-    # --- Main command ---
-    # --- --- Requests --- ---
-    # --- --- --- --- Sqlite --- --- ---
