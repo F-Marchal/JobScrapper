@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-import datetime
+import time
 
 @dataclass
 class SQLCommandFormater:
@@ -16,7 +16,7 @@ class SQLCommandFormater:
 
     select_arguments: list[str | int | None] = field(default_factory=list)
     join_arguments: list[str | int | None] = field(default_factory=list)
-    where_arguments: list[str | int | None | datetime.datetime] = field(default_factory=list)
+    where_arguments: list[str | int | None | time.struct_time] = field(default_factory=list)
     having_arguments: list[str | int | None] = field(default_factory=list)
 
     @staticmethod
@@ -89,7 +89,7 @@ class SQLCommandFormater:
         )
         return command
 
-    def _select_order_clean(self, to_clean: list[str | int | None | float | datetime.datetime]):
+    def _select_order_clean(self, to_clean: list[str | int | None | float | time.struct_time]):
         return [element for _, interest in sorted(to_clean)
                 for element in (interest if isinstance(interest, list) else [interest])]
 

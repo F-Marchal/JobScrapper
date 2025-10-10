@@ -1,7 +1,7 @@
 from .sql_core import ScrapperSQLightCore
 from .sql_command_constructor import SQLCommandFormater
 import re
-import datetime
+import time
 
 class ScrapperSQLightRunner(ScrapperSQLightCore):
     @classmethod
@@ -184,8 +184,8 @@ class ScrapperSQLightRunner(ScrapperSQLightCore):
             time_stamp: list[str] | None = None,
             distance_relax: bool = False,
 
-            after: datetime.datetime = None,
-            before: datetime.datetime = None,
+            after: time.struct_time = None,
+            before: time.struct_time  = None,
 
             origin_blacklist: list[str] | None = None,
             origin_whitelist: list[str] | None = None,

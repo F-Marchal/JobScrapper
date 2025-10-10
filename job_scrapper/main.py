@@ -1,6 +1,5 @@
 import os.path
 import time
-from datetime import datetime
 
 import click
 import cloup
@@ -266,11 +265,11 @@ def table_columns(table):
     "-b",
     "--before",
     type=click.DateTime(formats=["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]),
-    default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    default=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
     show_default=True,
     help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' Ensure that returned values comes from "
     "job that hava a time stamp older (>=) than this date. Meaning that this job offer has been seen "
-    f"on a website before this date. Default is now ('{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}')."
+    f"on a website before this date. Default is now ('{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}')."
 )
 
 @click.option(
@@ -313,8 +312,8 @@ def request(
         time_stamp=time_stamps,
         order_by=order_by,
         distance_relax=distance_relax,
-        after=after,
-        before=before,
+        after=after.utctimetuple(), # time_struct conversion
+        before=before.utctimetuple(), # time_struct conversion
         origin_blacklist=origin_blacklist,
         origin_whitelist=origin_whitelist,
         field_blacklist=field_blacklist,
