@@ -1,5 +1,6 @@
 import os
-
+from .sql_tables import BaseTableForJobScrapper, Jobs, Metadata, TimeStamps, Distances
+from sqlalchemy.orm import sessionmaker
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -11,14 +12,65 @@ from mypy.types_utils import AnyType
 import unicodedata
 from ..object_core import ScrapperObjectCore
 
+from .sql_tables import BaseTableForJobScrapper, Jobs, Metadata, TimeStamps, Distances, Keywords
+from sqlalchemy.orm import sessionmaker
 class ScrapperSQLightCore(ScrapperObjectCore):
     """
     Specialisation of ScrapperObjectCore that allows
     SQL exports and add the creation of an SQL database
     """
 
-    database_file_name = "AllJobs"
+    _database_file_name: str = "JobsDatabase"
+    _databases = {}
+    _tables: dict[str, BaseTableForJobScrapper] = {
+        Jobs.__tablename__: Jobs,
+        Metadata.__tablename__: Metadata,
+        TimeStamps.__tablename__: TimeStamps,
+        Distances.__tablename__: Distances,
+        Keywords.__tablename__: Keywords,
+    }
 
+    @classmethod
+    @contextmanager
+    def _get_session(cls, database_path: str):
+        if database_path not in cls._databases:
+            cls.logger.info("Database engine initialisation in '%s' ...", database_path)
+            engine = BaseTableForJobScrapper.get_engine(database_path)
+            session_maker = sessionmaker(bind=engine)
+            BaseTableForJobScrapper.metadata.create_all(engine)
+            cls._databases[database_path] = {
+                "engine": engine,
+                "session_maker": session_maker,
+                "initialised": True
+            }
+
+        session_maker = cls._databases[database_path]["session_maker"]
+        session = session_maker()
+        cls.logger.debug("Database session opened ('%s') for '%s'.", session, database_path)
+        try:
+            yield session
+            session.commit()
+        except Exception as error:
+            session.rollback()
+            cls.logger.error(error)
+            raise
+        finally:
+            cls.logger.info("Database session closed ('%s') for '%s'", session, database_path)
+            session.close()
+
+    @classmethod
+    @contextmanager
+    def get_database_session(cls, workdir: str | None = None):
+        path = cls.get_database_path(workdir)
+        with cls._get_session(database_path=path) as session:
+            yield session
+
+    @classmethod
+    @contextmanager
+    def get_archive_session(cls, workdir: str | None = None):
+        path = cls.get_archive_path(workdir)
+        with cls._get_session(database_path=path) as session:
+            yield session
 
 
     '''def __init__(self, *args, **kwargs):
@@ -50,21 +102,38 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 self.init_time_stamp_name
             ]'''
 
+
+
     #  --- --- --- --- Sqlite --- --- --- ----
     # --- --- Names and paths --- ---
-
     @classmethod
-    def get_database_path(cls, workdir: str | None = None):
+    def get_database_path(cls, workdir: str | None = None, ext: str = ".db"):
         """
         :param str workdir: a path to a directory
+        :param str ext: Database file extension
         :return str: A path that lead to a database file.
         """
         if not workdir:
             workdir = cls.get_workdir()
 
-        return os.path.abspath(
-            os.path.join(workdir, cls.database_file_name + ".db")
+        file_path = os.path.abspath(
+            os.path.join(workdir, cls._database_file_name)
         )
+
+        if file_path[-len(ext):] != ext:
+            file_path += ext
+
+        return file_path
+
+
+    @classmethod
+    def get_archive_path(cls, workdir: str | None = None):
+        """
+        :param str workdir: a path to a directory
+        :return str: A path that lead to a database file.
+        """
+        return cls.get_database_path(workdir, ext=".archive.db")
+    # --- --- Names and paths --- ---
 
     '''@classmethod
     def sql_header_compatible_string(cls, name: str):
