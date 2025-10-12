@@ -19,13 +19,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     database_file_name = "AllJobs"
 
-    _main_table_name = "Jobs"
-    _metadata_table_name = "Metadata"
-    _keywords_table_name = "KeywordsCount"
-    _distances_table_name = "Distances"
-    _time_stamps_table_name = "TimeStamps"
 
-    def __init__(self, *args, **kwargs):
+
+    '''def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # first_sighting
@@ -52,7 +48,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         else:
             self._time_stamps["first_sighting"] = self._time_stamps[
                 self.init_time_stamp_name
-            ]
+            ]'''
 
     #  --- --- --- --- Sqlite --- --- --- ----
     # --- --- Names and paths --- ---
@@ -70,7 +66,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             os.path.join(workdir, cls.database_file_name + ".db")
         )
 
-    @classmethod
+    '''@classmethod
     def sql_header_compatible_string(cls, name: str):
         """
         Transform a string to ensure that a keyword can be used as
@@ -502,3 +498,4 @@ if __name__ == "__main__":
     # test.time_stamps["Beta'"] = time.localtime()
     # print(test.sql_export())
     pass
+'''
