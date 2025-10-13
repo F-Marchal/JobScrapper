@@ -69,9 +69,8 @@ class ScrapperObjectCore(CoreLogger):
         self._distances: dict[str, float] = {}
         self._keywords: dict[str, int] = {}
 
-        self._time_stamps: dict[str, time.struct_time] = {
-            self.init_time_stamp_name: self.now(),
-        }
+        self._time_stamps: dict[str, time.struct_time] = {}
+        self.add_time_stamps(self.init_time_stamp_name, self.now())
 
     # --- --- --- --- Export managements --- --- ---
 
