@@ -78,7 +78,7 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
     # --- Log---
     JobScrapperSkeleton.logger.debug("CLI : %s", locals())
 
-
+'''
 # --- --- --- Database --- --- ---
 @cli.group()
 def database():
@@ -324,7 +324,7 @@ def request(
         title_whitelist=title_whitelist,
     )
     JobScrapperSkeleton.sql_run_display_command(command, *args, file=file, display=not no_display)
-
+'''
 
 # --- --- --- SCRAP group --- --- ---
 @cli.group()
