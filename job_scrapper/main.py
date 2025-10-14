@@ -83,11 +83,11 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
 @cli.group()
 def database():
     """A small set of command that can be used to interact with the database."""
-    if not os.path.exists(JobScrapperSkeleton.get_database_path()):
+    if not os.path.exists(JobScrapperSkeleton.get_maindb_path()):
         JobScrapperSkeleton.logger.critical(
             "Can not find the database ('%s'). "
             "Please run `job-scrapper scrap [target]` at least once to create it.",
-            JobScrapperSkeleton.get_database_path()
+            JobScrapperSkeleton.get_maindb_path()
         )
         exit(1)
 
