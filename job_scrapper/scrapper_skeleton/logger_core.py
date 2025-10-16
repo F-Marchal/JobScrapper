@@ -74,7 +74,10 @@ class CoreLogger:
     # (Part that format logs)
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(logging.DEBUG)
-    formatter = _ColorFormatter("[%(levelname)s] %(message)s")
+    formatter = _ColorFormatter(
+        "[%(levelname)s] [%(filename)s: line %(lineno)d] [%(name)s.%(funcName)s]"
+        "\n%(message)s"
+    )
     stream_handler.setFormatter(formatter)
 
     logger.addHandler(stream_handler)
@@ -123,7 +126,10 @@ class CoreLogger:
         cls.file_log_handler.setLevel(level)
 
         cls.file_log_handler.setFormatter(
-            logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
+            logging.Formatter(
+                "[%(levelname)s] [%(filename)s: line %(lineno)d] [%(name)s.%(funcName)s]"
+                "\n%(message)s"
+            )
         )
 
         cls.logger.addHandler(cls.file_log_handler)
