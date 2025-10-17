@@ -1,8 +1,8 @@
 from sqlalchemy.sql import operators as ope
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, Column
 from datetime import datetime
 from typing import Callable, Any
-
+from sqlalchemy.sql.elements import ClauseElement
 
 def to_datetime_ymd(string: str):
     """Transform a string to a datetime object using "%Y-%m-%d" format"""
@@ -28,7 +28,7 @@ class ConditionWrapper:
     """
     def __init__(
             self,
-            op: Callable,
+            op: Callable[[Column, Any], ClauseElement],
             help_: str,
             symbol: str,
             types: list[Callable[[str], Any]]
@@ -39,7 +39,7 @@ class ConditionWrapper:
         :param symbol: A symbol that represent the operation done by self.op
         :param types: A list of type / cast function that can turn string into
         """
-        self.op: Callable = op
+        self.op: Callable[[Column, Any], ClauseElement] = op
         self.help: str = help_
         self.symbol: str = symbol
         self.types: list[Callable[[str], Any]] = types
