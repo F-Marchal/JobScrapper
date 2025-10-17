@@ -1,11 +1,9 @@
-from mypyc.ir.rtypes import void_rtype
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, String, DateTime, Integer, Float, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship
 import os
 from sqlalchemy.orm import Session, Query
-from sqlalchemy.engine import Engine
 import traceback
 from sqlalchemy.inspection import inspect
 from contextlib import contextmanager
@@ -164,6 +162,13 @@ class BaseTableForJobScrapper(_Base):
 
         return session.query(self.__class__).filter_by(**self.to_pk_dict()).first()
 
+    @classmethod
+    def get_column_map(cls) -> dict[str, Column]:
+        """
+        Return a dictionary mapping column names to their SQLAlchemy column objects.
+        Example: {"id": Jobs.id, "title": Jobs.title, ...}
+        """
+        return {column.name: column for column in cls.__table__.columns}
 
     @classmethod
     def get_columns(cls):
