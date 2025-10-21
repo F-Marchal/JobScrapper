@@ -174,11 +174,13 @@ class BaseTableForJobScrapper(_Base):
     def get_columns(cls):
         return cls.__table__.columns.keys()
 
-    def to_dict(self):
-        return {c: getattr(self, c) for c in self.get_columns()}
+    @classmethod
+    def to_dict(cls):
+        return {c: getattr(cls, c) for c in cls.get_columns()}
 
-    def flat(self, sep="\t") -> str:
-        return f"{sep}".join(sorted([f"{key}={value}" for key, value in self.to_dict().items()]))
+    @classmethod
+    def flat(cls, sep="\t") -> str:
+        return f"{sep}".join(sorted([f"{key}={value}" for key, value in cls.to_dict().items()]))
 
     @classmethod
     def get_pk_columns(cls) -> list[str]:
@@ -191,21 +193,25 @@ class BaseTableForJobScrapper(_Base):
         mapper = inspect(cls)
         return [column.key for column in mapper.primary_key]
 
-    def to_pk_dict(self):
-        return {c: getattr(self, c) for c in self.get_pk_columns()}
+    @classmethod
+    def to_pk_dict(cls):
+        return {c: getattr(cls, c) for c in cls.get_pk_columns()}
 
-    def flat_pk(self, sep="\t") -> str:
-        return f"{sep}".join(sorted([f"{key}={value}" for key, value in self.to_pk_dict().items()]))
+    @classmethod
+    def flat_pk(cls, sep="\t") -> str:
+        return f"{sep}".join(sorted([f"{key}={value}" for key, value in cls.to_pk_dict().items()]))
 
     @classmethod
     def get_non_pk_columns(cls):
         return [col for col in cls.__table__.columns.keys() if col not in cls.get_pk_columns()]
 
-    def to_non_pk_dict(self):
-        return {c: getattr(self, c) for c in self.get_non_pk_columns()}
+    @classmethod
+    def to_non_pk_dict(cls):
+        return {c: getattr(cls, c) for c in cls.get_non_pk_columns()}
 
-    def flat_non_pk(self, sep="\t") -> str:
-        return f"{sep}".join(sorted([f"{key}={value}" for key, value in self.to_non_pk_dict().items()]))
+    @classmethod
+    def flat_non_pk(cls, sep="\t") -> str:
+        return f"{sep}".join(sorted([f"{key}={value}" for key, value in cls.to_non_pk_dict().items()]))
 
     # --- --- Descriptions --- ---
     # --- --- Standard requests --- ---
