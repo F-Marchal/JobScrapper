@@ -23,10 +23,10 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from .sql_core.sql_main import ScrapperSQLightRunner
+from .sql_core.sql_core import ScrapperSQLightCore
 
 
-class ScrapperRequestCore(ScrapperSQLightRunner):
+class ScrapperRequestCore(ScrapperSQLightCore):
     """
     Specialisation of ScrapperSQLightRunner. Add the ability to fetch
     website's jobs, count keywords occurrences inside the description
@@ -495,7 +495,7 @@ class ScrapperRequestCore(ScrapperSQLightRunner):
     ):
         """Compute the distances between a number of location and
         this job offer.
-        Results are stored inside <self._distances>"""
+        Results are stored inside <self.distances>"""
         if not localisations:
             return
 
@@ -507,7 +507,8 @@ class ScrapperRequestCore(ScrapperSQLightRunner):
             self.logger.debug(
                 "Can not find coordinates of %s", self._localisation
             )
-            self._distances.update({key: -1 for key in localisations})
+            for key in localisations:
+                self.add_distance_to(key, -1)
             return
 
         self.logger.debug(
@@ -524,7 +525,7 @@ class ScrapperRequestCore(ScrapperSQLightRunner):
 
             distance = geodesic(coord_positions, self_coord).km
 
-            self._distances[positions] = distance
+            self.add_distance_to(positions, distance)
 
             time.sleep(self.sleep_between_geo_interrogation)
 
@@ -582,7 +583,7 @@ class ScrapperRequestCore(ScrapperSQLightRunner):
         :param bs4.BeautifulSoup page_content: Content of self.url
         :param str ext: file extension (html; pdf ...)
         """
-        self.time_stamps["page_download"] = time.localtime()
+        self.add_time_stamps("page_download", time.localtime())
 
         folder, name = self._generate_job_file_name(ext)
         file_path = os.path.join(folder, name)
@@ -598,11 +599,14 @@ class ScrapperRequestCore(ScrapperSQLightRunner):
 
         # Reduce path length when possible
         if self.get_workdir() in file_path:
-            self._metadata["job_page"] = os.path.relpath(
-                file_path, start=self.get_workdir()
+            self.add_metadata(
+                "job_page",
+                os.path.relpath(
+                    file_path, start=self.get_workdir()
+                )
             )
         else:
-            self._metadata["job_page"] = file_path
+            self.add_metadata("job_page", file_path)
 
     def search_keywords(
         self, page_content: bs4.BeautifulSoup | str, **keywords: list[str]
@@ -615,14 +619,14 @@ class ScrapperRequestCore(ScrapperSQLightRunner):
         key=["key", "alias1", "alias2"]
         :param bs4.BeautifulSoup or str page_content: An html BeautifulSoup or a string
         """
-        self.time_stamps["keywords_research"] = time.localtime()
+        self.add_time_stamps("keywords_research", time.localtime())
         self._search_keyword_in_page_content(page_content, **keywords)
         self._search_keywords_in_attributes(**keywords)
 
     def _search_keywords_in_attributes(self, **keywords: list[str]):
         for key, list_of_associated_keywords in keywords.items():
             if key not in self._keywords:
-                self._keywords[key] = 0
+                self.add_keyword_count(key,  0)
 
             for patterns in list_of_associated_keywords:
                 count = len(
@@ -641,7 +645,7 @@ class ScrapperRequestCore(ScrapperSQLightRunner):
                 count += len(
                     re.findall(f"(?={patterns.lower()})", self.title.lower())
                 )
-                self._keywords[key] += count
+                self.add_keyword_count(key, count + self.retrieve_keyword_count(key))
 
     def _search_keyword_in_page_content(
         self, page: bs4.BeautifulSoup | str, **keywords: list[str]
@@ -663,11 +667,11 @@ class ScrapperRequestCore(ScrapperSQLightRunner):
         self.logger.debug("Seeking keywords in %s", self.url)
         for key, list_of_associated_keywords in keywords.items():
             if key not in self._keywords:
-                self._keywords[key] = 0
+                self.add_keyword_count(key, 0)
 
             for patterns in list_of_associated_keywords:
                 count = len(re.findall(f"(?={patterns.lower()})", page_content))
-                self._keywords[key] += count
+                self.add_keyword_count(key, count + self.retrieve_keyword_count(key))
 
     # --- --- Analyse jobs  --- ---
     # --- --- --- --- Job acquisition --- --- --- ----

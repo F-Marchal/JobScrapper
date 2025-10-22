@@ -18,6 +18,7 @@ geopy = "^2.4.1"
 pypdf2 = "^3.0.1"
 click-option-group = "^0.5.7"
 cloup = "^3.0.8"
+sqlalchemy = "^2.0.44"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
