@@ -66,12 +66,13 @@ class ScrapperObjectCore(CoreLogger):
         self.localisation = localisation
         self.contract_type = contract_type
         self.field = field
-        self._metadata: dict[str, str] = metadata
-
+        self._metadata: dict[str, str] = {}
         self._distances: dict[str, float] = {}
         self._keywords: dict[str, int] = {}
-
         self._time_stamps: dict[str, time.struct_time] = {}
+
+        for key, value in metadata.items():
+            self.add_metadata(key, value)
         self.add_time_stamps(self.init_time_stamp_name, self.now())
 
     # --- --- --- --- Export managements --- --- ---
