@@ -1,24 +1,21 @@
-import logging
 import os
 import datetime
-from sqlalchemy import create_engine
-
-from .sql_tables import BaseTableForJobScrapper, Jobs, Metadata, TimeStamps, Distances
-from sqlalchemy.orm import sessionmaker
-import sqlite3
-import time
+from sqlalchemy import  ColumnElement
 from contextlib import contextmanager
-from typing import Sequence, Union, Generator, Any
-import re
+from typing import Any, Type
+
 # pylint: disable=E0611
 from sqlalchemy.orm import Session, Query
+from sqlalchemy import case, func, and_, or_, not_, Result
 
 
-import unicodedata
 from ..object_core import ScrapperObjectCore
-
 from .sql_tables import BaseTableForJobScrapper, Jobs, Metadata, TimeStamps, Distances, Keywords
-from sqlalchemy.orm import sessionmaker
+from .filter_generator import FilterPart, FilterGenerator
+from .wrapper_comparison import STRING_TO_COMPARISON_WRAPPERS
+from .wrapper_logical import STRING_TO_LOGICAL_WRAPPERS
+from sqlalchemy.sql import operators as ope
+
 class ScrapperSQLightCore(ScrapperObjectCore):
     """
     Specialisation of ScrapperObjectCore that allows
@@ -52,7 +49,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             result = (
                 session.query(TimeStamps.time_stamp)
                 .filter(
-                    TimeStamps.url == self.url,
+                    and_(ope.eq(TimeStamps.url, self.url), TimeStamps.label == fstsn),
                     TimeStamps.label == fstsn
                 )
                 .all()
@@ -248,174 +245,278 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             loaded_jobs.append(new_jobs)
         return loaded_jobs
 
-
-
     # --- --- Imports --- ---
     # --- --- Utils --- ---
+    _sql_string_to_operators = {
+        "A": and_,
+        "&": and_,
+        "O": or_,
+        "|": or_,
+        "!": not_,
+        "N": not_,
+        "": None
+    }
 
-    # --- --- Utils --- ---
-
-    '''    # --- --- Names and paths --- ---
-    # --- --- Exports --- ---
-    @classmethod
-    def list_to_sql(cls, jobs: Sequence["ScrapperSQLightCore"]):
-        """
-        Export a list of job inside the sql_core database.
-        :param list ["ScrapperObjectCore"] jobs: A list of ScrapperObjectCore
-        :return:
-        """
-        cls.logger.debug("Exporting %s jobs to sql_core database", len(jobs))
-        for job_obj in jobs:
-            job_obj.sql_export()
-
-    # --- --- Exports --- ---
-    # --- --- Requests --- ---
-    # --- run ---
-    @classmethod
-    def sql_run(cls, command, *args) -> list[tuple[Union[str, int, None], ...]]:
-        cls.logger.debug("Running : \n%s",  cls._format_sql(command, args))
-        with cls.write_in_database() as cursor:
-            cursor.execute(command, args)
-            return cursor.fetchall()
+    _sql_string_sep = "::"
 
     @classmethod
-    def sql_run_with_header(cls, command, *args) -> list[tuple[Union[str, int, None, bool], ...]]:
-        cls.logger.debug("Running : \n%s",  cls._format_sql(command, args))
-        with cls.write_in_database() as cursor:
-            cursor.execute(command, args)
-            return [cursor.description, *cursor.fetchall()]
+    def get_sql_string_to_comparison_operators(cls):
+        return STRING_TO_COMPARISON_WRAPPERS
 
     @classmethod
-    def sql_run_file(cls, sql_file: str) -> list[tuple[Union[str, int, None], ...]]:
-        cls.logger.debug("Opening as SQL command : %s", sql_file)
-        with open(sql_file, "r", encoding="utf-8") as f:
-            command = f.read()
-
-        return cls.sql_run(command)
-
-    # --- run ---
-    # --- describe commands ---
-    @classmethod
-    def get_sql_table_names(cls) -> list[str]:
-        command = """
-            SELECT name
-            FROM sqlite_master
-            WHERE type='table'
-            ORDER BY name;
-        """
-        return [str(tup[0]) for tup in cls.sql_run(command)]
+    def get_sql_string_to_logic_operators(cls):
+        return STRING_TO_LOGICAL_WRAPPERS
 
     @classmethod
-    def sql_describe_table(
-        cls, table: str
-    ) -> list[tuple[Union[str, int, None], ...]]:
-        command = f"PRAGMA table_info('{table}');"
-        return cls.sql_run(command)
-    # --- describe commands ---
-    # --- columns names ---
-    @classmethod
-    def get_sql_table_column_name(cls, table: str) -> list[str]:
-        """Returns columns names attached to a table"""
-        return [str(tup[1]) for tup in cls.sql_describe_table(table) if tup]
+    def sql_clean_string(cls, string: str) -> str:
+        string = cls.clean_string(string)
+        string = string.removesuffix(cls.keyword_suffix)
+        string = string.removesuffix(cls.distance_suffix)
+        string = string.removesuffix(cls.metadata_suffix)
+        string = string.removesuffix(cls.time_stamp_suffix)
+        return string
 
     @classmethod
-    def get_sql_column_jobs_table(cls):
-        """Returns columns names attached to jobs table"""
-        return cls.get_sql_table_column_name(cls._main_table_name)
+    def sql_request_wrapper(
+            cls,
+            session: Session,
+            columns: list[str] | None = None,
+            distances_from: list[str] | None = None,
+            keywords: list[str] | None = None,
+            metadata: list[str] | None = None,
+            time_stamp: list[str] | None = None,
+            order_by: list[str] | None = None,
+
+    ) -> Query:
+        # Parse inputs
+        job_filter = cls._sql_request_wrapper_jobs(columns)
+        distance_filter = cls._sql_request_wrapper_distance(distances_from)
+        keywords_filter = cls._sql_request_wrapper_keywords(keywords)
+        time_filter = cls._sql_request_wrapper_time_stamp(time_stamp)
+        metadata_filter = cls._sql_request_wrapper_metadata(metadata)
+
+        all_cols: list[ColumnElement] = [
+            *job_filter.columns,
+            *distance_filter.columns,
+            *keywords_filter.columns,
+            *time_filter.columns,
+            *metadata_filter.columns,
+        ]
+
+        order_by_cols = cls._sql_request_wrapper_order_by(all_cols, order_by)
+
+
+
+        query = session.query(
+            *all_cols
+        ).join(
+            Keywords,
+            Keywords.url == Jobs.url
+        ).join(
+            Distances,
+            Distances.job_localisation == Jobs.localisation
+        ).join(
+            TimeStamps,
+            TimeStamps.url == Jobs.url
+        ).join(
+            Metadata,
+            Metadata.url == Jobs.url
+        ).where(
+            job_filter.safe_filters
+        ).group_by(
+            Jobs.url
+        ).having(
+            or_(
+                distance_filter.safe_filters,
+                keywords_filter.safe_filters,
+                time_filter.safe_filters,
+                metadata_filter.safe_filters
+            )
+        ).order_by(
+            *order_by_cols
+        )
+
+        return query
+
 
     @classmethod
-    def get_sql_column_metadata_table(cls):
-        """Returns columns names attached to metadata table"""
-        return cls.get_sql_table_column_name(cls._metadata_table_name)
+    def sql_execute_query(cls, session : Session, query: Query) -> Result:
+        cls.logger.debug("SQL run  : \n%s", query.statement.compile(compile_kwargs={"literal_binds": True}))
+        return session.execute(query)
 
     @classmethod
-    def get_sql_column_distances_table(cls):
-        """Returns columns names attached to distances table"""
-        return cls.get_sql_table_column_name(cls._distances_table_name)
+    def sql_display_result(cls, result: Result, sep="\t"):
+        print(sep.join(result.keys()))
+        for lines in result:
+            print(sep.join([str(l) for l in lines]))
 
     @classmethod
-    def get_sql_column_time_stamps_table(cls):
-        """Returns columns names attached to time stamps table"""
-        return cls.get_sql_table_column_name(cls._time_stamps_table_name)
+    def _sql_request_wrapper_order_by(
+            cls,
+            all_cols : list[ColumnElement],
+            order_by: list[str] | None = None,
+    ) -> list[ColumnElement]:
+        if order_by is None:
+            return []
 
-    @classmethod
-    def get_sql_column_keywords_table(cls):
-        """Returns columns names attached to keywords table"""
-        return cls.get_sql_table_column_name(cls._keywords_table_name)
-
-    # --- columns names ---
-    # --- get commands ---
-    @classmethod
-    def get_sql_column_content(
-        cls, table: str, column: str, distinct: bool = False
-    ) -> list[str | None | int]:
-        distinct_kw = "DISTINCT" if distinct else ""
-        command = f"SELECT {distinct_kw} {table}.{column} from {table};"
-        return [tup[0] for tup in cls.sql_run(command)]
-
-    @classmethod
-    def get_sql_reference_places(cls):
-        return cls.get_sql_column_content(cls._distances_table_name, "reference_localisation", distinct=True)
-
-    @classmethod
-    def get_sql_keywords(cls):
-        return cls.get_sql_column_content(cls._keywords_table_name, "keyword", distinct=True)
-
-    @classmethod
-    def get_sql_timestamps(cls):
-        return cls.get_sql_column_content(cls._time_stamps_table_name, "time_stamp", distinct=True)
-
-    @classmethod
-    def get_sql_metadata(cls):
-        return cls.get_sql_column_content(cls._metadata_table_name, "key", distinct=True)
-
-    # --- get commands ---
-    # --- Helpers ---
-    @staticmethod
-    def _parse_time(date_str: str) -> time.struct_time:
-        formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]
-        i = 0
-        result = None
-        last_error = None
-        while i < len(formats) and result is None:
-            try:
-                result = time.strptime(date_str, formats[i])
-            except ValueError as error:
-                i += 1
-                last_error = error
+        order = {cls.sql_clean_string(col_n): i for i, col_n in enumerate(order_by)}
+        result = []
+        for col in all_cols[:]:
+            col_name =  cls.sql_clean_string(col.name)
+            if col_name not in order:
                 continue
 
-        if result:
-            return result
-        raise last_error
-
-    @staticmethod
-    def _format_sql(command: str, args: list | tuple) -> str:
-        result = command
-
-        for val in args:
-            if isinstance(val, (str, time.struct_time)):
-                val_str = "'" + str(val).replace("'", "''") + "'"  # échappe les quotes SQL
-            elif val is None:
-                val_str = "NULL"
-            else:
-                val_str = str(val)
-            result = result.replace("?", val_str, 1)
+            all_cols.remove(col)
+            all_cols.insert(order[col_name], col)
+            result.append(col)
 
         return result
 
-    # --- Helpers ---
-    # --- --- Requests --- ---
-    # --- --- --- --- Sqlite --- --- ---
 
-if __name__ == "__main__":
-    # test = ScrapperObjectCore("Test1'", 'Paris"', "https://google.com", "CDD", "Biology", fake='True', second="3")
-    # test.keywords["Alpha'"] = 34
-    # test.keywords['Beta"'] = 35
-    # test.distances['Alpha"'] = 34.345
-    # test.distances["Beta'"] = 35.250
-    # test.time_stamps['Alpha"'] = time.localtime()
-    # test.time_stamps["Beta'"] = time.localtime()
-    # print(test.sql_export())
-    pass
-'''
+    @classmethod
+    def _sql_request_wrapper_jobs(cls, columns: list[str] | None):
+        if columns is None:
+            columns = Jobs.get_columns()
+
+        fp = FilterPart.list_init(
+            Jobs.to_dict(),
+            *columns,
+            logger=cls.logger,
+        )
+
+        return FilterGenerator(fp)
+    @classmethod
+    def _sql_request_wrapper_distance(cls, distances_from: list[str] | None = None,):
+        if distances_from is None:
+            distances_from = []
+        # TODO: Test that Table.name == cls.sql_clean_string(Table.name)
+        gcu = lambda col_name: func.max(
+            case(
+                (
+                    ope.eq(
+                        Distances.reference_localisation,
+                        cls.sql_clean_string(col_name)
+                    ),
+                    Distances.distance
+                ),
+                else_=None
+            )
+        ).label(col_name + cls.distance_suffix)
+
+        fp = FilterPart.list_init(
+            Distances.to_dict(),
+            *distances_from,
+            generate_column_using=gcu,
+            logger=cls.logger,
+        )
+
+        return FilterGenerator(fp)
+
+    @classmethod
+    def _sql_request_wrapper_keywords(cls, keywords: list[str] | None = None, ):
+        if keywords is None:
+            keywords = []
+
+        gcu = lambda col_name: func.max(
+            case(
+                (
+                    ope.eq(
+                        Keywords.keyword,
+                        cls.sql_clean_string(col_name)
+                    ),
+                    Keywords.occurrence
+                ),
+                else_=None
+            )
+        ).label(col_name + cls.keyword_suffix)
+
+        fp = FilterPart.list_init(
+            Keywords.to_dict(),
+            *keywords,
+            generate_column_using=gcu,
+            logger=cls.logger,
+        )
+
+        return FilterGenerator(fp)
+
+    @classmethod
+    def _sql_request_wrapper_time_stamp(cls, time_stamps: list[str] | None = None, ):
+        if time_stamps is None:
+            time_stamps = []
+
+
+        gcu = lambda col_name: func.max(
+            case(
+                (
+                    ope.eq(
+                        TimeStamps.label,
+                        cls.sql_clean_string(col_name)
+                    ),
+                    TimeStamps.time_stamp
+                ),
+                else_=None
+            )
+        ).label(col_name + cls.time_stamp_suffix)
+
+        fp = FilterPart.list_init(
+            TimeStamps.to_dict(),
+            *time_stamps,
+            generate_column_using=gcu,
+            logger=cls.logger,
+        )
+
+        return FilterGenerator(fp)
+
+    @classmethod
+    def _sql_request_wrapper_metadata(cls, metadatas: list[str] | None = None, ):
+        if metadatas is None:
+            metadatas = []
+        gcu = lambda col_name: func.max(
+            case(
+                (
+                    ope.eq(
+                        Metadata.key,
+                        cls.sql_clean_string(col_name)
+                    ),
+                    Metadata.value
+                ),
+                else_=None
+            )
+        ).label(col_name + cls.metadata_suffix)
+
+        fp = FilterPart.list_init(
+            TimeStamps.to_dict(),
+            *metadatas,
+            generate_column_using=gcu,
+            logger=cls.logger,
+        )
+
+        return FilterGenerator(fp)
+
+
+    @classmethod
+    def sql_display_query(cls, query):
+        first = True
+        for row in query.all():
+            if first:
+                print(row._mapping.keys())
+                first = False
+            print(row)
+
+
+
+
+    @classmethod
+    def _sql_select_columns(cls, database: Type[BaseTableForJobScrapper], *columns):
+        c_map = database.get_column_map()
+        selected_cols_object = []
+        for col in columns:
+            if col not in c_map:
+                cls.logger.warning(
+                    "Can not find '%s' col in '%s'. Please use one of %s.",
+                    col, database.__tablename__, c_map.keys()
+                )
+                continue
+            selected_cols_object.append(c_map[col])
+        return selected_cols_object
+

@@ -23,10 +23,10 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from .sql_core.sql_main import ScrapperSQLightRunner
+from .sql_core.sql_core import ScrapperSQLightCore
 
 
-class ScrapperRequestCore(ScrapperSQLightRunner):
+class ScrapperRequestCore(ScrapperSQLightCore):
     """
     Specialisation of ScrapperSQLightRunner. Add the ability to fetch
     website's jobs, count keywords occurrences inside the description
