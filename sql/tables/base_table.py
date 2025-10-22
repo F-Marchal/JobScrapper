@@ -131,10 +131,6 @@ class BaseTableForJobScrapper(_Base):
                      "\n\tupdates : %s", session, insertion, ignored, existing_counter, updates)
 
 
-
-
-
-
     @classmethod
     def create_all(cls, engine) -> None:
         """
@@ -175,14 +171,6 @@ class BaseTableForJobScrapper(_Base):
         return cls.__table__.columns.keys()
 
     @classmethod
-    def to_dict(cls):
-        return {c: getattr(cls, c) for c in cls.get_columns()}
-
-    @classmethod
-    def flat(cls, sep="\t") -> str:
-        return f"{sep}".join(sorted([f"{key}={value}" for key, value in cls.to_dict().items()]))
-
-    @classmethod
     def get_pk_columns(cls) -> list[str]:
         """
         Return the list of primary key column names for a SQLAlchemy model class.
@@ -194,24 +182,35 @@ class BaseTableForJobScrapper(_Base):
         return [column.key for column in mapper.primary_key]
 
     @classmethod
-    def to_pk_dict(cls):
-        return {c: getattr(cls, c) for c in cls.get_pk_columns()}
-
-    @classmethod
-    def flat_pk(cls, sep="\t") -> str:
-        return f"{sep}".join(sorted([f"{key}={value}" for key, value in cls.to_pk_dict().items()]))
-
-    @classmethod
     def get_non_pk_columns(cls):
         return [col for col in cls.__table__.columns.keys() if col not in cls.get_pk_columns()]
 
     @classmethod
-    def to_non_pk_dict(cls):
-        return {c: getattr(cls, c) for c in cls.get_non_pk_columns()}
+    def column_dict(cls):
+        return cls.__table__.columns
 
-    @classmethod
-    def flat_non_pk(cls, sep="\t") -> str:
-        return f"{sep}".join(sorted([f"{key}={value}" for key, value in cls.to_non_pk_dict().items()]))
+    def to_dict(self):
+        return {c: getattr(self, c) for c in self.get_columns()}
+
+    def flat(self, sep="\t") -> str:
+        # Sort keys and join key=value pairs with separator
+        return sep.join([f"{key}={value}" for key, value in sorted(self.to_dict().items())])
+
+
+    def to_pk_dict(self):
+        return {c: getattr(self, c) for c in self.get_pk_columns()}
+
+    def flat_pk(self, sep="\t") -> str:
+        return f"{sep}".join(sorted([f"{key}={value}" for key, value in self.to_pk_dict().items()]))
+
+
+
+    def to_non_pk_dict(self):
+        return {c: getattr(self, c) for c in self.get_non_pk_columns()}
+
+
+    def flat_non_pk(self, sep="\t") -> str:
+        return f"{sep}".join(sorted([f"{key}={value}" for key, value in self.to_non_pk_dict().items()]))
 
     # --- --- Descriptions --- ---
     # --- --- Standard requests --- ---

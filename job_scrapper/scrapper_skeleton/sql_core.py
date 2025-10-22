@@ -379,7 +379,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             columns = Jobs.get_columns()
 
         fp = FilterPart.list_init(
-            Jobs.to_dict(),
+            Jobs.column_dict(),
             *columns,
             logger=cls.logger,
         )
@@ -404,7 +404,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         ).label(col_name + cls.distance_suffix)
 
         fp = FilterPart.list_init(
-            Distances.to_dict(),
+            Distances.column_dict(),
             *distances_from,
             generate_column_using=gcu,
             logger=cls.logger,
@@ -431,7 +431,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         ).label(col_name + cls.keyword_suffix)
 
         fp = FilterPart.list_init(
-            Keywords.to_dict(),
+            Keywords.column_dict(),
             *keywords,
             generate_column_using=gcu,
             logger=cls.logger,
@@ -459,7 +459,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         ).label(col_name + cls.time_stamp_suffix)
 
         fp = FilterPart.list_init(
-            TimeStamps.to_dict(),
+            TimeStamps.column_dict(),
             *time_stamps,
             generate_column_using=gcu,
             logger=cls.logger,
@@ -485,7 +485,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         ).label(col_name + cls.metadata_suffix)
 
         fp = FilterPart.list_init(
-            TimeStamps.to_dict(),
+            TimeStamps.column_dict(),
             *metadatas,
             generate_column_using=gcu,
             logger=cls.logger,
