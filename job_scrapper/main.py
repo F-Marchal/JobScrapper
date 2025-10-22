@@ -395,7 +395,7 @@ def request(
     "--display",
     is_flag=True,
     help="Output the result inside the terminal. If --result-file (-f) is not used and "
-    "--no-sql_core-export (-q) is used, this flag"
+    "--no-sql-export (-q) is used, this flag"
     "is turned on by default.",
 )
 @click.option(

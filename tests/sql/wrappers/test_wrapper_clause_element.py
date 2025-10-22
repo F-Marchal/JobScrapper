@@ -1,4 +1,4 @@
-from job_scrapper.scrapper_skeleton.sql_core.wrapper_clause_element import (
+from sql.wrappers.wrapper_clause_element import (
     ClauseElementWrapper,
 )
 from sqlalchemy import and_

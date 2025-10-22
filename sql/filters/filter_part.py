@@ -1,6 +1,6 @@
 from logging import Logger
-from .wrapper_logical import LogicalWrapper, STRING_TO_LOGICAL_WRAPPERS
-from .wrapper_comparison import ComparisonWrapper, STRING_TO_COMPARISON_WRAPPERS
+from sql.wrappers.wrapper_logical import LogicalWrapper, STRING_TO_LOGICAL_WRAPPERS
+from sql.wrappers.wrapper_comparison import ComparisonWrapper, STRING_TO_COMPARISON_WRAPPERS
 from sqlalchemy.sql.elements import Label, ColumnElement
 from typing import Any, Optional, Callable
 

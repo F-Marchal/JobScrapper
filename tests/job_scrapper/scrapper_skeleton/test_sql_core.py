@@ -3,8 +3,8 @@ import os
 import pytest
 from tests.conftest import BaseTest
 
-from job_scrapper.scrapper_skeleton.sql_core.sql_core import ScrapperSQLightCore
-from contextlib import contextmanager
+from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
+
 
 @pytest.mark.job_core
 class TestScrapperSQLightCore(BaseTest):

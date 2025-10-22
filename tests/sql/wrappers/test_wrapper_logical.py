@@ -1,5 +1,5 @@
 from tests.conftest import BaseTest
-from job_scrapper.scrapper_skeleton.sql_core.wrapper_logical import (
+from sql.wrappers.wrapper_logical import (
     STRING_TO_LOGICAL_WRAPPERS,
     LOGICAL_WRAPPERS,
     LogicalWrapper,

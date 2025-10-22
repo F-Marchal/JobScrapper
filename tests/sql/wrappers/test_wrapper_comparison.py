@@ -1,6 +1,6 @@
 import re
 
-from job_scrapper.scrapper_skeleton.sql_core.wrapper_comparison import (
+from sql.wrappers.wrapper_comparison import (
     ComparisonWrapper,
     STRING_TO_COMPARISON_WRAPPERS,
     COMPARISON_WRAPPERS,
@@ -11,7 +11,7 @@ from datetime import datetime
 from sqlalchemy import and_, select, Column
 import pytest
 from typing import Any, Callable
-from .table_for_test_only import StringTable
+from tests.table_for_test_only import StringTable
 import os
 
 def ilike_filter(items_list: list[str], pattern: str, inverse=False) -> list[str]:
