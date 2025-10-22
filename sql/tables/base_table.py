@@ -46,6 +46,7 @@ class BaseTableForJobScrapper(_Base):
         session_maker = cls._databases[database_path]["session_maker"]
         session = session_maker()
         if logger: logger.debug("Database session opened ('%s') for '%s'.", session, database_path)
+
         try:
             with session.no_autoflush: # Remove autoflush in order to keep avoid sanitise flush.
                 yield session
@@ -187,7 +188,7 @@ class BaseTableForJobScrapper(_Base):
 
     @classmethod
     def column_dict(cls):
-        return cls.__table__.columns
+        return {col.key: col for col in cls.__table__.columns}
 
     def to_dict(self):
         return {c: getattr(self, c) for c in self.get_columns()}
