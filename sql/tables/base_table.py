@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, String, DateTime, Integer, Float, ForeignKey
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import Column
+from sqlalchemy.orm import declarative_base
 import os
 from sqlalchemy.orm import Session, Query
 import traceback
@@ -155,7 +155,7 @@ class BaseTableForJobScrapper(_Base):
             return True
         return False
 
-    def get_existing_self(self, session: Session) -> 'None | Keywords':
+    def get_existing_self(self, session: Session) -> 'None | BaseTableForJobScrapper':
         primary_keys = self.get_pk_columns()
         if not primary_keys:
             return None
@@ -227,116 +227,3 @@ class BaseTableForJobScrapper(_Base):
         return session.query(cls)
 
     # --- --- Standard requests --- ---
-
-class Jobs(BaseTableForJobScrapper):
-    __abstract__ = False
-    __tablename__ = "jobs"
-
-    # Table columns
-    contract = Column(String, nullable=False)
-    field = Column(String, nullable=False)
-    localisation = Column(String, nullable=False)
-    origin = Column(String, nullable=False)
-    title = Column(String, nullable=False)
-    url = Column(String, primary_key=True, nullable=False)
-
-    # time_stamp = Column(Date, nullable=False)
-
-    # Table relationships
-    # Relations dynamiques
-    metadata_entries = relationship(
-        "Metadata",
-        back_populates="main_entry",
-        cascade="all, delete-orphan",
-        lazy='dynamic' # Gives a query object instead of a list when job = session.get(Jobs, "url_du_job") ; job.metadata_entries
-    )
-    keywords_entries = relationship(
-        "Keywords",
-        back_populates="main_entry",
-        cascade="all, delete-orphan",
-        lazy='dynamic'
-    )
-    timestamps_entries = relationship(
-        "TimeStamps",
-        back_populates="main_entry",
-        cascade="all, delete-orphan",
-        lazy='dynamic'
-    )
-
-    # Ease requests
-    # distances_from_job = relationship(
-    #    "Distances",
-    #    primaryjoin="Jobs.localisation==Distances.job_localisation",
-    #    back_populates="job",
-    #    lazy='dynamic',  # important pour filtrer avec .filter()
-    #    viewonly=True
-    #)
-
-
-class Metadata(BaseTableForJobScrapper):
-    __abstract__ = False
-    __tablename__ = "metadata"
-
-    # Table columns
-    url = Column(String, ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"), primary_key=True)
-    key = Column(String, primary_key=True, nullable=False)
-    value = Column(String, nullable=False)
-
-    # Table relationships
-    main_entry = relationship("Jobs", back_populates="metadata_entries", passive_deletes=True)
-
-    @classmethod
-    def get_associated_metadata(cls, session: Session, url: str) -> list:
-        return session.query(cls).filter_by(url=url).all()
-
-class Keywords(BaseTableForJobScrapper):
-    __abstract__ = False
-    __tablename__ = "keywords"
-
-    url = Column(String, ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"), primary_key=True)
-    keyword = Column(String, primary_key=True, nullable=False)
-    occurrence = Column(Integer)
-
-    main_entry = relationship("Jobs", back_populates="keywords_entries", passive_deletes=True)
-
-    @classmethod
-    def get_associated_keywords(cls, session: Session, url: str) -> list:
-        return session.query(cls).filter_by(url=url).all()
-
-
-class TimeStamps(BaseTableForJobScrapper):
-    __abstract__ = False
-    __tablename__ = "timestamps"
-
-    url = Column(String, ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"), primary_key=True)
-    label = Column(String, primary_key=True, nullable=False)
-    time_stamp =  Column(DateTime, nullable=False)
-
-    main_entry = relationship("Jobs", back_populates="timestamps_entries", passive_deletes=True)
-
-    @classmethod
-    def get_associated_time_stamps(cls, session: Session, url: str) -> list:
-        return session.query(cls).filter_by(url=url).all()
-
-
-class Distances(BaseTableForJobScrapper):
-    __abstract__ = False
-    __tablename__ = "distances"
-
-    reference_localisation = Column(String, primary_key=True, nullable=False)
-    job_localisation = Column(String, primary_key=True, nullable=False)
-    distance = Column(Float)
-
-    @classmethod
-    def get_associated_distances(cls, session: Session, job_localisation: str) -> list:
-        return session.query(cls).filter_by(job_localisation=job_localisation).all()
-
-
-
-
-    # job = relationship(
-    #    "Jobs",
-    #    primaryjoin=f"Jobs.localisation==Distances.job_localisation",
-    #    back_populates="distances_from_job",
-    #    viewonly=True
-    # )

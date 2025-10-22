@@ -1,0 +1,52 @@
+from .base_table import BaseTableForJobScrapper
+from sqlalchemy import Column, String
+from sqlalchemy.orm import relationship
+
+class Jobs(BaseTableForJobScrapper):
+    """
+    Main table. Contains main information related to jobs offers :
+    contract, field, url ...
+    """
+    __abstract__ = False
+    __tablename__ = "jobs"
+
+    # Table columns
+    contract = Column(String, nullable=False)
+    field = Column(String, nullable=False)
+    localisation = Column(String, nullable=False)
+    origin = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    url = Column(String, primary_key=True, nullable=False)
+
+    # time_stamp = Column(Date, nullable=False)
+
+    # Table relationships
+    # Relations dynamiques
+    metadata_entries = relationship(
+        "Metadata",
+        back_populates="main_entry",
+        cascade="all, delete-orphan",
+        lazy='dynamic' # Gives a query object instead of a list when job = session.get(Jobs, "url_du_job") ; job.metadata_entries
+    )
+    keywords_entries = relationship(
+        "Keywords",
+        back_populates="main_entry",
+        cascade="all, delete-orphan",
+        lazy='dynamic'
+    )
+    timestamps_entries = relationship(
+        "TimeStamps",
+        back_populates="main_entry",
+        cascade="all, delete-orphan",
+        lazy='dynamic'
+    )
+
+    # Ease requests
+    # distances_from_job = relationship(
+    #    "Distances",
+    #    primaryjoin="Jobs.localisation==Distances.job_localisation",
+    #    back_populates="job",
+    #    lazy='dynamic',  # important pour filtrer avec .filter()
+    #    viewonly=True
+    #)
+

@@ -10,7 +10,7 @@ from sqlalchemy import case, func, and_, or_, not_, Result
 
 
 from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore
-from sql.tables.sql_tables import BaseTableForJobScrapper, Jobs, Metadata, TimeStamps, Distances, Keywords
+from sql.tables import BaseTableForJobScrapper, Jobs, Metadata, TimeStamps, Distances, Keywords
 from sql.filters.filter_generator import FilterPart, FilterGenerator
 from sql.wrappers.wrapper_comparison import STRING_TO_COMPARISON_WRAPPERS
 from sql.wrappers.wrapper_logical import STRING_TO_LOGICAL_WRAPPERS
