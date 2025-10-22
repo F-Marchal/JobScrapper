@@ -2,7 +2,7 @@ import os.path
 import time
 from typing import Sequence
 
-from .logger_core import CoreLogger
+from tools.logger_core import CoreLogger
 import unicodedata
 import re
 

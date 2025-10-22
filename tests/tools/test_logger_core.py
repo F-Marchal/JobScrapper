@@ -1,7 +1,7 @@
 import pytest
 from tests.conftest import BaseTest
 
-from job_scrapper.scrapper_skeleton.logger_core import (
+from tools.logger_core import (
     CoreLogger,
 )
 
