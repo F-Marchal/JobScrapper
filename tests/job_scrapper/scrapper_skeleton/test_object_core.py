@@ -97,7 +97,7 @@ class TestScrapperObjectCore(BaseTest):
 
         # Metadat exist
         # If assert True : Text is correctly cleaned.
-        assert soc.metadata_exist("message for*/ you")
+        assert soc.metadata_exist("message for*/ you" + soc.metadata_suffix)
         assert soc.metadata_exist("Message for you")
         assert soc.distance_to_exist("pâris, france:\t" + soc.distance_suffix)
         assert soc.distance_to_exist("Paris, france")

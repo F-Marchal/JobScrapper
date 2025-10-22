@@ -36,7 +36,9 @@ class ScrapperObjectCore(CoreLogger):
     distance_suffix = " (km)"
     keyword_suffix = " (#)"
     time_stamp_suffix = " (Y-M-D H:M:S)"
+    metadata_suffix = " (Met)"
     init_time_stamp_name = "Last sighting" # Should be a clean_string() output.
+
 
     @classmethod
     def set_workdir(cls, path: str):
@@ -527,7 +529,7 @@ class ScrapperObjectCore(CoreLogger):
         if "|" in value:
             raise ValueError("No pipe ('|') allowed as metadata value.")
 
-        name = self.clean_string(name)
+        name = self.clean_string(name.removesuffix(self.metadata_suffix))
         value = re.sub(r'\s+', '_', value)
         value = re.sub(r'_+', '_', value)
 
@@ -535,19 +537,19 @@ class ScrapperObjectCore(CoreLogger):
 
     def remove_metadata(self, name: str):
         """Delete a metadata attached to this job offer."""
-        name = self.clean_string(name)
+        name = self.clean_string(name.removesuffix(self.metadata_suffix))
         if name in self._metadata:
             del self._metadata[name]
 
     def retrieve_metadata(self, name: str) -> str:
         """Retrieve an entry inside this job metadata"""
-        name = self.clean_string(name)
+        name = self.clean_string(name.removesuffix(self.metadata_suffix))
         return self._metadata[name]
 
 
     def metadata_exist(self, name: str) -> bool:
         """Says if a metadata with the same <name> is defined in <self.metadata>"""
-        return self.clean_string(name) in self._metadata
+        return self.clean_string(name.removesuffix(self.metadata_suffix)) in self._metadata
 
     # --- --- time_stamps --- ----
     @property
