@@ -135,10 +135,10 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     def _sql_export_main(self, session: Session) -> None:
         job_obj = Jobs(
             url = self.url,
-            title = self.title,
-            localisation = self.localisation,
-            contract = self.contract_type,
-            field = self.field,
+            title = self.title if self.title else None,
+            localisation = self.localisation if self.localisation else None,
+            contract = self.contract_type if self.localisation else None,
+            field = self.field if self.localisation else None,
             origin = self.get_class_name()
         )
         session.add(job_obj)

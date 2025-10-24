@@ -11,11 +11,11 @@ class Jobs(BaseTableForJobScrapper):
     __tablename__ = "jobs"
 
     # Table columns
-    contract = Column(String, nullable=False)
-    field = Column(String, nullable=False)
-    localisation = Column(String, nullable=False)
-    origin = Column(String, nullable=False)
-    title = Column(String, nullable=False)
+    contract = Column(String, nullable=True)
+    field = Column(String, nullable=True)
+    localisation = Column(String, nullable=True)
+    origin = Column(String, nullable=True)
+    title = Column(String, nullable=True)
     url = Column(String, primary_key=True, nullable=False)
 
     # time_stamp = Column(Date, nullable=False)

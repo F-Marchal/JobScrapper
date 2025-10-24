@@ -195,7 +195,7 @@ class BaseTableForJobScrapper(_Base):
 
     def flat(self, sep="\t") -> str:
         # Sort keys and join key=value pairs with separator
-        return sep.join([f"{key}={value}" for key, value in sorted(self.to_dict().items())])
+        return sep.join([f"{key}={value}" for key, value in sorted(self.get_column_map().items())])
 
 
     def to_pk_dict(self):
