@@ -66,6 +66,15 @@ class BaseTableForJobScrapper(_Base):
 
     @classmethod
     def _sanitise_and_commit(cls, session: Session, logger: Logger | None = None):
+        """
+        Ensure that error will not be raised when an entry is known by the database
+        (primary key conflict).
+        - Same primary keys added twice : The first one is kept, the second one is ignored
+        - Added primary key exist in database : The one contained in the database is updated
+            to match the newer one
+        :param session: A Session object
+        :param logger: An optional logger to display logs.
+        """
         viewed_entries = {
 
         }
@@ -97,7 +106,7 @@ class BaseTableForJobScrapper(_Base):
                 )
                 session.expunge(entries)
                 updates += 1
-                for column in entries.get_non_pk_columns():
+                for column in entries.get_non_pk_attr():
                     setattr(existing, column, getattr(entries, column))
                 continue
 
@@ -153,61 +162,68 @@ class BaseTableForJobScrapper(_Base):
         return False
 
     def get_existing_self(self, session: Session) -> 'None | BaseTableForJobScrapper':
-        primary_keys = self.get_pk_columns()
+        primary_keys = self.get_pk_attr_name()
         if not primary_keys:
             return None
 
         return session.query(self.__class__).filter_by(**self.to_pk_dict()).first()
 
     @classmethod
-    def get_column_map(cls) -> dict[str, Column]:
+    def get_columns_using_sql_name(cls) -> dict[str, Column]:
         """
         Return a dictionary mapping column names to their SQLAlchemy column objects.
-        Example: {"id": Jobs.id, "title": Jobs.title, ...}
+        Example: {"column name in database": Column object, "title": Jobs.title, ...}
         """
+        # TODO: Use a function here instead of list_all_cols
         return {column.name: column for column in cls.__table__.columns}
 
     @classmethod
-    def get_columns(cls):
-        return cls.__table__.columns.keys()
+    def get_columns_using_attr_name(cls) -> dict[str, Column]:
+        """Returns a dictionary : {table attribute name: Column obj}"""
+        mapper = inspect(cls)
+        results = {}
+        for sql_prop in mapper.column_attrs:
+            orm_name = sql_prop.key
+            results[orm_name] = sql_prop.columns[0]
+
+        return results
 
     @classmethod
-    def get_pk_columns(cls) -> list[str]:
+    def get_pk_attr_name(cls) -> list[str]:
         """
         Return the list of primary key column names for a SQLAlchemy model class.
         """
         if cls.__abstract__:
             return []
-
+        results = []
         mapper = inspect(cls)
-        return [column.key for column in mapper.primary_key]
+        for sql_prop in mapper.column_attrs:
+            orm_name = sql_prop.key
+            results.append(orm_name)
+        return results
 
     @classmethod
-    def get_non_pk_columns(cls):
-        return [col for col in cls.__table__.columns.keys() if col not in cls.get_pk_columns()]
-
-    @classmethod
-    def column_dict(cls):
-        return {col.key: col for col in cls.__table__.columns}
+    def get_non_pk_attr(cls):
+        return [col for col in cls.__table__.columns.keys() if col not in cls.get_pk_attr_name()]
 
     def to_dict(self):
-        return {c: getattr(self, c) for c in self.get_columns()}
+        tmp = {c: getattr(self, c) for c in self.get_columns_using_attr_name()}
+        return tmp
 
     def flat(self, sep="\t") -> str:
         # Sort keys and join key=value pairs with separator
-        return sep.join([f"{key}={value}" for key, value in sorted(self.get_column_map().items())])
+        return sep.join([f"{key}={value}" for key, value in sorted(self.get_columns_using_attr_name().items())])
 
 
     def to_pk_dict(self):
-        return {c: getattr(self, c) for c in self.get_pk_columns()}
+
+        return {c: getattr(self, c) for c in self.get_pk_attr_name()}
 
     def flat_pk(self, sep="\t") -> str:
         return f"{sep}".join(sorted([f"{key}={value}" for key, value in self.to_pk_dict().items()]))
 
-
-
     def to_non_pk_dict(self):
-        return {c: getattr(self, c) for c in self.get_non_pk_columns()}
+        return {c: getattr(self, c) for c in self.get_non_pk_attr()}
 
 
     def flat_non_pk(self, sep="\t") -> str:

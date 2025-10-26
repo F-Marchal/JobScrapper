@@ -376,10 +376,10 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     @classmethod
     def _sql_request_wrapper_jobs(cls, columns: list[str] | None):
         if columns is None:
-            columns = Jobs.get_columns()
+            columns = Jobs.get_columns_using_sql_name()
 
         fp = FilterPart.list_init(
-            Jobs.column_dict(),
+            Jobs.get_columns_using_sql_name(),
             *columns,
             logger=cls.logger,
         )
@@ -404,7 +404,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         ).label(col_name + cls.distance_suffix)
 
         fp = FilterPart.list_init(
-            Distances.column_dict(),
+            Distances.get_columns_using_sql_name(),
             *distances_from,
             generate_column_using=gcu,
             logger=cls.logger,
@@ -431,7 +431,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         ).label(col_name + cls.keyword_suffix)
 
         fp = FilterPart.list_init(
-            Keywords.column_dict(),
+            Keywords.get_columns_using_sql_name(),
             *keywords,
             generate_column_using=gcu,
             logger=cls.logger,
@@ -459,7 +459,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         ).label(col_name + cls.time_stamp_suffix)
 
         fp = FilterPart.list_init(
-            TimeStamps.column_dict(),
+            TimeStamps.get_columns_using_sql_name(),
             *time_stamps,
             generate_column_using=gcu,
             logger=cls.logger,
@@ -485,7 +485,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         ).label(col_name + cls.metadata_suffix)
 
         fp = FilterPart.list_init(
-            TimeStamps.column_dict(),
+            TimeStamps.get_columns_using_sql_name(),
             *metadatas,
             generate_column_using=gcu,
             logger=cls.logger,
@@ -508,7 +508,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     @classmethod
     def _sql_select_columns(cls, database: Type[BaseTableForJobScrapper], *columns):
-        c_map = database.get_column_map()
+        c_map = database.get_columns_using_sql_name()
         selected_cols_object = []
         for col in columns:
             if col not in c_map:
