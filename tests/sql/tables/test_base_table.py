@@ -22,12 +22,12 @@ class TestTableForJobScrapper(BaseTest):
     # ===================================== #
     @pytest.mark.js_tables_pyt
     def test_get_column_using_sql_name(self):
-        cusn = self.TestBaseTableForJobScrapper.get_columns_using_sql_name()
-        self.screen_var("cusn", cusn)
-        assert cusn["strid"] == self.TestBaseTableForJobScrapper.string_id
-        assert cusn["intid"] == self.TestBaseTableForJobScrapper.integer_id
-        assert cusn["value"] == self.TestBaseTableForJobScrapper.value
-        assert cusn["time_stamp"] == self.TestBaseTableForJobScrapper.time_stamp
+       cusn = self.TestBaseTableForJobScrapper.get_columns_using_sql_name()
+       self.screen_var("cusn", cusn)
+       assert cusn["strid"] == self.TestBaseTableForJobScrapper.string_id
+       assert cusn["intid"] == self.TestBaseTableForJobScrapper.integer_id
+       assert cusn["value"] == self.TestBaseTableForJobScrapper.value
+       assert cusn["time_stamp"] == self.TestBaseTableForJobScrapper.time_stamp
 
     @pytest.mark.js_tables_pyt
     def test_get_columns_using_attr_name(self):
@@ -41,12 +41,15 @@ class TestTableForJobScrapper(BaseTest):
 
     # --- get columns ---
     @pytest.mark.js_tables_pyt
-    def test_get_columns(self):
-        pass
+    def test_get_pk_attr_name(self):
+        assert BaseTableForJobScrapper.get_pk_attr_name() == []
 
-    @pytest.mark.js_tables_pyt
-    def test_get_pk_columns(self):
-        pass
+        pk_cols = self.TestBaseTableForJobScrapper.get_pk_attr_name()
+        assert "string_id" in pk_cols
+        assert "integer_id" in pk_cols
+        assert "value" in pk_cols
+        assert "time_stamp" in pk_cols
+
 
     @pytest.mark.js_tables_pyt
     def test_get_non_pk_columns(self):
@@ -59,7 +62,17 @@ class TestTableForJobScrapper(BaseTest):
 
     @pytest.mark.js_tables_pyt
     def test_to_pk_dict(self):
-        pass
+        obj, now = self.make_one_entry()
+        pk_cols = obj.to_pk_dict()
+        assert "strid" in pk_cols
+        assert "intid" in pk_cols
+        assert "value" in pk_cols
+        assert "time_stamp" in pk_cols
+
+        assert pk_cols["strid"] == "AnId"
+        assert pk_cols["intid"] == 42
+        assert pk_cols["value"] == 63.45
+        assert pk_cols["time_stamp"] == now
 
     @pytest.mark.js_tables_pyt
     def test_to_non_pk_dict(self):
