@@ -106,7 +106,7 @@ class BaseTableForJobScrapper(_Base):
                 )
                 session.expunge(entries)
                 updates += 1
-                for column in entries.get_non_pk_attr():
+                for column in entries.get_non_pk_col_attr_name():
                     setattr(existing, column, getattr(entries, column))
                 continue
 
@@ -162,7 +162,7 @@ class BaseTableForJobScrapper(_Base):
         return False
 
     def get_existing_self(self, session: Session) -> 'None | BaseTableForJobScrapper':
-        primary_keys = self.get_pk_attr_name()
+        primary_keys = self.get_pk_col_attr_name()
         if not primary_keys:
             return None
 
@@ -174,12 +174,16 @@ class BaseTableForJobScrapper(_Base):
         Return a dictionary mapping column names to their SQLAlchemy column objects.
         Example: {"column name in database": Column object, "title": Jobs.title, ...}
         """
-        # TODO: Use a function here instead of list_all_cols
+        if cls.__abstract__:
+            return {}
         return {column.name: column for column in cls.__table__.columns}
 
     @classmethod
     def get_columns_using_attr_name(cls) -> dict[str, Column]:
         """Returns a dictionary : {table attribute name: Column obj}"""
+        if cls.__abstract__:
+            return {}
+
         mapper = inspect(cls)
         results = {}
         for sql_prop in mapper.column_attrs:
@@ -189,22 +193,15 @@ class BaseTableForJobScrapper(_Base):
         return results
 
     @classmethod
-    def get_pk_attr_name(cls) -> list[str]:
+    def get_pk_col_attr_name(cls) -> dict[str, Column]:
         """
         Return the list of primary key column names for a SQLAlchemy model class.
         """
-        if cls.__abstract__:
-            return []
-        results = []
-        mapper = inspect(cls)
-        for sql_prop in mapper.column_attrs:
-            orm_name = sql_prop.key
-            results.append(orm_name)
-        return results
+        return {col_name: col for col_name, col in cls.get_columns_using_attr_name().items() if col.primary_key}
 
     @classmethod
-    def get_non_pk_attr(cls):
-        return [col for col in cls.__table__.columns.keys() if col not in cls.get_pk_attr_name()]
+    def get_non_pk_col_attr_name(cls) -> dict[str, Column]:
+        return {col_name: col for col_name, col in cls.get_columns_using_attr_name().items() if not col.primary_key}
 
     def to_dict(self):
         tmp = {c: getattr(self, c) for c in self.get_columns_using_attr_name()}
@@ -217,13 +214,13 @@ class BaseTableForJobScrapper(_Base):
 
     def to_pk_dict(self):
 
-        return {c: getattr(self, c) for c in self.get_pk_attr_name()}
+        return {c: getattr(self, c) for c in self.get_pk_col_attr_name()}
 
     def flat_pk(self, sep="\t") -> str:
         return f"{sep}".join(sorted([f"{key}={value}" for key, value in self.to_pk_dict().items()]))
 
     def to_non_pk_dict(self):
-        return {c: getattr(self, c) for c in self.get_non_pk_attr()}
+        return {c: getattr(self, c) for c in self.get_non_pk_col_attr_name()}
 
 
     def flat_non_pk(self, sep="\t") -> str:
