@@ -22,15 +22,17 @@ class TestTableForJobScrapper(BaseTest):
     # ===================================== #
     @pytest.mark.js_tables_pyt
     def test_get_column_using_sql_name(self):
-       cusn = self.TestBaseTableForJobScrapper.get_columns_using_sql_name()
-       self.screen_var("cusn", cusn)
-       assert cusn["strid"] == self.TestBaseTableForJobScrapper.string_id
-       assert cusn["intid"] == self.TestBaseTableForJobScrapper.integer_id
-       assert cusn["value"] == self.TestBaseTableForJobScrapper.value
-       assert cusn["time_stamp"] == self.TestBaseTableForJobScrapper.time_stamp
+        """Ensure that get_columns_using_sql_name returns the correct content."""
+        cusn = self.TestBaseTableForJobScrapper.get_columns_using_sql_name()
+        self.screen_var("cusn", cusn)
+        assert cusn["strid"] == self.TestBaseTableForJobScrapper.string_id
+        assert cusn["intid"] == self.TestBaseTableForJobScrapper.integer_id
+        assert cusn["value"] == self.TestBaseTableForJobScrapper.value
+        assert cusn["time_stamp"] == self.TestBaseTableForJobScrapper.time_stamp
 
     @pytest.mark.js_tables_pyt
     def test_get_columns_using_attr_name(self):
+        """Ensure that get_columns_using_attr_name returns the correct content."""
         cuan = self.TestBaseTableForJobScrapper.get_columns_using_attr_name()
         self.screen_var("cuan", cuan)
 
@@ -42,54 +44,113 @@ class TestTableForJobScrapper(BaseTest):
     # --- get columns ---
     @pytest.mark.js_tables_pyt
     def test_get_pk_attr_name(self):
-        assert BaseTableForJobScrapper.get_pk_attr_name() == []
+        """Ensure that get_pk_col_attr_name returns the correct content."""
+        assert BaseTableForJobScrapper.get_pk_col_attr_name() == {}
 
-        pk_cols = self.TestBaseTableForJobScrapper.get_pk_attr_name()
+        pk_cols = self.TestBaseTableForJobScrapper.get_pk_col_attr_name()
         assert "string_id" in pk_cols
         assert "integer_id" in pk_cols
-        assert "value" in pk_cols
-        assert "time_stamp" in pk_cols
+        assert "value" not in pk_cols
+        assert "time_stamp" not in pk_cols
 
 
     @pytest.mark.js_tables_pyt
-    def test_get_non_pk_columns(self):
-        pass
+    def test_get_non_pk_attr_name(self):
+        """Ensure that get_non_pk_col_attr_name returns the correct content."""
+        assert BaseTableForJobScrapper.get_non_pk_col_attr_name() == {}
+
+        pk_cols = self.TestBaseTableForJobScrapper.get_non_pk_col_attr_name()
+        assert "string_id" not in pk_cols
+        assert "integer_id" not in pk_cols
+        assert "value" in pk_cols
+        assert "time_stamp" in pk_cols
 
     # --- to_dicts ---
     @pytest.mark.js_tables_pyt
     def test_to_dict(self):
-        pass
+        """Ensure that to_dict returns the correct content with correct types."""
+        obj, now = self.make_one_entry()
+        to_dict = obj.to_dict()
+        self.screen_var("to_dict", to_dict)
+
+        assert "string_id" in to_dict
+        assert "integer_id" in to_dict
+        assert "value" in to_dict
+        assert "time_stamp" in to_dict
+
+        assert to_dict["string_id"] == "AnId"
+        assert to_dict["integer_id"] == 42
+        assert to_dict["value"] == 63.45
+        assert to_dict["time_stamp"] == now
 
     @pytest.mark.js_tables_pyt
     def test_to_pk_dict(self):
+        """Ensure that to_pk_dict returns the correct content with correct types."""
         obj, now = self.make_one_entry()
-        pk_cols = obj.to_pk_dict()
-        assert "strid" in pk_cols
-        assert "intid" in pk_cols
-        assert "value" in pk_cols
-        assert "time_stamp" in pk_cols
+        to_dict = obj.to_pk_dict()
+        self.screen_var("to_pk_dict", to_dict)
 
-        assert pk_cols["strid"] == "AnId"
-        assert pk_cols["intid"] == 42
-        assert pk_cols["value"] == 63.45
-        assert pk_cols["time_stamp"] == now
+        assert "string_id" in to_dict
+        assert "integer_id" in to_dict
+        assert "value" not in to_dict
+        assert "time_stamp" not in to_dict
+
+        assert to_dict["string_id"] == "AnId"
+        assert to_dict["integer_id"] == 42
+        # assert to_dict["value"] == 63.45
+        # assert to_dict["time_stamp"] == now
 
     @pytest.mark.js_tables_pyt
     def test_to_non_pk_dict(self):
-       pass
+        """Ensure that to_non_pk_dict returns the correct content with correct types."""
+        obj, now = self.make_one_entry()
+        to_dict = obj.to_non_pk_dict()
+        self.screen_var("to_non_pk_dict", to_dict)
+
+        assert "string_id" not in to_dict
+        assert "integer_id" not in to_dict
+        assert "value" in to_dict
+        assert "time_stamp" in to_dict
+
+        # assert to_dict["string_id"] == "AnId"
+        # assert to_dict["integer_id"] == 42
+        assert to_dict["value"] == 63.45
+        assert to_dict["time_stamp"] == now
 
     # --- flat ---
     @pytest.mark.js_tables_pyt
     def test_flat(self):
-        pass
+        """Ensure that test_flat returns a string correctly formated.
+        Those strings should be equals for each entry with the same cols and col's value"""
+        obj1, obj2, now = self.make_two_equ_entry()
 
-    @pytest.mark.js_tables_pyt
-    def test_flat_non_pk(self):
-        pass
+
+        assert obj1.to_dict() == obj1.to_dict()
+        assert obj2.flat() == obj1.flat()
+
+
+
 
     @pytest.mark.js_tables_pyt
     def test_flat_pk(self):
-        pass
+        """Ensure that test_flat returns a string correctly formated.
+        Those strings should be equals for each entry with the same cols and col's value"""
+        obj1, obj2, now = self.make_two_equ_entry()
+
+
+        assert obj1.to_dict() == obj1.to_dict()
+        assert obj2.flat() == obj1.flat()
+
+    @pytest.mark.js_tables_pyt
+    def test_flat_non_pk(self):
+        """Ensure that test_flat returns a string correctly formated.
+        Those strings should be equals for each entry with the same cols and col's value"""
+        obj1, obj2, now = self.make_two_equ_entry()
+
+
+        assert obj1.to_dict() == obj1.to_dict()
+        assert obj2.to_non_pk_dict() == obj1.to_non_pk_dict()
+        assert obj2.flat_non_pk() == obj1.flat_non_pk()
 
     # --- Get existing ---
     @pytest.mark.js_tables_pyt
@@ -386,11 +447,31 @@ class TestTableForJobScrapper(BaseTest):
             )
         ]
 
-    def make_one_entry(self):
+    def make_one_entry(self, screen_name: str="RBRFJS-1"):
         now = datetime.now()
-        return self.TestBaseTableForJobScrapper(
+        obj = self.TestBaseTableForJobScrapper(
             string_id="AnId",
             integer_id=42,
             value=63.45,
             time_stamp=now,
-        ),now
+        )
+        self.screen_var(screen_name, obj)
+        return obj, now
+    
+    def make_two_equ_entry(self, screen_name: str="Entry"):
+        now = datetime.now()
+        obj1 = self.TestBaseTableForJobScrapper(
+            string_id="AnId",
+            integer_id=42,
+            value=63.45,
+            time_stamp=now,
+        )
+        obj2 = self.TestBaseTableForJobScrapper(
+            value=63.45,
+            time_stamp=now,
+            string_id="AnId",
+            integer_id=42,
+        )
+        self.screen_var(screen_name + "1", obj1)
+        self.screen_var(screen_name + "2", obj2)
+        return obj1, obj2, now
