@@ -60,7 +60,10 @@ max-line-length = 880
 [tool.pytest.ini_options]
 markers = [
     "logs: Test logging functions.",
-    "testModules: Test module only used during test runs."
+    "testModules: Test module only used during test runs.",
+    "js_tables: Test JobScrapper related sqlAlchemy tables.",
+    "js_tables_sql: Same as js_tables but for sql related methods.",
+    "js_tables_pyt: Same as js_tables but for non sql related methods."
 ]
 addopts = "-s"
 
