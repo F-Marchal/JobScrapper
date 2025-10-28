@@ -75,14 +75,28 @@ class BaseTableForJobScrapper(_Base):
         :param session: A Session object
         :param logger: An optional logger to display logs.
         """
-        viewed_entries = {
+        viewed_entries: dict[str, dict[str, BaseTableForJobScrapper]] = {
 
         }
-        if logger: logger.debug("Session sanitation (%s) of %s elements", session, len(session.new))
+
+        for d_entries in session.dirty:
+            d_table_name = d_entries.__table__
+            if d_table_name not in viewed_entries:
+                viewed_entries[d_table_name] = {}
+            d_flat_pk = d_entries.flat_pk()
+
+            viewed_entries[d_table_name][d_flat_pk] = d_entries
+
+        if logger: logger.debug(
+            "Session sanitation (%s) of %s new elements and %s elements modified",
+            session,
+            len(session.new),
+            len(viewed_entries)
+        )
         insertion = 0
         ignored = 0
         existing_counter = 0
-        updates = 0
+        updates = len(viewed_entries)
         for entries in session.new:
             existing = entries.get_existing_self(session)
             table_name = entries.__tablename__
@@ -134,11 +148,14 @@ class BaseTableForJobScrapper(_Base):
             viewed_entries[table_name][flat_pk] = entries
             insertion += 1
 
-        if logger: logger.debug("Session sanitation (%s) done :"
-                     "\n\tinsertion : %s"
-                     "\n\tignored : %s"
-                     "\n\texisting : %s"
-                     "\n\tupdates : %s", session, insertion, ignored, existing_counter, updates)
+        if logger: logger.debug(
+            "Session sanitation (%s) done :"
+                 "\n\tinsertion : %s"
+                 "\n\tignored : %s"
+                 "\n\texisting : %s"
+                 "\n\tupdates : %s",
+                session, insertion, ignored, existing_counter, updates
+        )
 
 
     @classmethod
@@ -150,23 +167,108 @@ class BaseTableForJobScrapper(_Base):
 
     # --- --- Engines, sessions and database management --- ---
     # --- --- Descriptions --- ---
+    @staticmethod
+    def are_equivalent(
+            t1: 'BaseTableForJobScrapper',
+            t2: 'BaseTableForJobScrapper',
+            strict: bool=False
+    ):
+        """Says weather two BaseTableForJobScrapper are equivalent (same primary keys).
+        Use `strict=True` to compare all columns values.
+
+        THIS DOES NOT PERFORM CLASS TYPE CHECK. TWO DIFFERENT TABLE WITH THE SAME PRIMARY KEYS WILL BE
+        CONSIDERED IDENTICAL !!"""
+        if strict:
+            return t1.to_dict() == t2.to_dict()
+        return  t1.to_pk_dict() == t2.to_pk_dict()
+
+    def is_equivalent_to(
+            self,
+            other: 'BaseTableForJobScrapper',
+            strict: bool=False
+    ):
+        """Says weather another BaseTableForJobScrapper is equivalent to self. (same primary keys).
+        Use `strict=True` to compare all columns values and not only the primary keys.
+
+        THIS DOES NOT PERFORM CLASS TYPE CHECK. TWO DIFFERENT TABLE WITH THE SAME PRIMARY KEYS WILL BE
+        CONSIDERED IDENTICAL !!"""
+        return self.are_equivalent(self, other, strict=strict)
+
+
     def __eq__(self, other):
+        """Says weather another BaseTableForJobScrapper is equivalent to self. (same primary keys).
+
+        THIS DOES NOT PERFORM CLASS TYPE CHECK. TWO DIFFERENT TABLE WITH THE SAME PRIMARY KEYS WILL BE
+        CONSIDERED IDENTICAL !!"""
         if not isinstance(other, BaseTableForJobScrapper):
             return NotImplemented
 
-        return other.to_dict() == self.to_dict()
+        return self.is_equivalent_to(other)
 
-    def exists(self, session: Session) -> bool:
-        if self.get_existing_self(session):
-            return True
-        return False
+    def __str__(self):
+        return f"{type(self).__name__}({self.flat(sep='|')})"
 
-    def get_existing_self(self, session: Session) -> 'None | BaseTableForJobScrapper':
-        primary_keys = self.get_pk_col_attr_name()
-        if not primary_keys:
+    def exists(
+            self,
+            session: Session,
+            strict: bool = False,
+            include_session: bool = False,
+            include_database: bool = True,
+    ) -> bool:
+        """Returns True if an equivalent of this entry exist in the database.
+        Two entries are equivalent when theirs primary keys are the same.
+        If you want to alo compare other keys, use strict=True"""
+        eq = self.get_existing_self(
+            session,
+            strict=strict,
+            include_session=include_session,
+            include_database=include_database
+        )
+        if eq is None:
+            return False
+        if strict:
+            return eq == self
+        return True
+
+
+    def get_existing_self(
+            self,
+            session: Session,
+            strict: bool = False,
+            include_session: bool = False,
+            include_database: bool = True
+    ) -> 'None | BaseTableForJobScrapper':
+        """
+        Returns an entry equivalent to self.
+        :param session: A session connected to a database
+        :param strict: strict=False only compare primary keys, strict=True ensure full equality (all columns).
+        :param include_session: When True, search an equivalent entry inside session.new.
+        :param include_database: When True, search an equivalent entry inside session's database.
+        :return:
+        """
+        if include_session is False and include_database is False:
             return None
 
-        return session.query(self.__class__).filter_by(**self.to_pk_dict()).first()
+        if include_session:
+            found = None
+            for obj in [*session.new, *session.dirty]:
+                if self.is_equivalent_to(obj, strict=strict):
+                    found = obj
+
+            if found is not None:
+                return found
+
+        if include_database:
+            if strict:
+                keys = self.to_dict()
+            else:
+                keys = self.to_pk_dict()
+
+            if not keys:
+                return None
+
+            return session.query(self.__class__).filter_by(**keys).first()
+        return None
 
     @classmethod
     def get_columns_using_sql_name(cls) -> dict[str, Column]:
@@ -201,30 +303,46 @@ class BaseTableForJobScrapper(_Base):
 
     @classmethod
     def get_non_pk_col_attr_name(cls) -> dict[str, Column]:
+        """Return a dict that contain <column attribute name> : <Column object that are not primary key>"""
         return {col_name: col for col_name, col in cls.get_columns_using_attr_name().items() if not col.primary_key}
 
-    def to_dict(self):
+
+    def to_dict(self) -> dict[str, Any]:
+        """Returns a dict  <column attribute name> : <Column value>"""
         tmp = {c: getattr(self, c) for c in self.get_columns_using_attr_name()}
         return tmp
 
     def flat(self, sep="\t") -> str:
+        """Turns an entry to a string that represent each column.
+        '<column attribute name>=<Column value>' The order of <column attribute name> is determined
+         by a `sorted` function"""
         # Sort keys and join key=value pairs with separator
-        return sep.join([f"{key}={value}" for key, value in sorted(self.get_columns_using_attr_name().items())])
+        d_ = self.to_dict()
+        return sep.join([f"{key}={d_[key]}" for key in sorted(d_.keys())])
 
 
-    def to_pk_dict(self):
-
+    def to_pk_dict(self) -> dict[str, Any]:
+        """Returns a dict that contain <column attribute name> : <Column object that are primary key>"""
         return {c: getattr(self, c) for c in self.get_pk_col_attr_name()}
 
     def flat_pk(self, sep="\t") -> str:
-        return f"{sep}".join(sorted([f"{key}={value}" for key, value in self.to_pk_dict().items()]))
+        """Turns an entry to a string that represent each column marked as primary key.
+        '<column attribute name>=<Column value>' The order of <column attribute name> is determined
+         by a `sorted` function"""
+        d_ = self.to_pk_dict()
+        return sep.join([f"{key}={d_[key]}" for key in sorted(d_.keys())])
 
-    def to_non_pk_dict(self):
+    def to_non_pk_dict(self) -> dict[str, Any]:
+        """Returns a dict that contain <column attribute name> : <Column object that are not primary key>"""
         return {c: getattr(self, c) for c in self.get_non_pk_col_attr_name()}
 
 
     def flat_non_pk(self, sep="\t") -> str:
-        return f"{sep}".join(sorted([f"{key}={value}" for key, value in self.to_non_pk_dict().items()]))
+        """Turn an entry to a string that represent each column not marked as primary key.
+        '<column attribute name>=<Column value>' The order of <column attribute name> is determined
+         by a `sorted` function"""
+        d_ = self.to_non_pk_dict()
+        return sep.join([f"{key}={d_[key]}" for key in sorted(d_.keys())])
 
     # --- --- Descriptions --- ---
     # --- --- Standard requests --- ---
