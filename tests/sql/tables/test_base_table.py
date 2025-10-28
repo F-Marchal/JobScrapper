@@ -8,13 +8,6 @@ from tools.logger_core import CoreLogger
 import pytest
 
 
-'''
-   
-
-
-
-
-'''
 @pytest.mark.js_tables
 class TestTableForJobScrapper(BaseTest):
     # ===================================== #
@@ -155,7 +148,58 @@ class TestTableForJobScrapper(BaseTest):
     # --- Get existing ---
     @pytest.mark.js_tables_pyt
     def test__eq__(self):
-        pass
+        """Ensure that BaseTableForJobScrapper comparisons are correctly done"""
+        e1, e2, _ = self.make_two_equ_entry()
+        assert e1 == e2
+
+    def test_are_equivalent(self):
+        """Ensure that BaseTableForJobScrapper comparisons are correctly done"""
+        e1, e2, _ = self.make_two_equ_entry()
+        assert BaseTableForJobScrapper.are_equivalent(e1, e2)
+        assert BaseTableForJobScrapper.are_equivalent(e1, e2, strict=True)
+
+        # e1 and e2 are equivalents but not equals
+        e1.value += 45
+        assert BaseTableForJobScrapper.are_equivalent(e1, e2)
+        assert not BaseTableForJobScrapper.are_equivalent(e1, e2, strict=True)
+
+
+        # e1 and e2 are not equivalents anymore
+        e1.integer_id += 45
+        assert not BaseTableForJobScrapper.are_equivalent(e1, e2)
+        assert not BaseTableForJobScrapper.are_equivalent(e1, e2, strict=True)
+
+
+    @pytest.mark.js_tables_pyt
+    def test_equivalent_to(self):
+        """Ensure that BaseTableForJobScrapper comparisons are correctly done"""
+        e1, e2, _ = self.make_two_equ_entry()
+
+        # e1 and e2 are fully equals
+        assert e1.is_equivalent_to(e1)
+        assert e1.is_equivalent_to(e2)
+        assert e2.is_equivalent_to(e1)
+        assert e2.is_equivalent_to(e2)
+
+        assert e1.is_equivalent_to(e1, strict=True)
+        assert e1.is_equivalent_to(e2, strict=True)
+        assert e2.is_equivalent_to(e1, strict=True)
+        assert e2.is_equivalent_to(e2, strict=True)
+
+        # e1 and e2 are equivalents but not equals
+        e1.value += 45
+
+        assert e1.is_equivalent_to(e2)
+        assert not e1.is_equivalent_to(e2, strict=True)
+        assert e2.is_equivalent_to(e1)
+        assert not e2.is_equivalent_to(e1, strict=True)
+
+        # e1 and e2 are not equivalents anymore
+        e1.integer_id += 45
+        assert not e1.is_equivalent_to(e2)
+        assert not e1.is_equivalent_to(e2, strict=True)
+        assert not e2.is_equivalent_to(e1)
+        assert not e2.is_equivalent_to(e1, strict=True)
 
     # ===================================== #
     #     js_tables_sql / js_tables_pyt     #
@@ -163,12 +207,142 @@ class TestTableForJobScrapper(BaseTest):
     @pytest.mark.js_tables_pyt
     @pytest.mark.js_tables_sql
     def test_get_existing_self(self):
-        pass
+        """Ensure that get_existing_self returns the correct instances in the correct situation"""
+        e1, e2, _ = self.make_two_equ_entry()
+        # e3 and e4 might have different datetime.
+        e3, e4, _ = self.make_two_equ_entry()
+        e3.integer_id += 1
+        e4.value += 1
+        db1 = f"{self.test_folder}/database1.db"
+
+        # Exist only inside the session :
+        with BaseTableForJobScrapper.get_session(db1) as session:
+            assert e2.get_existing_self(session, include_session=False, include_database=False) is None
+            session.add(e1)
+            assert e2.get_existing_self(session, include_session=False, include_database=False) is None
+
+            assert e1.get_existing_self(session) is None
+            assert e2.get_existing_self(session) is None
+
+            # When it should work
+            existing1 = e1.get_existing_self(session, strict=True, include_session=True)
+            existing2 = e2.get_existing_self(session, strict=True, include_session=True)
+            existing4 = e4.get_existing_self(session, strict=False, include_session=True)
+
+            assert existing1 is not None
+            assert existing2 is not None
+            assert existing4 is not None
+
+            assert existing1 == existing2
+            assert existing4 == existing2
+
+            # When it should not work
+            assert e4.get_existing_self(session, strict=True, include_session=True) is None
+            assert e3.get_existing_self(session, strict=False, include_session=True) is None
+
+        # Exist only inside the database :
+        with BaseTableForJobScrapper.get_session(db1) as session:
+            assert e2.get_existing_self(session, include_session=False, include_database=False) is None
+
+            # When it should work
+            existing2 = e2.get_existing_self(session, strict=True)
+            existing4 = e4.get_existing_self(session, strict=False)
+
+            assert existing2 is not None
+            assert existing4 is not None
+            assert existing4 == existing2
+
+            # When it should not work
+            assert e4.get_existing_self(session, strict=True) is None
+            assert e3.get_existing_self(session, strict=False) is None
+
+            # test include_database = False
+            assert e2.get_existing_self(session, strict=True, include_database=False) is None
+            assert e4.get_existing_self(session, strict=True, include_database=False) is None
+
+
+        # Exist both inside the database and the session:
+        with BaseTableForJobScrapper.get_session(db1) as session:
+            session.add(e4)
+
+            # Expect e4 format (e1 is in the session)
+            existing4_s = e4.get_existing_self(session, include_database=False, include_session=True)
+            assert BaseTableForJobScrapper.are_equivalent(e4, existing4_s, strict=True)
+            assert BaseTableForJobScrapper.are_equivalent(e4, existing4_s, strict=False)
+            assert not BaseTableForJobScrapper.are_equivalent(e2, existing4_s, strict=True)
+
+            # Expect e1 / e2 format (e1 has been exported inside the database)
+            existing4_d = e4.get_existing_self(session, include_database=True, include_session=False)
+            assert not BaseTableForJobScrapper.are_equivalent(e4, existing4_d, strict=True)
+            assert BaseTableForJobScrapper.are_equivalent(e4, existing4_d, strict=False)
+            assert BaseTableForJobScrapper.are_equivalent(e2, existing4_d, strict=True)
+
+            # Expect same result as first experiment. session has a bigger priority.
+            existing4_b = e4.get_existing_self(session, include_database=True, include_session=True)
+            assert BaseTableForJobScrapper.are_equivalent(e4, existing4_b, strict=True)
+            assert BaseTableForJobScrapper.are_equivalent(e4, existing4_b, strict=False)
+            assert not BaseTableForJobScrapper.are_equivalent(e2, existing4_b, strict=True)
+
+            # Test with e2. Instance returned should be like e4 (e4 in session.new)
+            existing2_b = e2.get_existing_self(session, include_database=True, include_session=True)
+            assert not BaseTableForJobScrapper.are_equivalent(e2, existing2_b, strict=True)
+            assert BaseTableForJobScrapper.are_equivalent(e2, existing4_b, strict=False)
+            assert BaseTableForJobScrapper.are_equivalent(e4, existing2_b, strict=True)
 
     @pytest.mark.js_tables_pyt
     @pytest.mark.js_tables_sql
     def test_exists(self):
-        pass
+        """.exist is mostly based on <test_get_existing_self>. I assume that if test_get_existing_self pass,
+        we do not need extensive test here."""
+        e1, e2, _ = self.make_two_equ_entry()
+        e3, e4, _ = self.make_two_equ_entry()
+        e3.integer_id += 1
+        e4.value += 1
+
+        db1 = f"{self.test_folder}/database1.db"
+        # In session.new
+        with BaseTableForJobScrapper.get_session(db1) as session:
+            session.add(e1)
+            assert not e1.exists(session, include_session=False, include_database=True)
+            assert not e1.exists(session, include_session=False, include_database=False)
+            assert     e1.exists(session, include_session=True, include_database=False)
+
+            assert not e2.exists(session, include_session=False, include_database=True, strict=True)
+            assert not e2.exists(session, include_session=False, include_database=False, strict=True)
+            assert     e2.exists(session, include_session=True, include_database=False, strict=True)
+
+            assert not e4.exists(session, include_session=False, include_database=True, strict=True)
+            assert not e4.exists(session, include_session=False, include_database=False, strict=True)
+            assert not e4.exists(session, include_session=True, include_database=False, strict=True)
+
+            assert not e4.exists(session, include_session=False, include_database=True)
+            assert not e4.exists(session, include_session=False, include_database=False)
+            assert     e4.exists(session, include_session=True, include_database=False)
+
+        # In database
+        with BaseTableForJobScrapper.get_session(db1) as session:
+            assert     e2.exists(session, include_session=False, include_database=True, strict=True)
+            assert not e2.exists(session, include_session=False, include_database=False, strict=True)
+            assert not e2.exists(session, include_session=True, include_database=False, strict=True)
+
+            assert not e4.exists(session, include_session=False, include_database=True, strict=True)
+            assert not e4.exists(session, include_session=False, include_database=False, strict=True)
+            assert not e4.exists(session, include_session=True, include_database=False, strict=True)
+
+            assert     e4.exists(session, include_session=False, include_database=True)
+            assert not e4.exists(session, include_session=False, include_database=False)
+            assert not e4.exists(session, include_session=True, include_database=False)
+
+        # In session.dirty
+        with BaseTableForJobScrapper.get_session(db1) as session:
+            e2_from_database = e2.get_existing_self(session, include_database=True, include_session=False)
+            e2_from_database.integer_id = e3.integer_id
+
+            assert len(session.new) == 0
+            assert len(session.dirty) == 1
+            assert not e3.exists(session, include_session=False, include_database=True)
+            assert not e3.exists(session, include_session=False, include_database=False)
+            assert     e3.exists(session, include_session=True, include_database=False)
 
     # ===================================== #
     #             js_tables_sql             #
@@ -209,18 +383,18 @@ class TestTableForJobScrapper(BaseTest):
         :return: 
         """
         gen1 = self.make_small_database()
+        gen2 = self.make_small_database()
         db1 = f"{self.test_folder}/database1.db"
         self.screen_var("database", db1)
+
         for i, obj in enumerate(gen1) : self.screen_var(f"testObj {i} V1", obj)
-
-        with BaseTableForJobScrapper.get_session(db1, logger=CoreLogger.logger) as session:
-            session.add_all(gen1)
-
-        gen2 = self.make_small_database()
         for i, obj in enumerate(gen2): self.screen_var(f"testObj {i} V2", obj)
 
         for i in range(0, len(gen1)):
             assert gen1[i].flat() == gen2[i].flat()
+
+        with BaseTableForJobScrapper.get_session(db1, logger=CoreLogger.logger) as session:
+            session.add_all(gen1)
 
         # 2 exists
         with BaseTableForJobScrapper.get_session(db1, logger=CoreLogger.logger) as session:
@@ -229,6 +403,7 @@ class TestTableForJobScrapper(BaseTest):
 
     @pytest.mark.js_tables_sql
     def test_sanitise_and_commit__added_twice_trough_multiple_session_no_update_case(self):
+        """Test to add the same list of element twice using two session"""
         db1 = f"{self.test_folder}/database1.db"
         list_a = self.make_small_database()
         list_b =  self.make_small_database()
@@ -248,6 +423,8 @@ class TestTableForJobScrapper(BaseTest):
 
     @pytest.mark.js_tables_sql
     def test_sanitise_and_commit__added_twice_trough_multiple_session_update_case(self):
+        """Test to add the same primary keys twice with different values using two session and test
+        order of insertion"""
         # - No error raised due to duplicates in added primary keys using multiple sessions
         strid1 = "strid1"
         intid1 = 15
@@ -296,11 +473,12 @@ class TestTableForJobScrapper(BaseTest):
             j1_d = j1_c_2.get_existing_self(session)
             self.screen_var("j1_d", j1_d)
 
-            assert j1_d.to_dict() != j1_c_1.to_dict()
-            assert j1_d.to_dict() == j1_c_2.to_dict()
+            assert j1_d.to_dict() == j1_c_1.to_dict()
+            assert j1_d.to_dict() != j1_c_2.to_dict()
 
     @pytest.mark.js_tables_sql
     def test_sanitise_and_commit__added_twice_no_update_case(self):
+        """Test to add the same primary keys twice using one session"""
         # - No error raised due to duplicates in added primary keys using one session
         strid1 = "strid1"
         intid1 = 15
@@ -338,6 +516,8 @@ class TestTableForJobScrapper(BaseTest):
 
     @pytest.mark.js_tables_sql
     def test_sanitise_and_commit__added_twice_update_case(self):
+        """Test to add the same primary keys twice with different values using one session and test
+        order of insertion"""
         # - No error raised due to duplicates in added primary keys and the
         #  entry is in the database
         strid1 = "strid1"
@@ -386,16 +566,13 @@ class TestTableForJobScrapper(BaseTest):
             assert j1_d.to_dict() == j1_c_1.to_dict()
             assert j1_d.to_dict() != j1_c_2.to_dict()
 
-        # TODO: Add_all list of unknown primary keys with duplicates that have some values modified from original
-        # TODO: Add_all list of known primary keys with some values modified from original
-        # TODO: All of the above at once !
-
 
     # ===================================== #
     #                 Utils                 #
     # ===================================== #
 
     class TestBaseTableForJobScrapper(BaseTableForJobScrapper):
+        """Test class used to test BaseTableForJobScrapper functionalities"""
         __abstract__ = False
         __tablename__ = "BaseTestTable"
         string_id = Column("strid", String, primary_key=True, nullable=False)
@@ -403,7 +580,8 @@ class TestTableForJobScrapper(BaseTest):
         value = Column(Float, nullable=True)
         time_stamp = Column(DateTime, nullable=True)
 
-    def make_small_database(self):
+    def make_small_database(self) -> list[TestBaseTableForJobScrapper]:
+        """Generate a list of 5 TestBaseTableForJobScrapper."""
         t1 = datetime(
             year=1945,
             month=12,
@@ -447,7 +625,8 @@ class TestTableForJobScrapper(BaseTest):
             )
         ]
 
-    def make_one_entry(self, screen_name: str="RBRFJS-1"):
+    def make_one_entry(self, screen_name: str="RBRFJS-1") -> tuple[TestBaseTableForJobScrapper, datetime]:
+        """Generate one TestBaseTableForJobScrapper. Returns both the object and the datetime used as time_stamp."""
         now = datetime.now()
         obj = self.TestBaseTableForJobScrapper(
             string_id="AnId",
@@ -458,7 +637,8 @@ class TestTableForJobScrapper(BaseTest):
         self.screen_var(screen_name, obj)
         return obj, now
     
-    def make_two_equ_entry(self, screen_name: str="Entry"):
+    def make_two_equ_entry(self, screen_name: str="Entry") -> tuple[TestBaseTableForJobScrapper, TestBaseTableForJobScrapper, datetime]:
+        """"Generate two TestBaseTableForJobScrapper. Returns the two objects and the datetime used as time_stamp."""
         now = datetime.now()
         obj1 = self.TestBaseTableForJobScrapper(
             string_id="AnId",
