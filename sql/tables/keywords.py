@@ -1,10 +1,10 @@
-from .base_table import BaseTableForJobScrapper
+from .base_table import BaseTable
 from sqlalchemy import Column, String, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 from .jobs import Jobs
 from sqlalchemy.orm import Session
 
-class Keywords(BaseTableForJobScrapper):
+class Keywords(BaseTable):
     """Table that contain the number of occurrences of a word (and aliases) inside
      a job offer"""
     __abstract__ = False

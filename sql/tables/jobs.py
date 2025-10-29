@@ -1,8 +1,8 @@
-from .base_table import BaseTableForJobScrapper
+from .base_table import BaseTable
 from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
 
-class Jobs(BaseTableForJobScrapper):
+class Jobs(BaseTable):
     """
     Main table. Contains main information related to jobs offers :
     contract, field, url ...

@@ -1,8 +1,8 @@
-from .base_table import BaseTableForJobScrapper
+from .base_table import BaseTable
 from sqlalchemy import Column, String, Float
 from sqlalchemy.orm import Session
 
-class Distances(BaseTableForJobScrapper):
+class Distances(BaseTable):
     """Contains distances between one place and another place."""
     __abstract__ = False
     __tablename__ = "distances"

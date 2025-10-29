@@ -11,7 +11,7 @@ from logging import Logger
 from typing import Any
 _Base = declarative_base()
 
-class BaseTableForJobScrapper(_Base):
+class BaseTable(_Base):
     __abstract__ = True
     _databases: dict[str, dict[str, Any]] = {}
 
@@ -75,7 +75,7 @@ class BaseTableForJobScrapper(_Base):
         :param session: A Session object
         :param logger: An optional logger to display logs.
         """
-        viewed_entries: dict[str, dict[str, BaseTableForJobScrapper]] = {
+        viewed_entries: dict[str, dict[str, BaseTable]] = {
 
         }
 
@@ -169,8 +169,8 @@ class BaseTableForJobScrapper(_Base):
     # --- --- Descriptions --- ---
     @staticmethod
     def are_equivalent(
-            t1: 'BaseTableForJobScrapper',
-            t2: 'BaseTableForJobScrapper',
+            t1: 'BaseTable',
+            t2: 'BaseTable',
             strict: bool=False
     ):
         """Says weather two BaseTableForJobScrapper are equivalent (same primary keys).
@@ -184,7 +184,7 @@ class BaseTableForJobScrapper(_Base):
 
     def is_equivalent_to(
             self,
-            other: 'BaseTableForJobScrapper',
+            other: 'BaseTable',
             strict: bool=False
     ):
         """Says weather another BaseTableForJobScrapper is equivalent to self. (same primary keys).
@@ -200,7 +200,7 @@ class BaseTableForJobScrapper(_Base):
 
         THIS DOES NOT PERFORM CLASS TYPE CHECK. TWO DIFFERENT TABLE WITH THE SAME PRIMARY KEYS WILL BE
         CONSIDERED IDENTICAL !!"""
-        if not isinstance(other, BaseTableForJobScrapper):
+        if not isinstance(other, BaseTable):
             return NotImplemented
 
         return self.is_equivalent_to(other)
@@ -211,7 +211,7 @@ class BaseTableForJobScrapper(_Base):
     def __copy__(self):
         return self.copy()
 
-    def copy(self) -> 'BaseTableForJobScrapper':
+    def copy(self) -> 'BaseTable':
         """Returns a shallow copy of self."""
         return type(self)(**self.to_dict())
 
@@ -246,7 +246,7 @@ class BaseTableForJobScrapper(_Base):
             strict: bool = False,
             include_session: bool = False,
             include_database: bool = True
-    ) -> 'None | BaseTableForJobScrapper':
+    ) -> 'None | BaseTable':
         """
         Returns an entry equivalent to self.
         :param session: A session connected to a database

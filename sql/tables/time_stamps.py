@@ -1,10 +1,10 @@
-from .base_table import BaseTableForJobScrapper
+from .base_table import BaseTable
 from sqlalchemy import Column, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from .jobs import Jobs
 from sqlalchemy.orm import Session
 
-class TimeStamps(BaseTableForJobScrapper):
+class TimeStamps(BaseTable):
     """Time stamps attached to a job offer."""
     __abstract__ = False
     __tablename__ = "timestamps"

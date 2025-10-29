@@ -10,7 +10,7 @@ from sqlalchemy import case, func, and_, or_, not_, Result
 
 
 from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore
-from sql.tables import BaseTableForJobScrapper, Jobs, Metadata, TimeStamps, Distances, Keywords
+from sql.tables import BaseTable, Jobs, Metadata, TimeStamps, Distances, Keywords
 from sql.filters.filter_generator import FilterPart, FilterGenerator
 from sql.wrappers.wrapper_comparison import STRING_TO_COMPARISON_WRAPPERS
 from sql.wrappers.wrapper_logical import STRING_TO_LOGICAL_WRAPPERS
@@ -23,7 +23,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     """
 
     _database_file_name: str = "JobsDatabase"
-    _tables: dict[str, BaseTableForJobScrapper] = {
+    _tables: dict[str, BaseTable] = {
         Jobs.__tablename__: Jobs,
         Metadata.__tablename__: Metadata,
         TimeStamps.__tablename__: TimeStamps,
@@ -34,7 +34,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     @classmethod
     def get_known_databases(cls) ->  dict[str, dict[str, Any]]:
-        return BaseTableForJobScrapper.get_known_databases()
+        return BaseTable.get_known_databases()
 
     @classmethod
     def get_tables(cls):
@@ -507,7 +507,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
 
     @classmethod
-    def _sql_select_columns(cls, database: Type[BaseTableForJobScrapper], *columns):
+    def _sql_select_columns(cls, database: Type[BaseTable], *columns):
         c_map = database.get_columns_using_sql_name()
         selected_cols_object = []
         for col in columns:

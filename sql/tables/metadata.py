@@ -1,10 +1,10 @@
-from .base_table import BaseTableForJobScrapper
+from .base_table import BaseTable
 from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import relationship
 from .jobs import Jobs
 from sqlalchemy.orm import Session
 
-class Metadata(BaseTableForJobScrapper):
+class Metadata(BaseTable):
     """Table that attach metadata to job offer E.g : Everything
     that does not fit inside other table / random information"""
     __abstract__ = False
