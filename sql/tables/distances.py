@@ -12,7 +12,7 @@ class Distances(BaseTableForJobScrapper):
     distance = Column(Float)
 
     @classmethod
-    def get_associated_distances(cls, session: Session, job_localisation: str) -> list:
+    def get_job_associated_distances(cls, session: Session, job_localisation: str) -> list:
         return cls.get_all(session).filter_by(job_localisation=job_localisation).all()
 
     # job = relationship(

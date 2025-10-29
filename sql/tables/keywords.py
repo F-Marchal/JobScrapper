@@ -17,6 +17,6 @@ class Keywords(BaseTableForJobScrapper):
     main_entry = relationship("Jobs", back_populates="keywords_entries", passive_deletes=True)
 
     @classmethod
-    def get_associated_keywords(cls, session: Session, url: str) -> list:
+    def get_job_associated_keywords(cls, session: Session, url: str) -> list:
         """Get keywords count associated to a url."""
         return cls.get_all(session).filter_by(url=url).all()

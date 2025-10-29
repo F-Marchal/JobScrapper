@@ -16,6 +16,6 @@ class TimeStamps(BaseTableForJobScrapper):
     main_entry = relationship("Jobs", back_populates="timestamps_entries", passive_deletes=True)
 
     @classmethod
-    def get_associated_time_stamps(cls, session: Session, url: str) -> list:
+    def get_job_associated_time_stamps(cls, session: Session, url: str) -> list:
         """Get a list of all time stamps attached to a url."""
         return cls.get_all(session).filter_by(url=url).all()

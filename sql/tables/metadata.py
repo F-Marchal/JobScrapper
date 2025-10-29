@@ -19,6 +19,6 @@ class Metadata(BaseTableForJobScrapper):
     main_entry = relationship("Jobs", back_populates="metadata_entries", passive_deletes=True)
 
     @classmethod
-    def get_associated_metadata(cls, session: Session, url: str) -> list:
+    def get_job_associated_metadata(cls, session: Session, url: str) -> list:
         """Get metadata associated to an url"""
         return cls.get_all(session).filter_by(url=url).all()
