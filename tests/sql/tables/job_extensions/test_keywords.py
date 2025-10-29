@@ -13,8 +13,8 @@ class TestKeywords(BaseTest):
             session.add_all(self.make_small_database())
 
         with Jobs.get_session(db1) as session:
-            assert 2 == len(Keywords.get_job_associated_keywords(session, "Alpha"))
-            assert 1 == len(Keywords.get_job_associated_keywords(session, "Beta"))
+            assert 2 == len(Keywords.get_for_job(session, "Alpha").all())
+            assert 1 == len(Keywords.get_for_job(session, "Beta").all())
 
     def test_relationship(self):
         """Ensure that the delete cascade works."""
@@ -29,7 +29,7 @@ class TestKeywords(BaseTest):
 
         with Jobs.get_session(db_path) as session:
             number_of_kw = len(Keywords.get_all(session).all())
-            number_of_kw_associated_to_url = len(Keywords.get_job_associated_keywords(session, url=url))
+            number_of_kw_associated_to_url = len(Keywords.get_for_job(session, url=url).all())
             session.delete(db[0])
 
         # Now Only

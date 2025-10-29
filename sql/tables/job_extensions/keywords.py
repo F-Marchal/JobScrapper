@@ -1,22 +1,21 @@
-from sql.tables.base_table import BaseTable
-from sqlalchemy import Column, String, ForeignKey, Integer
-from sqlalchemy.orm import relationship
-from sql.tables.jobs import Jobs
-from sqlalchemy.orm import Session
+from .job_extra_base import JobExtraBase, Jobs
+from sqlalchemy import Column, String, Integer
+from sqlalchemy.orm import Session, Query, relationship
 
-class Keywords(BaseTable):
+class Keywords(JobExtraBase):
     """Table that contain the number of occurrences of a word (and aliases) inside
      a job offer"""
     __abstract__ = False
     __tablename__ = "keywords"
 
-    url = Column(String, ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"), primary_key=True)
+    # url = Column(String, ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"), primary_key=True)
     keyword = Column(String, primary_key=True, nullable=False)
     occurrence = Column(Integer, nullable=True)
 
     main_entry = relationship("Jobs", back_populates="keywords_entries", passive_deletes=True)
 
     @classmethod
-    def get_job_associated_keywords(cls, session: Session, url: str) -> list:
+    def get_for_job(cls, session: Session, url: str | Jobs) -> Query:
         """Get keywords count associated to a url."""
-        return cls.get_all(session).filter_by(url=url).all()
+        true_url = url.url if isinstance(url, Jobs) else url
+        return cls.get_all(session).filter_by(url=true_url)

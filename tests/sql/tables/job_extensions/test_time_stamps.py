@@ -14,8 +14,8 @@ class TestTimeStamps(BaseTest):
             session.add_all(self.make_small_database())
 
         with Jobs.get_session(db1) as session:
-            assert 2 == len(TimeStamps.get_job_associated_time_stamps(session, "Alpha"))
-            assert 1 == len(TimeStamps.get_job_associated_time_stamps(session, "Beta"))
+            assert 2 == len(TimeStamps.get_for_job(session, "Alpha").all())
+            assert 1 == len(TimeStamps.get_for_job(session, "Beta").all())
 
     def test_relationship(self):
         """Ensure that the delete cascade works."""
@@ -30,7 +30,7 @@ class TestTimeStamps(BaseTest):
 
         with Jobs.get_session(db_path) as session:
             number_of_kw = len(TimeStamps.get_all(session).all())
-            number_of_kw_associated_to_url = len(TimeStamps.get_job_associated_time_stamps(session, url=url))
+            number_of_kw_associated_to_url = len(TimeStamps.get_for_job(session, url=url).all())
             session.delete(db[0])
 
         # Now Only
