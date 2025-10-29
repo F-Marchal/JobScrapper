@@ -208,6 +208,15 @@ class BaseTableForJobScrapper(_Base):
     def __str__(self):
         return f"{type(self).__name__}({self.flat(sep='|')})"
 
+    def __copy__(self):
+        return self.copy()
+
+    def copy(self) -> 'BaseTableForJobScrapper':
+        """Returns a shallow copy of self."""
+        return type(self)(**self.to_dict())
+
+
+
     def exists(
             self,
             session: Session,

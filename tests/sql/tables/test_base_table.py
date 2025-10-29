@@ -201,6 +201,15 @@ class TestTableForJobScrapper(BaseTest):
         assert not e2.is_equivalent_to(e1)
         assert not e2.is_equivalent_to(e1, strict=True)
 
+    @pytest.mark.js_tables_pyt
+    def test___copy__(self):
+        """Ensure that __copy__ and copy works as intended"""
+        e1, time = self.make_one_entry()
+        e2 = e1.copy()
+        self.screen_var("copy", e2)
+
+        assert e1.to_dict() == e2.to_dict()
+
     # ===================================== #
     #     js_tables_sql / js_tables_pyt     #
     # ===================================== #
