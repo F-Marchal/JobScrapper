@@ -3,7 +3,7 @@ import os.path
 from sql.tables import BaseTableForJobScrapper
 from sqlalchemy import Column, String, Integer, Float, DateTime
 from tests.conftest import BaseTest
-from datetime import datetime, timedelta
+from datetime import datetime
 from tools.logger_core import CoreLogger
 import pytest
 
@@ -566,6 +566,28 @@ class TestTableForJobScrapper(BaseTest):
             assert j1_d.to_dict() == j1_c_1.to_dict()
             assert j1_d.to_dict() != j1_c_2.to_dict()
 
+    def test_get_all(self):
+        """Ensure that <get_all> returns all object with the same class as the table used."""
+        db1 = f"{self.test_folder}/database.db"
+        class SecondTestBaseTableForJobScrapper(BaseTableForJobScrapper):
+            """Quicly defined table class. This Class i used to ensure that <get_all> returns only
+            instances related to the class used."""
+            __abstract__ = False
+            __tablename__ = "SecondTestTable"
+            string_id = Column("strid", String, primary_key=True, nullable=False)
+
+        st1 = SecondTestBaseTableForJobScrapper(string_id="15")
+        st2 = SecondTestBaseTableForJobScrapper(string_id="Beta")
+        self.screen_var("st1", st1)
+        self.screen_var("st2", st2)
+        db = self.make_small_database()
+
+        with BaseTableForJobScrapper.get_session(db1) as session:
+            session.add_all([st1, st2, *db])
+
+        with BaseTableForJobScrapper.get_session(db1) as session:
+            assert len(SecondTestBaseTableForJobScrapper.get_all(session).all()) == 2
+            assert len(self.TestBaseTableForJobScrapper.get_all(session).all()) == len(db)
 
     # ===================================== #
     #                 Utils                 #
@@ -619,7 +641,7 @@ class TestTableForJobScrapper(BaseTest):
             ),
             self.TestBaseTableForJobScrapper(
                 string_id="id1",
-                integer_id=621,
+                integer_id=650,
                 value=47.12,
                 time_stamp=t2,
             )
