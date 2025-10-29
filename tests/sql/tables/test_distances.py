@@ -1,6 +1,8 @@
 from sql.tables.distances import Distances
 from tests.conftest import BaseTest
+import pytest
 
+@pytest.mark.js_tables
 class TestDistances(BaseTest):
     """Ensure that Distances table works as intended"""
     def test_get_job_associated_distances(self):
