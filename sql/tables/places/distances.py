@@ -1,4 +1,4 @@
-from .base_table import BaseTable
+from sql.tables.base_table import BaseTable
 from sqlalchemy import Column, String, Float
 from sqlalchemy.orm import Session
 

@@ -1,7 +1,7 @@
-from .base_table import BaseTable
+from sql.tables.base_table import BaseTable
 from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import relationship
-from .jobs import Jobs
+from sql.tables.jobs import Jobs
 from sqlalchemy.orm import Session
 
 class Metadata(BaseTable):

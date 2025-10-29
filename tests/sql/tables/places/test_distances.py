@@ -1,4 +1,4 @@
-from sql.tables.distances import Distances
+from sql.tables.places.distances import Distances
 from tests.conftest import BaseTest
 import pytest
 
