@@ -115,6 +115,11 @@ class BaseTest:
         """LogFile.screen wrapper"""
         self.tracker.screen(name, obj)
 
+    def screen_multiple_vars(self, name: str, *obj: typing.Any):
+        """self.screen_var a number of <obj>. Each obj is named '<name>-<position in obj>'"""
+        for i, to_screen in enumerate(obj):
+            self.screen_var(f"{name}-{i}", obj)
+
     def re_screen_var(self, name: str, obj=None) -> None:
         """LogFile.re_screen wrapper"""
         self.tracker.re_screen(name, obj)
