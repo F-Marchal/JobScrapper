@@ -1,74 +1,22 @@
 from sql.tables.job_extensions.time_stamps import TimeStamps
-from sql.tables.jobs import Jobs
-from tests.conftest import BaseTest
-import pytest
 import datetime
+import pytest
+from .abstract_job_extra_base import TestJobExtraBase
 
 @pytest.mark.js_tables
-class TestTimeStamps(BaseTest):
-    """Ensure that Distances table works as intended"""
-    def test_get_job_associated_time_stamps(self):
-        """Test that <get_job_associated_time_stamps> works as intended"""
-        db1 = f"{self.test_folder}/database.db"
-        with Jobs.get_session(db1) as session:
-            session.add_all(self.make_small_database())
-
-        with Jobs.get_session(db1) as session:
-            assert 2 == len(TimeStamps.get_for_job(session, "Alpha").all())
-            assert 1 == len(TimeStamps.get_for_job(session, "Beta").all())
-
-    def test_relationship(self):
-        """Ensure that the delete cascade works."""
-        db_path = f"{self.test_folder}/database.db"
-        db = self.make_small_database()
-
-        assert isinstance(db[0], Jobs)  # Axiome
-        url = db[0].url
-
-        with Jobs.get_session(db_path) as session:
-            session.add_all(db)
-
-        with Jobs.get_session(db_path) as session:
-            number_of_kw = len(TimeStamps.get_all(session).all())
-            number_of_kw_associated_to_url = len(TimeStamps.get_for_job(session, url=url).all())
-            session.delete(db[0])
-
-        # Now Only
-        with Jobs.get_session(db_path) as session:
-            # Ensure that passive_deletes works !
-            assert len(TimeStamps.get_all(session).all()) == number_of_kw - number_of_kw_associated_to_url
-
-
-    # Utils
-    def make_small_database(self) -> list[Jobs | TimeStamps]:
-        """Make a small database for test purposes."""
-        j1 = Jobs(
-            url="Alpha"
-        )
-        j2 = Jobs(
-            url="Beta"
-        )
-
-        t1 = TimeStamps(
-            url="Alpha",
-            label="Download",
-            time_stamp=datetime.datetime.now(),
-        )
-        t2 = TimeStamps(
-            url="Alpha",
-            label="Informatic",
-            time_stamp=datetime.datetime.now(),
-        )
-        t3 = TimeStamps(
-            url="Beta",
-            label="Download",
-            time_stamp=datetime.datetime.now(),
-        )
-
-        self.screen_multiple_vars("j", j1, j2)
-        self.screen_multiple_vars("t", t1, t2, t3)
-
-        return [j1, j2, t1, t2, t3]
-
-
-
+class TestTimeStamps(TestJobExtraBase):
+    """Ensure that TimeStamps table works as intended"""
+    __tested_class__ = TimeStamps
+    job_entry_name = "timestamps_entries"
+    db_comp1 = {
+        "label": "download",
+        "time_stamp": datetime.datetime.now()
+    }
+    db_comp2 = {
+        "label": "upload",
+        "time_stamp": datetime.datetime.now()
+    }
+    db_comp3 = {
+        "label": "download",
+        "time_stamp": datetime.datetime.now()
+    }

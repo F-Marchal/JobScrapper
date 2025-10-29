@@ -1,73 +1,22 @@
 from sql.tables.job_extensions.keywords import Keywords
-from sql.tables.jobs import Jobs
-from tests.conftest import BaseTest
 import pytest
+from .abstract_job_extra_base import TestJobExtraBase
 
 @pytest.mark.js_tables
-class TestKeywords(BaseTest):
-    """Ensure that Distances table works as intended"""
-    def test_get_job_associated_keywords(self):
-        """Test that <get_job_associated_keywords> works as intended"""
-        db1 = f"{self.test_folder}/database.db"
-        with Jobs.get_session(db1) as session:
-            session.add_all(self.make_small_database())
-
-        with Jobs.get_session(db1) as session:
-            assert 2 == len(Keywords.get_for_job(session, "Alpha").all())
-            assert 1 == len(Keywords.get_for_job(session, "Beta").all())
-
-    def test_relationship(self):
-        """Ensure that the delete cascade works."""
-        db_path = f"{self.test_folder}/database.db"
-        db = self.make_small_database()
-
-        assert isinstance(db[0], Jobs)  # Axiome
-        url = db[0].url
-
-        with Jobs.get_session(db_path) as session:
-            session.add_all(db)
-
-        with Jobs.get_session(db_path) as session:
-            number_of_kw = len(Keywords.get_all(session).all())
-            number_of_kw_associated_to_url = len(Keywords.get_for_job(session, url=url).all())
-            session.delete(db[0])
-
-        # Now Only
-        with Jobs.get_session(db_path) as session:
-            # Ensure that passive_deletes works !
-            assert len(Keywords.get_all(session).all()) == number_of_kw - number_of_kw_associated_to_url
-
-
-    # Utils
-    def make_small_database(self) -> list[Keywords | Jobs]:
-        """Make a small database for test purposes."""
-        j1 = Jobs(
-            url="Alpha"
-        )
-        j2 = Jobs(
-            url="Beta"
-        )
-
-        k1 = Keywords(
-            url="Alpha",
-            keyword="Biology",
-            occurrence=45,
-        )
-        k2 = Keywords(
-            url="Alpha",
-            keyword="Informatic",
-            occurrence=5,
-        )
-        k3 = Keywords(
-            url="Beta",
-            keyword="Biology",
-            occurrence=None,
-        )
-
-        self.screen_multiple_vars("j", j1, j2)
-        self.screen_multiple_vars("k", k1, k2, k3)
-
-        return [j1, j2, k1, k2, k3]
-
+class TestKeywords(TestJobExtraBase):
+    """Ensure that keyword table works as intended"""
+    __tested_class__ = Keywords
+    job_entry_name = "keywords_entries"
+    db_comp1 = {
+        "keyword": "download",
+        "occurrence": 55
+    }
+    db_comp2 = {
+        "keyword": "upload",
+        "occurrence": None
+    }
+    db_comp3 = {
+        "keyword": "download",
+    }
 
 
