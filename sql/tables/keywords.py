@@ -12,7 +12,7 @@ class Keywords(BaseTableForJobScrapper):
 
     url = Column(String, ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"), primary_key=True)
     keyword = Column(String, primary_key=True, nullable=False)
-    occurrence = Column(Integer)
+    occurrence = Column(Integer, nullable=True)
 
     main_entry = relationship("Jobs", back_populates="keywords_entries", passive_deletes=True)
 
