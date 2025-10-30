@@ -232,21 +232,22 @@ class FilterPart:
 
 
     @property
-    def logic_operator(self) -> LogicalWrapper | None:
+    def logic_operator(self) -> LogicalWrapper:
         """Returns LogicalWrapper attached to self"""
         return self._logic_operator
 
     @logic_operator.setter
-    def logic_operator(self, val: str | LogicalWrapper):
+    def logic_operator(self, val: str | LogicalWrapper | None):
         """set LogicalWrapper attached to self using a string
         ('&', '|', ...) or a LogicalWrapper. This attribute can not
-        be None due to FilterGenerator requirements"""
+        be None due to FilterGenerator requirements.
+        If val is None, a fallback wrapper will be selected base on parse_string_logic()'s fall_back_string."""
         if isinstance(val, LogicalWrapper):
             true_val = val
         else:
             true_val = self.parse_string_logic(val)
 
-        self._logic_operator: LogicalWrapper | None = true_val
+        self._logic_operator: LogicalWrapper = true_val
 
     def parse_string_logic(self, s_condition: str | None, fall_back_string="&") -> LogicalWrapper:
         """Transform a string <s_condition> to a ComparisonWrapper using  self.get_string_to_logic_operators()"""
