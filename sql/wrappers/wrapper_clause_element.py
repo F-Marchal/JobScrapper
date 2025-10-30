@@ -34,7 +34,7 @@ class ClauseElementWrapper:
     def op(self, operator: Callable[[Any, Any], ColumnElement]):
         self._op = operator
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> ColumnElement:
         """Call self.op and returns results"""
         return self.op(*args, **kwargs)
 
