@@ -1,18 +1,20 @@
-from typing import Callable, Any
-from sqlalchemy.sql.elements import ClauseElement
-from sqlalchemy import select, literal
-from sqlalchemy import create_engine
+from typing import Any, Callable
+
+from sqlalchemy import create_engine, literal, select
+from sqlalchemy.sql.elements import ColumnElement
+
 
 class ClauseElementWrapper:
     """
     An object that encapsulate a callable object that can be used
     in a query.filter()
     """
+
     def __init__(
-            self,
-            op: Callable[[Any, Any], ClauseElement],
-            help_: str,
-            symbols: list[str],
+        self,
+        op: Callable[[Any, Any], ColumnElement],
+        help_: str,
+        symbols: list[str],
     ):
         """
         :param op: a callable object that can be used in a query.filter()
@@ -23,13 +25,13 @@ class ClauseElementWrapper:
         self.help: str = help_
         self.symbols: list[str] = symbols
 
-
     @property
-    def op(self) -> Callable[[Any, Any], ClauseElement]:
+    def op(self) -> Callable[[Any, Any], ColumnElement]:
+        """Returns a callable object that can be used in a query.filter()"""
         return self._op
 
     @op.setter
-    def op(self, operator:  Callable[..., ClauseElement]):
+    def op(self, operator: Callable[[Any, Any], ColumnElement]):
         self._op = operator
 
     def __call__(self, *args, **kwargs):
@@ -41,7 +43,12 @@ class ClauseElementWrapper:
         return self.symbols[0]
 
     @classmethod
-    def run_operator(cls,op: Callable[[Any, Any], ClauseElement], value1: Any, value2: Any) -> bool:
+    def run_operator(
+        cls,
+        op: Callable[[Any, Any], ColumnElement],
+        value1: Any,
+        value2: Any,
+    ) -> bool:
         """
         Run an Operator using literal values and return the result
         :param op: Any callable object that accept two arguments and returns a ClauseElement
@@ -49,11 +56,12 @@ class ClauseElementWrapper:
         :param value2: Any value accepted by op
         """
         engine = create_engine("sqlite:///:memory:")
-        stmt = select(op(literal(value1), literal(value2)))
+        stmt = select(
+            op(literal(value1), literal(value2)),
+        )
 
         with engine.connect() as conn:
             return conn.execute(stmt).scalar_one()
-
 
     def run(self, value1: Any, value2: Any) -> bool:
         """
@@ -66,4 +74,3 @@ class ClauseElementWrapper:
 
         with engine.connect() as conn:
             return conn.execute(stmt).scalar_one()
-
