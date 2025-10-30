@@ -61,6 +61,11 @@ max-line-length = 880
 markers = [
     "logs: Test logging functions.",
     "testModules: Test module only used during test runs.",
+
+    # Sql Filters
+    "sql_filters: Test sql command generation related to user inpput.",
+
+    # Table related
     "js_tables: Test JobScrapper related sqlAlchemy tables.",
     "js_tables_sql: Same as js_tables but for sql related methods.",
     "js_tables_pyt: Same as js_tables but for non sql related methods."
