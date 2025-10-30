@@ -59,8 +59,8 @@ class FilterPart:
     def __init__(
             self,
             unformatted_string: str,
-            string_to_columns:dict[str, ColumnElement],
-            string_formater:Callable[[str], str]=lambda string: string,
+            string_to_columns: dict[str, ColumnElement],
+            string_formater: Callable[[str], str]=lambda string: string,
 
             separator: str="::",
             logger: Logger | None = None,
@@ -141,6 +141,10 @@ class FilterPart:
 
     @str_column.setter
     def str_column(self, column_name: str | None):
+        """Set str_column using a string (column_name).
+        This string is used to determine which column in self.string_to_columns
+        should be used as self.column. if  self._generate_new_column is not None,
+        A new column can be generated. This will update self.string_to_columns"""
         if column_name is None:
             self._column = None
             return
@@ -177,20 +181,25 @@ class FilterPart:
 
     @property
     def column(self) -> None | ColumnElement:
+        """Column object attached to self."""
         return self._column
 
     @column.setter
     def column(self, column_name: str):
+        """Set column obect attached to self using a string and  self.string_to_columns"""
         self.str_column = column_name
 
     # --- Column related ---
     # --- Wrapper related ---
     @property
     def comp_operator(self) -> None | ComparisonWrapper:
+        """Return ComparisonWrapper attached to self"""
         return self._comp_operator
 
     @comp_operator.setter
     def comp_operator(self, val: str | ComparisonWrapper | None):
+        """Set ComparisonWrapper attached to self using a string '>=', '==', ...,
+        a ComparisonWrapper or None"""
         if isinstance(val, ComparisonWrapper):
            true_val = val
         elif val is None:
@@ -201,6 +210,7 @@ class FilterPart:
         self._comp_operator: ComparisonWrapper | None = true_val
 
     def parse_string_comp(self, s_condition: str, fall_back_string="==") -> ComparisonWrapper:
+        """Transform a string <s_condition> to a ComparisonWrapper using  self.get_string_to_comparison_operators()"""
         string_to_comp = self.get_string_to_comparison_operators()
 
         if fall_back_string not in string_to_comp:
@@ -223,10 +233,14 @@ class FilterPart:
 
     @property
     def logic_operator(self) -> LogicalWrapper | None:
+        """Returns LogicalWrapper attached to self"""
         return self._logic_operator
 
     @logic_operator.setter
     def logic_operator(self, val: str | LogicalWrapper):
+        """set LogicalWrapper attached to self using a string
+        ('&', '|', ...) or a LogicalWrapper. This attribute can not
+        be None due to FilterGenerator requirements"""
         if isinstance(val, LogicalWrapper):
             true_val = val
         else:
@@ -235,6 +249,7 @@ class FilterPart:
         self._logic_operator: LogicalWrapper | None = true_val
 
     def parse_string_logic(self, s_condition: str | None, fall_back_string="&") -> LogicalWrapper:
+        """Transform a string <s_condition> to a ComparisonWrapper using  self.get_string_to_logic_operators()"""
         string_to_logic = self.get_string_to_logic_operators()
 
         if fall_back_string not in string_to_logic:
@@ -257,15 +272,19 @@ class FilterPart:
     # --- Value related ---
     @property
     def comp_value(self) -> Any:
+        """Returns the value used by comp_operator to compare column value"""
         if self._comp_operator is None:
             return None
         return self.parse_string_value(self._comp_value, self._comp_operator)
 
     @comp_value.setter
     def comp_value(self, value: str):
+        """Sets the value used by comp_operator to compare column value"""
         self._comp_value = value
 
-    def parse_string_value(self, val: str, cond_wrap: ComparisonWrapper) -> Any:
+    def parse_string_value(self, val: str, cond_wrap: ComparisonWrapper) -> Any | None:
+        """Try to transform a string (<val>) with a ComparisonWrapper <cond_wrap> to type that
+        <cond_wrap> can use."""
         try:
             return cond_wrap.cast(val)
         except ValueError as e:
@@ -280,6 +299,11 @@ class FilterPart:
     # --- Value related ---
     # --- Parenthesis ---
     def set_parenthesis(self, string: str) -> None:
+        """Set parenthesis attached to this part.
+        Use :
+        - ')' to close parenthesis
+        - '(' to open parenthesis
+        - ')(' to close last parenthesis and open a new one"""
         if string == "":
             return
         elif string == ")":
@@ -301,16 +325,15 @@ class FilterPart:
     # --- --- Utils --- ---
     @classmethod
     def get_string_to_comparison_operators(cls) -> dict[str, ComparisonWrapper]:
+        """Returns STRING_TO_COMPARISON_WRAPPERS, a dictionary that associate strings with
+        ComparisonWrapper"""
         return STRING_TO_COMPARISON_WRAPPERS
 
     @classmethod
     def get_string_to_logic_operators(cls) -> dict[str, LogicalWrapper]:
+        """Returns STRING_TO_LOGICAL_WRAPPERS  a dictionary that associate strings with
+        LogicalWrapper"""
         return STRING_TO_LOGICAL_WRAPPERS
-
-    def get_column_obj(self) -> Optional[ColumnElement]:
-        if self.str_column in self.string_to_columns:
-            return self.string_to_columns[self.str_column]
-        return None
 
     def __str__(self):
         return self.unformatted_string
