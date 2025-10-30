@@ -9,7 +9,7 @@ class Distances(BaseTable):
 
     reference_localisation = Column(String, primary_key=True, nullable=False)
     job_localisation = Column(String, primary_key=True, nullable=False)
-    distance = Column(Float)
+    distance = Column(Float, nullable=True)
 
     @classmethod
     def get_job_associated_distances(cls, session: Session, job_localisation: str) -> list:
