@@ -63,8 +63,8 @@ markers = [
     "logs: Test logging functions.",
     "testModules: Test module only used during test runs.",
 
-    # Sql Filters
-    "sql_filters: Test sql command generation related to user inpput.",
+    # Wrappers
+    "sqlalchemy_wrappers: Test classes that wraps SQLAclhemy functionalities",
 
     # Table related
     "js_tables: Test JobScrapper related sqlAlchemy tables.",

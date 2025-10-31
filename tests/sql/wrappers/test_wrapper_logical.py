@@ -11,6 +11,7 @@ from tests.conftest import BaseTest
 
 
 # pylint: disable=R0801
+@pytest.mark.sqlalchemy_wrappers
 class TestLogicalWrapper(BaseTest):
     """Test LogicalWrapper's methods."""
 

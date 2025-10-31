@@ -14,7 +14,7 @@ from sql.tables.places.distances import Distances
 from tests.conftest import BaseTest
 
 
-@pytest.mark.sql_filters
+@pytest.mark.sqlalchemy_wrappers
 class TestFilterPart(BaseTest):
     """Test FilterPart generation"""
 

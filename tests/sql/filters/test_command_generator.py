@@ -23,7 +23,7 @@ def quick_filter(string: str) -> FilterPart:
     )
 
 
-@pytest.mark.sql_filters
+@pytest.mark.sqlalchemy_wrappers
 class TestFilterGenerator(BaseTest):
     """Ensure that FilterGenerator correctly generate filters from a list of FilterPart"""
 

@@ -5,7 +5,7 @@ from sql.wrappers.wrapper_clause_element import (
 )
 from tests.conftest import BaseTest
 
-
+@pytest.mark.sqlalchemy_wrappers
 class TestClauseElementWrapper(BaseTest):
     """
     Test main ClauseElement functions

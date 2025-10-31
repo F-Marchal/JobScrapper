@@ -33,6 +33,7 @@ def ilike_filter(
 
 
 # pylint: disable=R0801
+@pytest.mark.sqlalchemy_wrappers
 class TestComparisonWrapper(BaseTest):
     """Class that test ComparisonWrapper's methods"""
 
