@@ -1,15 +1,23 @@
-from sql.filters.filter_part import FilterPart, STRING_TO_COMPARISON_WRAPPERS, STRING_TO_LOGICAL_WRAPPERS
+from typing import Any
+
+import pytest
+from sqlalchemy import case, func
+from sqlalchemy.sql import operators as ope
+
+from sql.filters.filter_part import (
+    STRING_TO_COMPARISON_WRAPPERS,
+    STRING_TO_LOGICAL_WRAPPERS,
+    FilterPart,
+)
 from sql.tables.jobs import Jobs
 from sql.tables.places.distances import Distances
 from tests.conftest import BaseTest
-import pytest
-from typing import Any
-from sqlalchemy.sql import operators as ope
-from sqlalchemy import case, func
+
 
 @pytest.mark.sql_filters
 class TestFilterPart(BaseTest):
     """Test FilterPart generation"""
+
     #####################################
     #           Initialisation          #
     #####################################
@@ -25,8 +33,6 @@ class TestFilterPart(BaseTest):
         assert fp.comp_operator is None
         assert fp.start_parenthesis is False
         assert fp.close_parenthesis is False
-        
-
 
     @pytest.mark.parametrize(
         "raw_string, column_name, comp_op, comp_value",
@@ -38,11 +44,7 @@ class TestFilterPart(BaseTest):
         ],
     )
     def test_comp_initialisation(
-            self,
-            raw_string: str,
-            column_name: str,
-            comp_op: str,
-            comp_value: Any
+        self, raw_string: str, column_name: str, comp_op: str, comp_value: Any
     ):
         """Test initialisation using url::comparator:value"""
         kwargs = self.common_kwargs()
@@ -58,6 +60,7 @@ class TestFilterPart(BaseTest):
         assert fp.start_parenthesis is False
         assert fp.close_parenthesis is False
 
+    # pylint: disable=R0913,R0917
     @pytest.mark.parametrize(
         "raw_string, column_name, comp_op, comp_value, logic_op",
         [
@@ -67,12 +70,12 @@ class TestFilterPart(BaseTest):
         ],
     )
     def test_logic_initialisation(
-            self,
-            raw_string: str,
-            column_name: str,
-            comp_op: str,
-            comp_value: Any,
-            logic_op: str,
+        self,
+        raw_string: str,
+        column_name: str,
+        comp_op: str,
+        comp_value: Any,
+        logic_op: str,
     ):
         """Test initialisation using operator::url::comparator:value"""
         kwargs = self.common_kwargs()
@@ -88,6 +91,7 @@ class TestFilterPart(BaseTest):
         assert fp.start_parenthesis is False
         assert fp.close_parenthesis is False
 
+    # pylint: disable=R0913,R0917
     @pytest.mark.parametrize(
         "raw_string, column_name, comp_op, comp_value, logic_op, open_, close",
         [
@@ -97,14 +101,14 @@ class TestFilterPart(BaseTest):
         ],
     )
     def test_par_initialisation(
-            self,
-            raw_string: str,
-            column_name: str,
-            comp_op: str,
-            comp_value: Any,
-            logic_op: str,
-            open_: bool,
-            close: bool,
+        self,
+        raw_string: str,
+        column_name: str,
+        comp_op: str,
+        comp_value: Any,
+        logic_op: str,
+        open_: bool,
+        close: bool,
     ):
         """Test initialisation using parenthesis::operator::url::comparator:value"""
         kwargs = self.common_kwargs()
@@ -150,27 +154,29 @@ class TestFilterPart(BaseTest):
         - does fp works with 'unknown' column.
         """
 
-        gcu = lambda col_name: func.max(
-            case(
-                (
-                    ope.eq(
-                        Distances.reference_localisation,
-                        col_name.lower()
-                    ),
-                    Distances.distance
-                ),
-                else_=None
-            )
-        ).label(col_name + "_test")
         kwargs = self.common_kwargs()
         assert "alpha" not in kwargs["string_to_columns"]
-        fp = FilterPart("alpha::<=::50", **kwargs, generate_column_using=gcu)
+        fp = FilterPart(
+            "alpha::<=::50",
+            **kwargs,
+            generate_column_using=lambda col_name: func.max(
+                case(
+                    (
+                        ope.eq(
+                            Distances.reference_localisation, col_name.lower()
+                        ),
+                        Distances.distance,
+                    ),
+                    else_=None,
+                )
+            ).label(col_name + "_test"),
+        )
         assert fp
         assert fp.str_column == "alpha"
         assert fp.column is not None
         assert "alpha" in fp.string_to_columns
         assert "alpha" in kwargs["string_to_columns"]
-    
+
     #####################################
     #                UTILS              #
     #####################################
@@ -179,5 +185,5 @@ class TestFilterPart(BaseTest):
         """Returns kwargs used by (almost) all FilterPart during tests."""
         return {
             "string_to_columns": Jobs.get_columns_using_sql_name(),
-            "string_formater": lambda s: s.lower()
+            "string_formater": lambda s: s.lower(),
         }

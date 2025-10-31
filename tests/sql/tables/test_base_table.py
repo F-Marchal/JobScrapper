@@ -565,15 +565,16 @@ class TestTableForJobScrapper(BaseTest):
         self.screen_var("j1_c_2", j1_c_2)
 
         # Correctly added ?
-        # The first (j1_a / j1_c_1) one should be the one on the database
         with BaseTable.get_session(db1) as session:
             assert j1_c_1.exists(session)
             assert j1_c_2.exists(session)
             j1_d = j1_c_2.get_existing_self(session)
             self.screen_var("j1_d", j1_d)
 
-            assert j1_d.to_dict() == j1_c_1.to_dict()
-            assert j1_d.to_dict() != j1_c_2.to_dict()
+            # Since content in new is unordered one of the following should be true
+            j1_a_has_been_selected = j1_d.to_dict() == j1_c_1.to_dict() and j1_d.to_dict() != j1_c_2.to_dict()
+            j1_b_has_been_selected = j1_d.to_dict() == j1_c_2.to_dict() and j1_d.to_dict() != j1_c_1.to_dict()
+            assert j1_a_has_been_selected or j1_b_has_been_selected
 
     def test_get_all(self):
         """Ensure that <get_all> returns all object with the same class as the table used."""
