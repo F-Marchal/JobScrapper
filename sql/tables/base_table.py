@@ -1,23 +1,46 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column
-from sqlalchemy.orm import declarative_base
 import os
-from sqlalchemy.orm import Session, Query
 import traceback
-from sqlalchemy.inspection import inspect
 from contextlib import contextmanager
 from logging import Logger
-from typing import Any
-_Base = declarative_base()
+from typing import Any, Mapping
 
-class BaseTable(_Base):
+from sqlalchemy import create_engine
+from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Query,
+    Session,
+    sessionmaker,
+)
+from sqlalchemy.sql.elements import ColumnElement
+
+
+class Base(DeclarativeBase):
+    """DeclarativeBase can not be inherited directly by BaseTable so
+    this class erv as an intermediary"""
+
+    pass
+
+
+class BaseTable(Base):
+    """Base class for table in this project.
+    Provide a number of methods :
+    - Session management
+    - Commit cleaning
+    - __eq__ and __copy__ related methods
+    - quick search in database
+    - diverse representation methods
+    """
+
     __abstract__ = True
+    __tablename__ = ""
     _databases: dict[str, dict[str, Any]] = {}
 
     # --- --- Engines, sessions and database management --- ---
     @classmethod
-    def get_known_databases(cls) ->  dict[str, dict[str, Any]]:
+    def get_known_databases(cls) -> dict[str, dict[str, Any]]:
+        """Returns a dict that detail which database has been opened. For each
+        opened database, the subdict will contain session make and an engine."""
         if not cls._databases:
             return {}
         return {path: dict_.copy() for path, dict_ in cls._databases.items()}
@@ -31,24 +54,44 @@ class BaseTable(_Base):
     @classmethod
     @contextmanager
     def get_session(cls, database_path: str, logger: Logger | None = None):
+        """
+        Yields a session connected to a database. The database is created if needed.
+        When closed, the session is commit. This commit is sanitised using _sanitise_and_commit.
+
+        Priorities :
+        - An entry that is added but exist within the database will update the database
+
+        :param database_path: Path that lead to the database.
+        :param logger:  An optional logger
+        """
         database_path = os.path.abspath(database_path)
         if database_path not in cls._databases:
-            if logger: logger.debug("Database engine initialisation in '%s' ...", database_path)
+            if logger:
+                logger.debug(
+                    "Database engine initialisation in '%s' ...", database_path
+                )
             engine = cls._get_engine(database_path)
             session_maker = sessionmaker(bind=engine)
             cls.create_all(engine)
             cls._databases[database_path] = {
                 "engine": engine,
                 "session_maker": session_maker,
-                "initialised": True
+                "initialised": True,
             }
 
         session_maker = cls._databases[database_path]["session_maker"]
         session = session_maker()
-        if logger: logger.debug("Database session opened ('%s') for '%s'.", session, database_path)
+        if logger:
+            logger.debug(
+                "Database session opened ('%s') for '%s'.",
+                session,
+                database_path,
+            )
 
         try:
-            with session.no_autoflush: # Remove autoflush in order to keep avoid sanitise flush.
+            with (
+                session.no_autoflush
+            ):  # Remove autoflush in order to keep avoid sanitise flush.
                 yield session
                 if session.new:
                     cls._sanitise_and_commit(session, logger)
@@ -56,29 +99,130 @@ class BaseTable(_Base):
 
         except Exception as error:
             session.rollback()
-            if logger: logger.error("Error while '%s' was opened ! Rollback all modifications. \n%s", session,  traceback.format_exc())
+            if logger:
+                logger.error(
+                    "Error while '%s' was opened ! Rollback all modifications. \n%s",
+                    session,
+                    traceback.format_exc(),
+                )
             raise error
 
         finally:
-            if logger: logger.debug("Database session closed ('%s') for '%s'. "
-                                    "Everything went fine.", session, database_path)
+            if logger:
+                logger.debug(
+                    "Database session closed ('%s') for '%s'. "
+                    "Everything went fine.",
+                    session,
+                    database_path,
+                )
             session.close()
 
     @classmethod
-    def _sanitise_and_commit(cls, session: Session, logger: Logger | None = None):
+    def _sanitise_and_commit(  # disa
+        cls, session: Session, logger: Logger | None = None
+    ):
         """
         Ensure that error will not be raised when an entry is known by the database
         (primary key conflict).
-        - Same primary keys added twice : The first one is kept, the second one is ignored
+        - Same primary keys added twice :
+            - Only one of them will be added. Since this process is supposed to be undordered,
+              we can not guess which one will be added
+
         - Added primary key exist in database : The one contained in the database is updated
             to match the newer one
         :param session: A Session object
         :param logger: An optional logger to display logs.
         """
-        viewed_entries: dict[str, dict[str, BaseTable]] = {
+        # Viewed entries will contain all entries that have been seen.
+        # We initialised it with session.dirty to note entries
+        # contained in session.dirty as viewed
+        viewed_entries: dict[str, dict[str, BaseTable]] = (
+            cls._sanitise_and_commit__viewed_entries_init(session)
+        )
 
-        }
+        # Preparation
+        if logger:
+            logger.debug(
+                "Session sanitation (%s) of %s new elements and %s elements modified",
+                session,
+                len(session.new),
+                len(viewed_entries),
+            )
+        insertion = 0
+        ignored = 0
+        existing_counter = 0
+        updates = len(viewed_entries)
 
+        # Main body
+        for entries in session.new:
+            # Entries related variable
+            existing = entries.get_existing_self(session)
+            table_name = entries.__tablename__
+            flat_pk: str = entries.flat_pk()
+
+            # Does the entry exist in database.
+            if existing:
+                update_needed = cls._sanitise_and_commit__potential_update_log(
+                    existing=existing,
+                    entries=entries,
+                    logger=logger,
+                    session=session,
+                )
+
+                # Should we update it ?
+                if not update_needed:
+                    existing_counter += 1
+                    continue
+
+                session.expunge(entries)
+                updates += 1
+                for column in entries.get_non_pk_col_attr_name():
+                    setattr(existing, column, getattr(entries, column))
+
+                continue
+
+            if table_name not in viewed_entries:
+                # Setup viewed_entries for this table
+                viewed_entries[table_name] = {}
+
+            if flat_pk in viewed_entries[table_name]:
+                # this entrie is known (same pk) in viewed_entries
+                # we can not keep it, an error will be raised.
+                cls._sanitise_and_commit__same_as_previous_log(
+                    session=session,
+                    logger=logger,
+                    entries=entries,
+                    previous=viewed_entries[table_name][flat_pk],
+                )
+                ignored += 1
+                session.expunge(entries)
+                continue
+
+            # This entry is kept. Lets update viewed_entries
+            viewed_entries[table_name][flat_pk] = entries
+            insertion += 1
+
+        # Conclusion
+        if logger:
+            logger.debug(
+                "Session sanitation (%s) done :"
+                "\n\tinsertion : %s"
+                "\n\tignored : %s"
+                "\n\texisting : %s"
+                "\n\tupdates : %s",
+                session,
+                insertion,
+                ignored,
+                existing_counter,
+                updates,
+            )
+
+    @classmethod
+    def _sanitise_and_commit__viewed_entries_init(
+        cls, session
+    ) -> dict[str, dict[str, "BaseTable"]]:
+        """Generate the `viewed_entries` dict using session.dirty"""
+        viewed_entries: dict[str, dict[str, BaseTable]] = {}
         for d_entries in session.dirty:
             d_table_name = d_entries.__table__
             if d_table_name not in viewed_entries:
@@ -87,76 +231,77 @@ class BaseTable(_Base):
 
             viewed_entries[d_table_name][d_flat_pk] = d_entries
 
-        if logger: logger.debug(
-            "Session sanitation (%s) of %s new elements and %s elements modified",
-            session,
-            len(session.new),
-            len(viewed_entries)
-        )
-        insertion = 0
-        ignored = 0
-        existing_counter = 0
-        updates = len(viewed_entries)
-        for entries in session.new:
-            existing = entries.get_existing_self(session)
-            table_name = entries.__tablename__
-            flat_pk: str = entries.flat_pk()
+        return viewed_entries
 
-            if existing:
-                if existing == entries:
-                    if logger: logger.debug("Ignoring '%s' export since it has the exact same content as an existing entry (%s)"
-                                 "\n(%s)\nExisting : %s\n=="
-                                 "\n'New' : %s\n", entries, existing, session, existing.flat(), entries.flat())
-
-                    session.expunge(entries)
-                    existing_counter += 1
-                    continue
-
-                if logger: logger.debug(
-                    f"'%s' already exist in database.\n(%s)\n"
-                    f"Updating existing entry : "
-                    f"\nExisting : \t%s\n-->"
-                    f"\nNew : \t%s\n", entries, session, existing.flat(), entries.flat()
+    @classmethod
+    def _sanitise_and_commit__potential_update_log(
+        cls, existing, entries, logger, session
+    ) -> bool:
+        """Generate the correct log when an entry in the database might be updated ignored.
+        Returns False when there is no need to update and True when there is a need.
+        """
+        if existing == entries:
+            if logger:
+                logger.debug(
+                    "Ignoring '%s' export since it has the exact same content as an existing entry (%s)"
+                    "\n(%s)\nExisting : %s\n=="
+                    "\n'New' : %s\n",
+                    entries,
+                    existing,
+                    session,
+                    existing.flat(),
+                    entries.flat(),
                 )
-                session.expunge(entries)
-                updates += 1
-                for column in entries.get_non_pk_col_attr_name():
-                    setattr(existing, column, getattr(entries, column))
-                continue
 
-            if table_name not in viewed_entries:
-                viewed_entries[table_name] = {}
+            session.expunge(entries)
+            return False
 
-            if flat_pk in viewed_entries[table_name]:
-                previous = viewed_entries[table_name][flat_pk]
+        if logger:
+            logger.debug(
+                "'%s' already exist in database.\n(%s)\n"
+                "Updating existing entry : "
+                "\nExisting : \t%s\n-->"
+                "\nNew : \t%s\n",
+                entries,
+                session,
+                existing.flat(),
+                entries.flat(),
+            )
+            return True
+        return True
 
-                if previous == entries:
-                    if logger: logger.debug("Ignoring '%s' export since it has the exact same content as"
-                                 " another new entry '%s'\n(%s)"
-                                 "\nPrevious : %s\n=="
-                                 "\nCurrent : %s\n", entries, previous, session, previous.flat(), entries.flat())
+    @classmethod
+    def _sanitise_and_commit__same_as_previous_log(
+        cls, session, logger, entries, previous
+    ):
+        """Generate the correct log when an entry in session.new should be ignored"""
+        if previous == entries:
+            if logger:
+                logger.debug(
+                    "Ignoring '%s' export since it has the exact same content as"
+                    " another new entry '%s'\n(%s)"
+                    "\nPrevious : %s\n=="
+                    "\nCurrent : %s\n",
+                    entries,
+                    previous,
+                    session,
+                    previous.flat(),
+                    entries.flat(),
+                )
 
-                else:
-                    if logger: logger.debug("Ignoring '%s' export since it has the same primary key(s) as a previous"
-                                 "entry ('%s').\n(%s)"
-                                 "\nPrevious : %s\n!="
-                                 "\nCurrent : %s\n", entries, previous, session, previous.flat(), entries.flat())
-                ignored += 1
-                session.expunge(entries)
-                continue
-
-            viewed_entries[table_name][flat_pk] = entries
-            insertion += 1
-
-        if logger: logger.debug(
-            "Session sanitation (%s) done :"
-                 "\n\tinsertion : %s"
-                 "\n\tignored : %s"
-                 "\n\texisting : %s"
-                 "\n\tupdates : %s",
-                session, insertion, ignored, existing_counter, updates
-        )
-
+        else:
+            if logger:
+                logger.debug(
+                    "Ignoring '%s' export since it has the same primary key(s) as a previous"
+                    "entry ('%s').\n(%s)"
+                    "\nPrevious : %s\n!="
+                    "\nCurrent : %s\n",
+                    entries,
+                    previous,
+                    session,
+                    previous.flat(),
+                    entries.flat(),
+                )
 
     @classmethod
     def create_all(cls, engine) -> None:
@@ -168,11 +313,7 @@ class BaseTable(_Base):
     # --- --- Engines, sessions and database management --- ---
     # --- --- Descriptions --- ---
     @staticmethod
-    def are_equivalent(
-            t1: 'BaseTable',
-            t2: 'BaseTable',
-            strict: bool=False
-    ):
+    def are_equivalent(t1: "BaseTable", t2: "BaseTable", strict: bool = False):
         """Says weather two BaseTableForJobScrapper are equivalent (same primary keys).
         Use `strict=True` to compare all columns values.
 
@@ -180,20 +321,15 @@ class BaseTable(_Base):
         CONSIDERED IDENTICAL !!"""
         if strict:
             return t1.to_dict() == t2.to_dict()
-        return  t1.to_pk_dict() == t2.to_pk_dict()
+        return t1.to_pk_dict() == t2.to_pk_dict()
 
-    def is_equivalent_to(
-            self,
-            other: 'BaseTable',
-            strict: bool=False
-    ):
+    def is_equivalent_to(self, other: "BaseTable", strict: bool = False):
         """Says weather another BaseTableForJobScrapper is equivalent to self. (same primary keys).
         Use `strict=True` to compare all columns values and not only the primary keys.
 
         THIS DOES NOT PERFORM CLASS TYPE CHECK. TWO DIFFERENT TABLE WITH THE SAME PRIMARY KEYS WILL BE
         CONSIDERED IDENTICAL !!"""
         return self.are_equivalent(self, other, strict=strict)
-
 
     def __eq__(self, other):
         """Says weather another BaseTableForJobScrapper is equivalent to self. (same primary keys).
@@ -211,18 +347,16 @@ class BaseTable(_Base):
     def __copy__(self):
         return self.copy()
 
-    def copy(self) -> 'BaseTable':
+    def copy(self) -> "BaseTable":
         """Returns a shallow copy of self."""
         return type(self)(**self.to_dict())
 
-
-
     def exists(
-            self,
-            session: Session,
-            strict: bool = False,
-            include_session: bool = False,
-            include_database: bool = True,
+        self,
+        session: Session,
+        strict: bool = False,
+        include_session: bool = False,
+        include_database: bool = True,
     ) -> bool:
         """Returns True if an equivalent of this entry exist in the database.
         Two entries are equivalent when theirs primary keys are the same.
@@ -231,7 +365,7 @@ class BaseTable(_Base):
             session,
             strict=strict,
             include_session=include_session,
-            include_database=include_database
+            include_database=include_database,
         )
         if eq is None:
             return False
@@ -239,14 +373,13 @@ class BaseTable(_Base):
             return eq == self
         return True
 
-
     def get_existing_self(
-            self,
-            session: Session,
-            strict: bool = False,
-            include_session: bool = False,
-            include_database: bool = True
-    ) -> 'None | BaseTable':
+        self,
+        session: Session,
+        strict: bool = False,
+        include_session: bool = False,
+        include_database: bool = True,
+    ) -> "None | BaseTable":
         """
         Returns an entry equivalent to self.
         :param session: A session connected to a database
@@ -280,17 +413,17 @@ class BaseTable(_Base):
         return None
 
     @classmethod
-    def get_columns_using_sql_name(cls) -> dict[str, Column]:
+    def get_columns_using_sql_name(cls) -> Mapping[str, ColumnElement]:
         """
         Return a dictionary mapping column names to their SQLAlchemy column objects.
         Example: {"column name in database": Column object, "title": Jobs.title, ...}
         """
         if cls.__abstract__:
             return {}
-        return {column.name: column for column in cls.__table__.columns}
+        return {column.name: column for column in list(cls.__table__.columns)}
 
     @classmethod
-    def get_columns_using_attr_name(cls) -> dict[str, Column]:
+    def get_columns_using_attr_name(cls) -> Mapping[str, ColumnElement]:
         """Returns a dictionary : {table attribute name: Column obj}"""
         if cls.__abstract__:
             return {}
@@ -304,19 +437,26 @@ class BaseTable(_Base):
         return results
 
     @classmethod
-    def get_pk_col_attr_name(cls) -> dict[str, Column]:
+    def get_pk_col_attr_name(cls) -> Mapping[str, ColumnElement]:
         """
         Return the list of primary key column names for a SQLAlchemy model class.
         """
-        return {col_name: col for col_name, col in cls.get_columns_using_attr_name().items() if col.primary_key}
+        return {
+            col_name: col
+            for col_name, col in cls.get_columns_using_attr_name().items()
+            if col.primary_key
+        }
 
     @classmethod
-    def get_non_pk_col_attr_name(cls) -> dict[str, Column]:
+    def get_non_pk_col_attr_name(cls) -> Mapping[str, ColumnElement]:
         """Return a dict that contain <column attribute name> : <Column object that are not primary key>"""
-        return {col_name: col for col_name, col in cls.get_columns_using_attr_name().items() if not col.primary_key}
+        return {
+            col_name: col
+            for col_name, col in cls.get_columns_using_attr_name().items()
+            if not col.primary_key
+        }
 
-
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Mapping[str, Any]:
         """Returns a dict  <column attribute name> : <Column value>"""
         tmp = {c: getattr(self, c) for c in self.get_columns_using_attr_name()}
         return tmp
@@ -328,7 +468,6 @@ class BaseTable(_Base):
         # Sort keys and join key=value pairs with separator
         d_ = self.to_dict()
         return sep.join([f"{key}={d_[key]}" for key in sorted(d_.keys())])
-
 
     def to_pk_dict(self) -> dict[str, Any]:
         """Returns a dict that contain <column attribute name> : <Column object that are primary key>"""
@@ -344,7 +483,6 @@ class BaseTable(_Base):
     def to_non_pk_dict(self) -> dict[str, Any]:
         """Returns a dict that contain <column attribute name> : <Column object that are not primary key>"""
         return {c: getattr(self, c) for c in self.get_non_pk_col_attr_name()}
-
 
     def flat_non_pk(self, sep="\t") -> str:
         """Turn an entry to a string that represent each column not marked as primary key.

@@ -1,10 +1,13 @@
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import Query, Session, relationship
+
 from .job_extra_base import JobExtraBase, Jobs
-from sqlalchemy import Column, String, Integer
-from sqlalchemy.orm import Session, Query, relationship
+
 
 class Keywords(JobExtraBase):
     """Table that contain the number of occurrences of a word (and aliases) inside
-     a job offer"""
+    a job offer"""
+
     __abstract__ = False
     __tablename__ = "keywords"
 
@@ -12,7 +15,9 @@ class Keywords(JobExtraBase):
     keyword = Column(String, primary_key=True, nullable=False)
     occurrence = Column(Integer, nullable=True)
 
-    main_entry = relationship("Jobs", back_populates="keywords_entries", passive_deletes=True)
+    main_entry = relationship(
+        "Jobs", back_populates="keywords_entries", passive_deletes=True
+    )
 
     @classmethod
     def get_for_job(cls, session: Session, url: str | Jobs) -> Query:

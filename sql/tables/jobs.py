@@ -1,12 +1,15 @@
-from .base_table import BaseTable
 from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
+
+from .base_table import BaseTable
+
 
 class Jobs(BaseTable):
     """
     Main table. Contains main information related to jobs offers :
     contract, field, url ...
     """
+
     __abstract__ = False
     __tablename__ = "jobs"
 
@@ -26,19 +29,19 @@ class Jobs(BaseTable):
         "Metadata",
         back_populates="main_entry",
         cascade="all, delete-orphan",
-        lazy='dynamic' # Gives a query object instead of a list when job = session.get(Jobs, "url_du_job") ; job.metadata_entries
+        lazy="dynamic",  # Gives a query object instead of a list when job = session.get(Jobs, "url_du_job") ; job.metadata_entries
     )
     keywords_entries = relationship(
         "Keywords",
         back_populates="main_entry",
         cascade="all, delete-orphan",
-        lazy='dynamic'
+        lazy="dynamic",
     )
     timestamps_entries = relationship(
         "TimeStamps",
         back_populates="main_entry",
         cascade="all, delete-orphan",
-        lazy='dynamic'
+        lazy="dynamic",
     )
 
     # Ease requests
@@ -48,5 +51,4 @@ class Jobs(BaseTable):
     #    back_populates="job",
     #    lazy='dynamic',  # important pour filtrer avec .filter()
     #    viewonly=True
-    #)
-
+    # )
