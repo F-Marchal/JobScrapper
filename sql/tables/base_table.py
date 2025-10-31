@@ -2,7 +2,7 @@ import os
 import traceback
 from contextlib import contextmanager
 from logging import Logger
-from typing import Any, Mapping
+from typing import Any
 
 from sqlalchemy import create_engine
 from sqlalchemy.inspection import inspect
@@ -12,14 +12,12 @@ from sqlalchemy.orm import (
     Session,
     sessionmaker,
 )
-from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.elements import ColumnElement, NamedColumn
 
 
 class Base(DeclarativeBase):
     """DeclarativeBase can not be inherited directly by BaseTable so
     this class erv as an intermediary"""
-
-    pass
 
 
 class BaseTable(Base):
@@ -413,17 +411,19 @@ class BaseTable(Base):
         return None
 
     @classmethod
-    def get_columns_using_sql_name(cls) -> Mapping[str, ColumnElement]:
+    def get_columns_using_sql_name(cls) -> dict[str, ColumnElement]:
         """
         Return a dictionary mapping column names to their SQLAlchemy column objects.
         Example: {"column name in database": Column object, "title": Jobs.title, ...}
         """
         if cls.__abstract__:
             return {}
-        return {column.name: column for column in list(cls.__table__.columns)}
+        return dict(
+            {column.name: column for column in list(cls.__table__.columns)}
+        )
 
     @classmethod
-    def get_columns_using_attr_name(cls) -> Mapping[str, ColumnElement]:
+    def get_columns_using_attr_name(cls) -> dict[str, NamedColumn]:
         """Returns a dictionary : {table attribute name: Column obj}"""
         if cls.__abstract__:
             return {}
@@ -437,7 +437,7 @@ class BaseTable(Base):
         return results
 
     @classmethod
-    def get_pk_col_attr_name(cls) -> Mapping[str, ColumnElement]:
+    def get_pk_col_attr_name(cls) -> dict[str, ColumnElement]:
         """
         Return the list of primary key column names for a SQLAlchemy model class.
         """
@@ -448,7 +448,7 @@ class BaseTable(Base):
         }
 
     @classmethod
-    def get_non_pk_col_attr_name(cls) -> Mapping[str, ColumnElement]:
+    def get_non_pk_col_attr_name(cls) -> dict[str, ColumnElement]:
         """Return a dict that contain <column attribute name> : <Column object that are not primary key>"""
         return {
             col_name: col
@@ -456,7 +456,7 @@ class BaseTable(Base):
             if not col.primary_key
         }
 
-    def to_dict(self) -> Mapping[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Returns a dict  <column attribute name> : <Column value>"""
         tmp = {c: getattr(self, c) for c in self.get_columns_using_attr_name()}
         return tmp

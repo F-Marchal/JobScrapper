@@ -9,9 +9,10 @@ class StringTable(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
 
+    @staticmethod
     @contextmanager
-    def get_session(self, path=":memory:"):
-        engine = create_engine(f"sqlite:///{path}:")  # echo=True pour voir le SQL
+    def get_session(path:str=":memory:"):
+        engine = create_engine(f"sqlite:///{path}")  # echo=True pour voir le SQL
         Base.metadata.create_all(engine)
         with Session(engine) as session:
             session.add_all([

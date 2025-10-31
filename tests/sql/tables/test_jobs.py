@@ -1,6 +1,8 @@
-from tests.conftest import BaseTest
-from sql.tables.jobs import Jobs
 import pytest
+
+# from sql.tables.jobs import Jobs
+from tests.conftest import BaseTest
+
 
 @pytest.mark.js_tables
 class TestJobs(BaseTest):

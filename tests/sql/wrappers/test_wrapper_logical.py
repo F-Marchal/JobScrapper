@@ -1,17 +1,23 @@
-from tests.conftest import BaseTest
-from sql.wrappers.wrapper_logical import (
-    STRING_TO_LOGICAL_WRAPPERS,
-    LOGICAL_WRAPPERS,
-    LogicalWrapper,
-)
-import pytest
 from typing import Any, Callable
 
+import pytest
+
+from sql.wrappers.wrapper_logical import (
+    LOGICAL_WRAPPERS,
+    STRING_TO_LOGICAL_WRAPPERS,
+    LogicalWrapper,
+)
+from tests.conftest import BaseTest
+
+
+# pylint: disable=R0801
 class TestLogicalWrapper(BaseTest):
+    """Test LogicalWrapper's methods."""
+
     def test_string_to_logic_ope(self):
         """Test content of STRING_TO_LOGIC_OPE"""
         for key, wrapper in STRING_TO_LOGICAL_WRAPPERS.items():
-            self.screen_var('_'.join(wrapper.symbols), wrapper)
+            self.screen_var("_".join(wrapper.symbols), wrapper)
             assert key in wrapper.symbols
             assert isinstance(wrapper, LogicalWrapper)
 
@@ -29,9 +35,7 @@ class TestLogicalWrapper(BaseTest):
         tested_op = set()
         expected_op = set(STRING_TO_LOGICAL_WRAPPERS.keys())
 
-        assert len(self.test_logical_parameters) == 2
-        print()
-        for vals in self.test_logical_parameters[1]:
+        for vals in self.test_logical_parameters:
             tested_op.add(vals[1])
 
         self.screen_var("Tested", tested_op)
@@ -44,46 +48,45 @@ class TestLogicalWrapper(BaseTest):
 
         assert len(untested) == 0
         assert len(tested_but_unknown) == 0
-    
-    test_logical_parameters = [ # IA Generated
-        "val1, operand, val2, true_operand",
-        [
-            # ====== OR variants ======
-            (True, "|", False, lambda a, b: a or b),
-            (False, "|", False, lambda a, b: a or b),  # False
-            (True, "Or", False, lambda a, b: a or b),
-            (False, "Or", False, lambda a, b: a or b),  # False
 
-            # ====== OR NOT variants ======
-            (True, "|~", False, lambda a, b: a or not b),
-            (False, "|~", True, lambda a, b: a or not b),  # False
-            (True, "Or not", False, lambda a, b: a or not b),
-            (False, "Or not", True, lambda a, b: a or not b),  # False
-
-            # ====== AND variants ======
-            (True, "&", True, lambda a, b: a and b),
-            (True, "&", False, lambda a, b: a and b),  # False
-            (True, "And", True, lambda a, b: a and b),
-            (False, "And", True, lambda a, b: a and b),  # False
-
-            # ====== AND NOT variants ======
-            (True, "&~", False, lambda a, b: a and not b),
-            (True, "&~", True, lambda a, b: a and not b),  # False
-            (True, "And not", False, lambda a, b: a and not b),
-            (False, "And not", False, lambda a, b: a and not b),  # False
-
-            # ====== XOR variants ======
-            (True, "^", False, lambda a, b: a ^ b),
-            (True, "^", True, lambda a, b: a ^ b),  # False
-            (True, "Xor", False, lambda a, b: a ^ b),
-            (False, "Xor", False, lambda a, b: a ^ b),  # False
-        ],
+    test_logical_parameters = [
+        # ====== OR variants ======
+        (True, "|", False, lambda a, b: a or b),
+        (False, "|", False, lambda a, b: a or b),  # False
+        (True, "Or", False, lambda a, b: a or b),
+        (False, "Or", False, lambda a, b: a or b),  # False
+        # ====== OR NOT variants ======
+        (True, "|~", False, lambda a, b: a or not b),
+        (False, "|~", True, lambda a, b: a or not b),  # False
+        (True, "Or not", False, lambda a, b: a or not b),
+        (False, "Or not", True, lambda a, b: a or not b),  # False
+        # ====== AND variants ======
+        (True, "&", True, lambda a, b: a and b),
+        (True, "&", False, lambda a, b: a and b),  # False
+        (True, "And", True, lambda a, b: a and b),
+        (False, "And", True, lambda a, b: a and b),  # False
+        # ====== AND NOT variants ======
+        (True, "&~", False, lambda a, b: a and not b),
+        (True, "&~", True, lambda a, b: a and not b),  # False
+        (True, "And not", False, lambda a, b: a and not b),
+        (False, "And not", False, lambda a, b: a and not b),  # False
+        # ====== XOR variants ======
+        (True, "^", False, lambda a, b: a ^ b),
+        (True, "^", True, lambda a, b: a ^ b),  # False
+        (True, "Xor", False, lambda a, b: a ^ b),
+        (False, "Xor", False, lambda a, b: a ^ b),  # False
     ]
 
-    @pytest.mark.parametrize(
-        *test_logical_parameters
+    @pytest.mark.parametrize(  # IA Generated
+        "val1, operand, val2, true_operand", test_logical_parameters
     )
-    def test_simple_operands(self, val1: Any, operand: str, val2: Any, true_operand: Callable[[bool, bool], bool]):
+    def test_simple_operands(
+        self,
+        val1: Any,
+        operand: str,
+        val2: Any,
+        true_operand: Callable[[bool, bool], bool],
+    ):
         """
         Test each operand defined in STRING_TO_LOGICAL_WRAPPERS
         :param val1: Any value
