@@ -29,7 +29,8 @@ class Jobs(BaseTable):
         "Metadata",
         back_populates="main_entry",
         cascade="all, delete-orphan",
-        lazy="dynamic",  # Gives a query object instead of a list when job = session.get(Jobs, "url_du_job") ; job.metadata_entries
+        lazy="dynamic",  # Gives a query object instead of a list when
+                         # job = session.get(Jobs, "url_du_job") ; job.metadata_entries
     )
     keywords_entries = relationship(
         "Keywords",
