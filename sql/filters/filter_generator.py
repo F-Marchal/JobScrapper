@@ -19,6 +19,7 @@ class FilterGenerator:
         commands: list[FilterPart],
     ):
         self.filters: None | ColumnElement = None
+        self.filter_parts: list[FilterPart] = commands
         self.columns: list[ColumnElement] = []
         self._parse_init(commands)
 
@@ -73,6 +74,10 @@ class FilterGenerator:
                     )
                 i += 1
                 continue
+
+            col = cf.column
+            self.columns.append(col)
+
             if not isinstance(cf.logic_operator, LogicalWrapper):
                 # This should not happen since FilterPart's logic_operator returns a LogicalWrapper
                 if cf.logger:
@@ -90,9 +95,6 @@ class FilterGenerator:
                 # filter to add.
                 i += 1
                 continue
-
-            col = cf.column
-            self.columns.append(col)
 
             # if col is None:
             #    if cf.logger: cf.logger.error(
