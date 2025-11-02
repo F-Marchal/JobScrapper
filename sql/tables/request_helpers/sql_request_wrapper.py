@@ -44,7 +44,7 @@ class SQLRequestWrapper:
         it might be a good idea to have `column_label_value_normaliser=lambda string: string.lower.strip(' #')`
         in order to ensure that the string passed will match the label
     """
-
+    # --- --- Attrs --- ---
     def __init__(
         self,
         suffixes: dict[str, str] | None = None,
@@ -87,6 +87,7 @@ class SQLRequestWrapper:
         if suffix_name in self.suffixes:
             return self._suffixes[suffix_name]
         return ""
+    # --- --- Attrs --- ---
 
     @classmethod
     def sql_display_query(cls, query: Query) -> None:
@@ -96,7 +97,7 @@ class SQLRequestWrapper:
         first = True
         for row in query.all():
             if first:
-                print(row.mapping.keys())
+                row.mapping.keys()
                 first = False
             print(row)
 
@@ -117,12 +118,6 @@ class SQLRequestWrapper:
         return str(
             query.statement.compile(compile_kwargs={"literal_binds": True})
         )
-
-    def sql_execute_query(self, session: Session, query: Query) -> Result:
-        """Execute a query object on a session and log the Query"""
-        if self.logger:
-            self.logger.debug("SQL run  : \n%s", self.compile_query(query))
-        return session.execute(query)
 
     def build_request(
         self,
