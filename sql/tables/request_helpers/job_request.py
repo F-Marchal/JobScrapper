@@ -1,4 +1,4 @@
-from sqlalchemy import ColumnElement, case, func, or_
+from sqlalchemy import ColumnElement, or_
 
 # pylint: disable=E0611
 from sqlalchemy.orm import Query, Session
@@ -15,26 +15,6 @@ class JobRequest(SQLRequestWrapper):
     Build a huge Query object to request all information related to a job in Jobs (JobExtraBase, Jobs and Distances)
     """
 
-    @property
-    def distance_suffix(self) -> str:
-        """Returns self.get_suffix("distance_suffix")"""
-        return self.get_suffix("distance_suffix")
-
-    @property
-    def keyword_suffix(self) -> str:
-        """Returns self.get_suffix("keyword_suffix")"""
-        return self.get_suffix("keyword_suffix")
-
-    @property
-    def time_stamp_suffix(self) -> str:
-        """Returns self.get_suffix("time_stamp_suffix")"""
-        return self.get_suffix("time_stamp_suffix")
-
-    @property
-    def metadata_suffix(self) -> str:
-        """Returns self.get_suffix("metadata_suffix")"""
-        return self.get_suffix("metadata_suffix")
-
     # --- --- Request --- ---
     # pylint: disable=R0913,R0917,R0914
     # This is a massive overhaul method used as user interface,
@@ -50,10 +30,10 @@ class JobRequest(SQLRequestWrapper):
         order_by: list[str] | None = None,
     ) -> Query:
         """
-        Returns A query object that apply all filters defines in the paramaeters of this method.
+        Returns A query object that apply all filters defines in the parameters of this method.
 
-        For each of the list[str] (except for order_by) the format expected is the one used by FilterParts.
-        See FiltersParts.format_help.
+        For distances_from, keywords, metadata, time_stamp each string of the list[str], the format expected is the
+        one used by FilterParts.  See FiltersParts.format_help.
 
         :param session: An opened session on a database.
         :param columns: List of column to keep / filter from Jobs table
@@ -102,7 +82,6 @@ class JobRequest(SQLRequestWrapper):
             )
             .order_by(*order_by_cols)
         )
-
         return query
 
     def _build_request_order_by(
@@ -121,12 +100,12 @@ class JobRequest(SQLRequestWrapper):
             return []
 
         order = {
-            self.column_name_cleaner(col_n): i
+            self.column_label_value_normaliser(col_n): i
             for i, col_n in enumerate(order_by)
         }
         result = []
         for col in all_cols[:]:
-            col_name = self.column_name_cleaner(col.name)
+            col_name = self.column_label_value_normaliser(col.name)
             if col_name not in order:
                 continue
 
@@ -158,18 +137,12 @@ class JobRequest(SQLRequestWrapper):
         return self.quick_filter_generator(
             table=Distances,
             columns=distances_from,
-            column_creator=lambda col_name: func.max(
-                case(
-                    (
-                        ope.eq(
-                            Distances.reference_localisation,
-                            self.column_name_cleaner(col_name),
-                        ),
-                        Distances.distance,
-                    ),
-                    else_=None,
-                )
-            ).label(col_name + self.distance_suffix),
+            column_creator=self.quick_column_creator(
+                label_col=Distances.reference_localisation,
+                value_col=Distances.distance,
+                suffix_name="distances",
+                else_value=None,
+            ),
         )
 
     def build_keywords_filter_generator(
@@ -183,17 +156,12 @@ class JobRequest(SQLRequestWrapper):
         return self.quick_filter_generator(
             table=Keywords,
             columns=keywords,
-            column_creator=lambda col_name: func.max(
-                case(
-                    (
-                        ope.eq(
-                            Keywords.keyword, self.column_name_cleaner(col_name)
-                        ),
-                        Keywords.occurrence,
-                    ),
-                    else_=None,
-                )
-            ).label(col_name + self.keyword_suffix),
+            column_creator=self.quick_column_creator(
+                label_col=Keywords.keyword,
+                value_col=Keywords.occurrence,
+                suffix_name="keywords",
+                else_value=None,
+            ),
         )
 
     def build_time_stamp_filter_generator(
@@ -207,17 +175,12 @@ class JobRequest(SQLRequestWrapper):
         return self.quick_filter_generator(
             table=TimeStamps,
             columns=time_stamps,
-            column_creator=lambda col_name: func.max(
-                case(
-                    (
-                        ope.eq(
-                            TimeStamps.label, self.column_name_cleaner(col_name)
-                        ),
-                        TimeStamps.time_stamp,
-                    ),
-                    else_=None,
-                )
-            ).label(col_name + self.time_stamp_suffix),
+            column_creator=self.quick_column_creator(
+                label_col=TimeStamps.label,
+                value_col=TimeStamps.time_stamp,
+                suffix_name="time_tamps",
+                else_value=None,
+            ),
         )
 
     def build_metadata_filter_generator(
@@ -230,15 +193,10 @@ class JobRequest(SQLRequestWrapper):
         return self.quick_filter_generator(
             table=Metadata,
             columns=metadata,
-            column_creator=lambda col_name: func.max(
-                case(
-                    (
-                        ope.eq(
-                            Metadata.key, self.column_name_cleaner(col_name)
-                        ),
-                        Metadata.value,
-                    ),
-                    else_=None,
-                )
-            ).label(col_name + self.metadata_suffix),
+            column_creator=self.quick_column_creator(
+                label_col=Metadata.key,
+                value_col=Metadata.value,
+                suffix_name="metadata",
+                else_value=None,
+            ),
         )
