@@ -122,7 +122,7 @@ class FilterPart:
             "comp_operator": None,
             "comp_value": None,
             "logic_operator": None,
-            "parenthesis": None,
+            "parenthesis": "",
         }
 
         split_string = unformatted_string.split(separator)
@@ -361,9 +361,10 @@ class FilterPart:
         - ')' to close parenthesis
         - '(' to open parenthesis
         - ')(' to close last parenthesis and open a new one"""
-        if string == "":
-            return
-        if string == ")":
+        if not string:
+            self.start_parenthesis = False
+            self.close_parenthesis = True
+        elif string == ")":
             self.start_parenthesis = False
             self.close_parenthesis = True
         elif string == "(":
@@ -375,11 +376,10 @@ class FilterPart:
         else:
             if self.logger:
                 self.logger.error(
-                    "Can parse parenthesis ('%s') in '%s'",
+                    "Can not parse parenthesis ('%s') in '%s'",
                     string,
                     self.unformatted_string,
                 )
-            return
 
     # --- Parenthesis ---
     # --- --- Utils --- ---
