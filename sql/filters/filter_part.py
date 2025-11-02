@@ -83,8 +83,8 @@ class FilterPart:
         :param string_formater: : A callable that ensure correct string formatting for column name usage.
         :param separator: used in unformatted_string as separator for each field
         :param logger: A logger to display execution information
-        :param generate_column_using: A command that allow column generation when a string
-         is not in string_to_columns. Will modify string_to_columns.
+        :param generate_column_using: A command that allow column generation when a column name
+         is not inside. string_to_columns. Will modify string_to_columns.
         """
 
         # Attributes without properties:
