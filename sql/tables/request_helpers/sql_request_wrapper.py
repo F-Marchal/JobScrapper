@@ -77,6 +77,17 @@ class SQLRequestWrapper:
         """Returns a copy of self._suffixes"""
         return self._suffixes.copy()
 
+    def set_suffixes(self, **suffixes: str):
+        """Set suffixes inside self.suffixes. suffix_name=suffix"""
+        for suffix_name, suffix in suffixes.items():
+            self._suffixes[suffix_name] = suffix
+
+    def get_suffix(self, suffix_name: str) -> str:
+        """Returns a suffix name contained inside self.suffixes. if this suffix does not exist : returns ''."""
+        if suffix_name in self.suffixes:
+            return self._suffixes[suffix_name]
+        return ""
+
     @classmethod
     def sql_display_query(cls, query: Query) -> None:
         """
@@ -107,17 +118,6 @@ class SQLRequestWrapper:
             query.statement.compile(compile_kwargs={"literal_binds": True})
         )
 
-    def set_suffixes(self, **suffixes: str):
-        """Set suffixes inside self.suffixes. suffix_name=suffix"""
-        for suffix_name, suffix in suffixes.items():
-            self._suffixes[suffix_name] = suffix
-
-    def get_suffix(self, suffix_name: str) -> str:
-        """Returns a suffix name contained inside self.suffixes. if this suffix does not exist : returns ''."""
-        if suffix_name in self.suffixes:
-            return self._suffixes[suffix_name]
-        return ""
-
     def sql_execute_query(self, session: Session, query: Query) -> Result:
         """Execute a query object on a session and log the Query"""
         if self.logger:
@@ -136,7 +136,7 @@ class SQLRequestWrapper:
         table: Type[BaseTable],
         column_creator: Callable[[str], ColumnElement] | None = None,
         columns: list[str] | None = None,
-        fill_none_columns: bool = True,
+        fill_none_columns: bool = False,
     ) -> FilterGenerator:
         """Quicly generate a FilterGenerator for a Table."""
         if columns is None:
