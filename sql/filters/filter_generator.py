@@ -1,6 +1,6 @@
 from typing import Union
 
-from sqlalchemy import or_, true
+from sqlalchemy import true
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.orm import Query
 from sqlalchemy.sql.elements import ClauseElement, ColumnElement
@@ -18,7 +18,7 @@ class FilterGenerator:
         self,
         commands: list[FilterPart],
     ):
-        self.filters: None | ClauseElement = None
+        self.filters: None | ColumnElement = None
         self.columns: list[ColumnElement] = []
         self._parse_init(commands)
 
@@ -155,11 +155,11 @@ class FilterGenerator:
         return prev_command, i
 
     @property
-    def safe_filters(self) -> ClauseElement:
+    def safe_filters(self) -> ColumnElement:
         """Return the filter build inside this FilterGenerator. If no filter has been
         built, a filter always True is returned."""
         if self.filters is None:
-            return or_(true(), true())
+            return true()
         return self.filters
 
     def __str__(self):
