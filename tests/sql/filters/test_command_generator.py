@@ -120,3 +120,23 @@ class TestFilterGenerator(BaseTest):
         self.screen_var("fg", fg)
 
         assert str(fg) == expected
+
+
+    def test_column_selection(self):
+        qf = [
+            quick_filter("url::>=::5"), # Column should contain well formated FilterParts
+            quick_filter("field"), # Column should contain well formated FilterParts
+            quick_filter("contract::"), # Column should try to contain wrong formated FilterParts
+            quick_filter(""),
+        ]
+        self.screen_multiple_vars("qf", *qf)
+
+        fg = FilterGenerator(qf)
+        self.screen_var("fg", fg)
+
+        assert fg.filter_parts == qf
+        assert len(fg.columns) == 3
+
+
+
+
