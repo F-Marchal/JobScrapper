@@ -44,12 +44,31 @@ class JobRequest(SQLRequestWrapper):
         :param order_by: A list of column name (form Tables or generated during the request) that should order
             the result.
         """
+
+        # Small security to ensure correct suffixes setup
+        mandatory_suffixes = {
+            "time_stamp",
+            "metadata",
+            "keyword",
+            "distance",
+        }
+        if not mandatory_suffixes.issubset(set(self.suffixes)):
+            raise KeyError(
+                "Missing suffixes in self.suffixes"
+                f"\nself={self}"
+                f"\nself.suffixes{self.suffixes}"
+                f"\nexpected={mandatory_suffixes}"
+        )
+
+
         # Parse inputs
         job_filter = self.build_jobs_filter_generator(columns)
         distance_filter = self.build_distance_filter_generator(distances_from)
         keywords_filter = self.build_keywords_filter_generator(keywords)
         time_filter = self.build_time_stamp_filter_generator(time_stamp)
         metadata_filter = self.build_metadata_filter_generator(metadata)
+
+        self.logger.info(time_filter.columns)
 
         all_cols: list[ColumnElement] = [
             *job_filter.columns,
@@ -59,17 +78,17 @@ class JobRequest(SQLRequestWrapper):
             *metadata_filter.columns,
         ]
 
-        order_by_cols = self._build_request_order_by(all_cols, order_by)
+        order_by_cols = self.build_request_order_by(all_cols, order_by)
 
         query = (
-            session.query(*all_cols)
+            session.query(*order_by_cols)
             .join(Keywords, ope.eq(Keywords.url, Jobs.url))
             .join(
                 Distances,
-                ope.eq(Distances.job_localisation == Jobs.localisation),
+                ope.eq(Distances.job_localisation , Jobs.localisation),
             )
-            .join(TimeStamps, ope.eq(TimeStamps.url == Jobs.url))
-            .join(Metadata, ope.eq(Metadata.url == Jobs.url))
+            .join(TimeStamps, ope.eq(TimeStamps.url , Jobs.url))
+            .join(Metadata, ope.eq(Metadata.url , Jobs.url))
             .where(job_filter.safe_filters)
             .group_by(Jobs.url)
             .having(
@@ -84,7 +103,7 @@ class JobRequest(SQLRequestWrapper):
         )
         return query
 
-    def _build_request_order_by(
+    def build_request_order_by(
         self,
         all_cols: list[ColumnElement],
         order_by: list[str] | None = None,
@@ -97,23 +116,18 @@ class JobRequest(SQLRequestWrapper):
         :return list[ColumnElement]: A list of ColumnElements ordered using column names inside <all_cols>.
         """
         if order_by is None:
-            return []
+            return all_cols[:]
 
         order = {
-            self.column_label_value_normaliser(col_n): i
+            self.column_name_normaliser(col_n): i
             for i, col_n in enumerate(order_by)
         }
-        result = []
-        for col in all_cols[:]:
-            col_name = self.column_label_value_normaliser(col.name)
-            if col_name not in order:
-                continue
 
-            all_cols.remove(col)
-            all_cols.insert(order[col_name], col)
-            result.append(col)
+        return sorted(
+            all_cols,
+            key=lambda col: order.get(self.column_name_normaliser(col.name), len(order))
+        )
 
-        return result
 
     def build_jobs_filter_generator(self, columns: list[str] | None):
         """
@@ -140,7 +154,7 @@ class JobRequest(SQLRequestWrapper):
             column_creator=self.quick_column_creator(
                 label_col=Distances.reference_localisation,
                 value_col=Distances.distance,
-                suffix_name="distances",
+                suffix_name="distance",
                 else_value=None,
             ),
         )
@@ -159,7 +173,7 @@ class JobRequest(SQLRequestWrapper):
             column_creator=self.quick_column_creator(
                 label_col=Keywords.keyword,
                 value_col=Keywords.occurrence,
-                suffix_name="keywords",
+                suffix_name="keyword",
                 else_value=None,
             ),
         )
@@ -178,7 +192,7 @@ class JobRequest(SQLRequestWrapper):
             column_creator=self.quick_column_creator(
                 label_col=TimeStamps.label,
                 value_col=TimeStamps.time_stamp,
-                suffix_name="time_tamps",
+                suffix_name="time_stamp",
                 else_value=None,
             ),
         )

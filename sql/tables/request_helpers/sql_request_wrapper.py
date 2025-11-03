@@ -163,6 +163,7 @@ class SQLRequestWrapper:
             to the label to generate the label of the ColumnElement.
         :return:
         """
+        selected_suffix = self.get_suffix(suffix_name)
         return lambda col_name: func.max(
             case(
                 (
@@ -173,5 +174,7 @@ class SQLRequestWrapper:
                 ),
                 else_=else_value,
             )
-        ).label(col_name + self.get_suffix(suffix_name))
+        ).label(col_name.removesuffix(selected_suffix) + selected_suffix)
+        # Ugly way to ensure that the suffix is at the ↑
+        # end of the label with no repetition          ↑
     # --- --- main body --- ---
