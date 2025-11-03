@@ -91,6 +91,14 @@ class TestFilterPart(BaseTest):
         assert fp.start_parenthesis is False
         assert fp.close_parenthesis is False
 
+        fp.set_parenthesis(")(")
+        assert fp.start_parenthesis is True
+        assert fp.close_parenthesis is True
+
+        fp.set_parenthesis("")
+        assert fp.start_parenthesis is False
+        assert fp.close_parenthesis is False
+
     # pylint: disable=R0913,R0917
     @pytest.mark.parametrize(
         "raw_string, column_name, comp_op, comp_value, logic_op, open_, close",

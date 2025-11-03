@@ -156,6 +156,7 @@ class FilterPart:
                         self.logger.error(
                             "Invalid format : '%s'. Only the first parti will be used (as column name).\n"
                             "%s",
+                            unformatted_string,
                             self.format_help,
                         )
                     result["str_column"] = column
@@ -197,7 +198,7 @@ class FilterPart:
                         " %s",
                         self.unformatted_string,
                         true_column_name,
-                        self.string_to_columns.keys(),
+                        list(self.string_to_columns.keys()),
                     )
                 self._str_column = ""
                 self._column = None
@@ -363,7 +364,7 @@ class FilterPart:
         - ')(' to close last parenthesis and open a new one"""
         if not string:
             self.start_parenthesis = False
-            self.close_parenthesis = True
+            self.close_parenthesis = False
         elif string == ")":
             self.start_parenthesis = False
             self.close_parenthesis = True
