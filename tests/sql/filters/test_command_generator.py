@@ -7,8 +7,6 @@ from sql.filters.filter_generator import FilterGenerator
 from sql.filters.filter_part import FilterPart
 from sql.tables.jobs import Jobs
 from tests.conftest import BaseTest
-from tools.logger_core import CoreLogger
-
 
 #####################################
 #                UTILS              #
@@ -19,7 +17,7 @@ def quick_filter(string: str) -> FilterPart:
         string,
         string_to_columns=dict(Jobs.get_columns_using_sql_name()),
         string_formater=lambda s: s.lower(),
-        logger=CoreLogger.logger,
+        logger=BaseTest.icl.logger,
     )
 
 

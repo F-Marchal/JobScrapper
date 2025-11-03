@@ -8,7 +8,7 @@ from inspect import getfile
 
 import pytest
 from tools.variable_tracker import VariableTracker
-
+from tools.logger_core import CoreLogger
 
 def pytest_addoption(parser):
     """Add --keep-test-dir option to keep  test folder even when they succeed"""
@@ -41,6 +41,8 @@ class BaseTest:
 
     In addition, a number of tool method are contained inside this class.
     """
+    icl = CoreLogger
+    enable_icl = True
 
     @property
     def get_test_folder_parent(self) -> str:
@@ -109,6 +111,20 @@ class BaseTest:
         # ---- Process work dir ----
 
         return self.test_folder
+
+    @pytest.fixture(autouse=True)
+    # pylint: disable=W0201
+    # I can not define this attributes in an __init__ !
+    def redirect_logs_to_tempdir(self, _setup_tempdir):
+        self.test_logs =  f"{_setup_tempdir}/logs.log"
+        if not self.enable_icl:
+            yield self.test_logs
+            return
+
+        with open(self.test_logs, "w") as lof:
+
+            with self.icl.redirect_logs_to_file(lof, level="DEBUG"):
+                yield self.test_logs
 
     # ---- ---- Screening ---- ----
     def screen_var(self, name: str, obj: typing.Any) -> None:

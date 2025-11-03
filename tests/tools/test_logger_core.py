@@ -9,6 +9,7 @@ from tools.logger_core import (
 @pytest.mark.logs
 class TestCoreLogger(BaseTest):
     """Test CoreLogger main functionalities."""
+    enable_icl = False
 
     @pytest.fixture
     def cl(self):

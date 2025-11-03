@@ -9,6 +9,7 @@ from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
 @pytest.mark.job_core
 class TestScrapperSQLightCore(BaseTest):
     """Test ScrapperSQLightCore main functionalities."""
+    icl = ScrapperSQLightCore
 
     @pytest.fixture(autouse=True)
     def _redirect_logs(self, _setup_tempdir):

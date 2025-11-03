@@ -9,6 +9,7 @@ from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore, time
 @pytest.mark.job_core
 class TestScrapperObjectCore(BaseTest):
     """Test ScrapperObjectCore main functionalities."""
+    icl = ScrapperObjectCore
 
     # --- --- --- --- Attributes managements --- --- --- ----
     @pytest.mark.parametrize(
