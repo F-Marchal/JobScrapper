@@ -190,15 +190,16 @@ class FilterPart:
             try:
                 self._generate_new_column(column_name)
                 self.str_column = column_name
-            except AttributeError:
+            except AttributeError as ae:
                 print("BOOM", self.logger)
                 if self.logger:
                     self.logger.error(
                         "Can not process '%s' (column='%s'). Invalid format. Please use one of"
-                        " %s",
+                        " %s\nColumn generator message : %s",
                         self.unformatted_string,
                         true_column_name,
                         list(self.string_to_columns.keys()),
+                        ae
                     )
                 self._str_column = ""
                 self._column = None
