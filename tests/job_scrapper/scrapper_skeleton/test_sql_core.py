@@ -2,7 +2,6 @@ import os
 
 import pytest
 from tests.conftest import BaseTest
-
 from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
 
 
@@ -11,14 +10,68 @@ class TestScrapperSQLightCore(BaseTest):
     """Test ScrapperSQLightCore main functionalities."""
     icl = ScrapperSQLightCore
 
-    @pytest.fixture(autouse=True)
-    def _redirect_logs(self, _setup_tempdir):
-        path = os.path.join(self.test_folder, "scrapper.logs")
-        with open(path, "w", encoding="UTF8") as f :
-            with ScrapperSQLightCore.redirect_logs_to_file( f , level="DEBUG"):
-                yield path
+    def test_to_job_entry(self):
+        ssc = self._generate_a_test_ssc()
+        entry = ssc.to_job_entry()
 
+        assert entry.url == ssc.url
+        assert entry.title == ssc.title
+        assert entry.localisation == ssc.localisation
+        assert entry.contract == ssc.contract_type
+        assert entry.field == ssc.field
+        assert entry.origin == ssc.get_class_name()
 
+    def test_to_metadata_entries(self):
+        ssc = self._generate_a_test_ssc()
+        entries = ssc.to_metadata_entries()
+
+        self.screen_multiple_vars("entry", *entries)
+        entry_d = {ent.key : ent.value for ent in entries}
+        assert entry_d == ssc.metadata
+
+    def test_to_keywords_entries(self):  # IA generated from test_to_metadata_entries
+        ssc = self._generate_a_test_ssc()
+        entries = ssc.to_keywords_entries()
+
+        self.screen_multiple_vars("entry", *entries)
+        entry_d = {ent.keyword: (ent.occurrence if ent.occurrence is not None else -1)
+                   for ent in entries}
+        assert entry_d == ssc.keywords
+
+    def test_to_time_stamps_entries(self):  # IA generated from test_to_metadata_entries
+        ssc = self._generate_a_test_ssc()
+        entries = ssc.to_time_stamps_entries()
+
+        self.screen_multiple_vars("entry", *entries)
+        entry_d = {
+            ent.label: ent.time_stamp.timetuple()
+            for ent in entries
+        }
+
+        # Compare struct_time values (tm_year, tm_mon, etc.)
+        expected = ssc.time_stamps
+        for label, t_struct in expected.items():
+            e_time = entry_d[label]
+            assert (
+                    e_time.tm_year == t_struct.tm_year and
+                    e_time.tm_mon == t_struct.tm_mon and
+                    e_time.tm_mday == t_struct.tm_mday and
+                    e_time.tm_hour == t_struct.tm_hour and
+                    e_time.tm_min == t_struct.tm_min and
+                    e_time.tm_sec == t_struct.tm_sec
+            )
+
+    def test_to_distances_entries(self): # IA generated from test_to_metadata_entries
+        ssc = self._generate_a_test_ssc()
+        entries = ssc.to_distances_entries()
+
+        self.screen_multiple_vars("entry", *entries)
+        entry_d = {
+            ent.reference_localisation:
+                (ent.distance if ent.distance is not None else -1)
+            for ent in entries
+        }
+        assert entry_d == ssc.distances
 
     def test_class_variable(self):
         """Ensure that table names can be used as table name in sqlite."""
@@ -126,4 +179,7 @@ class TestScrapperSQLightCore(BaseTest):
         assert ssc2_b == ssc2_a
         assert ssc3_b == ssc3_a
 
+    def test_job_requester(self):
+        """job_requester is tested inside its own file :
+        tests/sql/tables/request_helpers/test_job_request.py"""
 
