@@ -1,5 +1,5 @@
 from logging import Logger
-from typing import Any, Callable, Type
+from typing import Any, Callable, Type, Generator
 
 from sqlalchemy import Column, ColumnElement, Result, case, func
 
@@ -88,27 +88,20 @@ class SQLRequestWrapper:
             return self._suffixes[suffix_name]
         return ""
     # --- --- Attrs --- ---
-
+    # --- --- utils --- ---
     @classmethod
-    def sql_display_query(cls, query: Query) -> None:
+    def result_to_flat_file_generator(cls, result: Result, sep="\t") -> Generator[str, None, None]:
         """
-        Display a Query result in the terminal.
+        Returns a generator of string that describe how
+        the content of the query :
+        "col1 col2 col3"
+        "val1 val2 val3"
+        "val4 val5 val6"
+        ...
         """
-        first = True
-        for row in query.all():
-            if first:
-                row.mapping.keys()
-                first = False
-            print(row)
-
-    @classmethod
-    def sql_display_result(cls, result: Result, sep="\t") -> None:
-        """
-        Display a Result in the terminal.
-        """
-        print(sep.join(result.keys()))
+        yield sep.join(result.keys())
         for lines in result:
-            print(sep.join([str(l) for l in lines]))
+            yield sep.join([str(l) for l in lines])
 
     @classmethod
     def compile_query(cls, query: Query) -> str:
@@ -118,7 +111,8 @@ class SQLRequestWrapper:
         return str(
             query.statement.compile(compile_kwargs={"literal_binds": True})
         )
-
+    # --- --- utils --- ---
+    # --- --- main body --- ---
     def build_request(
         self,
         session: Session,
@@ -180,3 +174,4 @@ class SQLRequestWrapper:
                 else_=else_value,
             )
         ).label(col_name + self.get_suffix(suffix_name))
+    # --- --- main body --- ---
