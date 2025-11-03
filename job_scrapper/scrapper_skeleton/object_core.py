@@ -35,8 +35,8 @@ class ScrapperObjectCore(CoreLogger):
     
     distance_suffix = " (km)"
     keyword_suffix = " (#)"
-    time_stamp_suffix = " (Y-M-D H:M:S)"
-    metadata_suffix = " (Met)"
+    time_stamp_suffix = " (date)"
+    metadata_suffix = " (met)"
     init_time_stamp_name = "Last sighting" # Should be a clean_string() output.
 
 
@@ -361,8 +361,8 @@ class ScrapperObjectCore(CoreLogger):
 
     # --- --- --- --- Utils --- --- ---
     # --- --- --- --- Attributes managements --- --- --- ----
-    @staticmethod
-    def clean_string(string: str | None) -> str | None:
+    @classmethod
+    def clean_string(cls, string: str | None, keep_suffix: bool=False) -> str | None:
         """
         Clean a string to make it safe to use as filename.
         - Transform \s cars to spaces
@@ -370,12 +370,27 @@ class ScrapperObjectCore(CoreLogger):
         - Remove invalid filename characters
         - Replace underscores with spaces
         - Remove consecutive spaces
+        - Remove suffixes defined in this class
 
         :param string: A string that should be cleaned
+        :param keep_suffix: if True, suffixes wil not be trim out of the string.
         :return str: The cleaned and filename-safe string
         """
         if string is None:
             return ""
+
+        # Ensure that no suffix are allowed at the end of the string.
+        # suffixes are test to pass clean_string(keep_suffix=False)
+        if not keep_suffix:
+            suffix_pattern = (
+                f"({re.escape(cls.keyword_suffix)}|"
+                f"{re.escape(cls.distance_suffix)}|"
+                f"{re.escape(cls.metadata_suffix)}|"
+                f"{re.escape(cls.time_stamp_suffix)})$"
+            )
+
+            while re.search(suffix_pattern, string):
+                string = re.sub(suffix_pattern, "", string).strip().strip('_')
 
         # replace è, ê, è, ô... by e, o...
         string = unicodedata.normalize('NFD', string)
@@ -530,7 +545,7 @@ class ScrapperObjectCore(CoreLogger):
         if "|" in value:
             raise ValueError("No pipe ('|') allowed as metadata value.")
 
-        name = self.clean_string(name.removesuffix(self.metadata_suffix))
+        name = self.clean_string(name)
         value = re.sub(r'\s+', '_', value)
         value = re.sub(r'_+', '_', value)
 
@@ -538,19 +553,19 @@ class ScrapperObjectCore(CoreLogger):
 
     def remove_metadata(self, name: str):
         """Delete a metadata attached to this job offer."""
-        name = self.clean_string(name.removesuffix(self.metadata_suffix))
+        name = self.clean_string(name)
         if name in self._metadata:
             del self._metadata[name]
 
     def retrieve_metadata(self, name: str) -> str:
         """Retrieve an entry inside this job metadata"""
-        name = self.clean_string(name.removesuffix(self.metadata_suffix))
+        name = self.clean_string(name)
         return self._metadata[name]
 
 
     def metadata_exist(self, name: str) -> bool:
         """Says if a metadata with the same <name> is defined in <self.metadata>"""
-        return self.clean_string(name.removesuffix(self.metadata_suffix)) in self._metadata
+        return self.clean_string(name) in self._metadata
 
     # --- --- time_stamps --- ----
     @property
@@ -561,12 +576,12 @@ class ScrapperObjectCore(CoreLogger):
     def add_time_stamps(self, name: str, value: time.struct_time):
         """Add an entry inside this job time stamps
         If <name> contains <self.time_stamp_suffix> as suffix it will be removed"""
-        name = self.clean_string(name.removesuffix(self.time_stamp_suffix))
+        name = self.clean_string(name)
         self._time_stamps[name] = value
 
     def remove_time_stamps(self, name: str):
         """Delete a time stamp from the list of known time stamps."""
-        name = self.clean_string(name.removesuffix(self.time_stamp_suffix))
+        name = self.clean_string(name)
 
         if name == self.init_time_stamp_name:
             raise ValueError(f"'{self.init_time_stamp_name}' can not be removed from time stamps !")
@@ -577,13 +592,13 @@ class ScrapperObjectCore(CoreLogger):
     def retrieve_time_stamps(self, name: str) -> time.struct_time:
         """Retrieve an entry inside this job time stamps
         If <name> contains <self.time_stamp_suffix> as suffix it will be removed"""
-        name = self.clean_string(name.removesuffix(self.time_stamp_suffix))
+        name = self.clean_string(name)
         return self._time_stamps[name]
 
     def time_stamps_exist(self, name: str) -> bool:
         """Says if a time stamp with the same <name> is defined in <self.time_stamps>
         If <name> contains <self.time_stamp_suffix> as suffix it will be removed"""
-        return self.clean_string(name.removesuffix(self.time_stamp_suffix)) in self._time_stamps
+        return self.clean_string(name) in self._time_stamps
 
     # --- --- distances --- ----
     @property
@@ -596,26 +611,26 @@ class ScrapperObjectCore(CoreLogger):
     def add_distance_to(self, place: str, distance: float):
         """Add a distances that separate this offer from a <place>.
          If <place> contains <self.distance_suffix> as suffix it will be removed"""
-        place = self.clean_string(place.removesuffix(self.distance_suffix))
+        place = self.clean_string(place)
         self._distances[place] = float(distance)
 
     def remove_distance_to(self, place: str):
         """Delete a place from the list known places in the distance dictionary."""
-        place = self.clean_string(place.removesuffix(self.distance_suffix))
+        place = self.clean_string(place)
         if place in self._distances:
             del self._distances[place]
 
     def retrieve_distance_to(self, place: str) -> float:
         """Retrieves distances that separate this offer from a <place>.
          If <place> contains <self.distance_suffix> as suffix it will be removed"""
-        place = self.clean_string(place.removesuffix(self.distance_suffix))
+        place = self.clean_string(place)
         return self._distances[place]
 
     def distance_to_exist(self, place: str, default_value_do_not_count: bool=True) -> bool:
         """Says if the distance that separate self.localisation and a <place>
         is defined in <self._distances>
          If <place> contains <self.distance_suffix> as suffix it will be removed"""
-        place = self.clean_string(place.removesuffix(self.distance_suffix))
+        place = self.clean_string(place)
         if default_value_do_not_count:
             return place in self._distances and self._distances[place] != -1
         return place in self._distances
@@ -631,25 +646,25 @@ class ScrapperObjectCore(CoreLogger):
     def add_keyword_count(self, keyword: str, count: int):
         """Add the number or occurrences of a keyword in job offer
          If <keyword> contains <self.keyword_suffix> as suffix it will be removed"""
-        keyword = self.clean_string(keyword.removesuffix(self.keyword_suffix))
+        keyword = self.clean_string(keyword)
         self._keywords[keyword] = int(count)
 
     def remove_keyword_count(self, keyword: str):
         """Delete keyword from the list of known keywords attached to this job offer."""
-        keyword = self.clean_string(keyword.removesuffix(self.keyword_suffix))
+        keyword = self.clean_string(keyword)
         if keyword in self._keywords:
             del self._keywords[keyword]
 
     def retrieve_keyword_count(self, keyword: str) -> int:
         """Retrieve the number or occurrences of a keyword in job offer
          If <keyword> contains <self.keyword_suffix> as suffix it will be removed"""
-        keyword = self.clean_string(keyword.removesuffix(self.keyword_suffix))
+        keyword = self.clean_string(keyword)
         return self._keywords[keyword]
 
     def keyword_exist(self, keyword: str, default_value_do_not_count: bool=True) -> bool:
         """Says if the number of occurrence contained in this offer is known.
         If <keyword> contains <self.keyword_suffix> as suffix it will be removed"""
-        keyword = self.clean_string(keyword.removesuffix(self.keyword_suffix))
+        keyword = self.clean_string(keyword)
         if default_value_do_not_count:
             return keyword in self._keywords and self._keywords[keyword] != -1
         return keyword in self._keywords

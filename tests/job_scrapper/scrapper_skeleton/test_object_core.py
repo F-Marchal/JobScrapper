@@ -34,6 +34,19 @@ class TestScrapperObjectCore(BaseTest):
 
         assert cleaned_input == expected
 
+    @pytest.mark.parametrize(
+        "suffix",
+        [
+            ScrapperObjectCore.distance_suffix,
+            ScrapperObjectCore.keyword_suffix,
+            ScrapperObjectCore.time_stamp_suffix,
+            ScrapperObjectCore.metadata_suffix
+        ],
+    )
+    def test_suffixes(self, suffix):
+        assert ScrapperObjectCore.clean_string(suffix, keep_suffix=True) == suffix.strip().strip("_")
+        assert ScrapperObjectCore.clean_string(suffix, keep_suffix=False) == ""
+
     def test_initialization_and_properties_default(self):
         """
         Test minimal initialisation of a ScrapperObjectCore
