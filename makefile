@@ -25,11 +25,12 @@ scrap-sfbi: ; $(CMD)
 
 full_scraping: $(addprefix scrap-,$(ORGS))
 
+FOLDER ?= ./job_scrapper
 cleancode:
-	poetry run black ./job_scrapper/ # Refomate code
-	poetry run isort  ./job_scrapper/  # Sort dependances
-	poetry run mypy  ./job_scrapper/  # statick typing
-	poetry run pylint  ./job_scrapper/  # Coding Standard
+	poetry run black $(FOLDER) # Refomate code
+	poetry run isort  $(FOLDER)  # Sort dependances
+	poetry run mypy  $(FOLDER)  # statick typing
+	poetry run pylint  $(FOLDER)  # Coding Standard
 
 cleantestcode:
 	poetry run black ./tests/ # Refomate code

@@ -1,6 +1,5 @@
 import os.path
 import time
-from datetime import datetime
 
 import click
 import cloup
@@ -79,46 +78,46 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
     # --- Log---
     JobScrapperSkeleton.logger.debug("CLI : %s", locals())
 
-
+'''
 # --- --- --- Database --- --- ---
 @cli.group()
 def database():
     """A small set of command that can be used to interact with the database."""
-    if not os.path.exists(JobScrapperSkeleton.get_database_path()):
+    if not os.path.exists(JobScrapperSkeleton.get_maindb_path()):
         JobScrapperSkeleton.logger.critical(
             "Can not find the database ('%s'). "
             "Please run `job-scrapper scrap [target]` at least once to create it.",
-            JobScrapperSkeleton.get_database_path()
+            JobScrapperSkeleton.get_maindb_path()
         )
         exit(1)
 
 @database.command()
 def job_columns():
     """Display each column of the 'job' table."""
-    for col in JobScrapperSkeleton.get_sql_job_columns():
+    for col in JobScrapperSkeleton.get_sql_column_jobs_table():
         print(col)
 
 @database.command()
 def tables_names():
     """Displays each table's names in the database"""
-    for names in JobScrapperSkeleton.sql_table_names():
+    for names in JobScrapperSkeleton.get_sql_table_names():
         print(names)
 
 @database.command()
 @click.argument(
     "table",
-    type=click.Choice(list(JobScrapperSkeleton.sql_table_names()), case_sensitive=True),
+    type=click.Choice(list(JobScrapperSkeleton.get_sql_table_names()), case_sensitive=True),
 )
 def table_columns(table):
     """Displays columns names attached to a table."""
-    for vals in JobScrapperSkeleton.sql_table_column_name(table):
+    for vals in JobScrapperSkeleton.get_sql_table_column_name(table):
         print(vals)
 
 @database.command()
 @click.option(
     "-c", "--columns",
     multiple=True,
-    type=click.Choice(list(JobScrapperSkeleton.get_sql_job_columns()),
+    type=click.Choice(list(JobScrapperSkeleton.get_sql_column_jobs_table()),
                       case_sensitive=True),
     help=(
         "A list of column names. Each selected column will be displayed in the final result. "
@@ -266,11 +265,11 @@ def table_columns(table):
     "-b",
     "--before",
     type=click.DateTime(formats=["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]),
-    default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    default=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
     show_default=True,
     help="A date format 'YYYY-MM-JJ' or 'YYYY-MM-JJ HH:MM:SS' Ensure that returned values comes from "
     "job that hava a time stamp older (>=) than this date. Meaning that this job offer has been seen "
-    f"on a website before this date. Default is now ('{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}')."
+    f"on a website before this date. Default is now ('{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}')."
 )
 
 @click.option(
@@ -313,8 +312,8 @@ def request(
         time_stamp=time_stamps,
         order_by=order_by,
         distance_relax=distance_relax,
-        after=after,
-        before=before,
+        after=after.utctimetuple(), # time_struct conversion
+        before=before.utctimetuple(), # time_struct conversion
         origin_blacklist=origin_blacklist,
         origin_whitelist=origin_whitelist,
         field_blacklist=field_blacklist,
@@ -325,7 +324,7 @@ def request(
         title_whitelist=title_whitelist,
     )
     JobScrapperSkeleton.sql_run_display_command(command, *args, file=file, display=not no_display)
-
+'''
 
 # --- --- --- SCRAP group --- --- ---
 @cli.group()
