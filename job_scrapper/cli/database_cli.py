@@ -1,6 +1,10 @@
-'''
-# --- --- --- Database --- --- ---
-@cli.group()
+import click
+import cloup
+from job_scrapper import JobScrapperSkeleton
+import os
+import json
+
+@cloup.group()
 def database():
     """A small set of command that can be used to interact with the database."""
     if not os.path.exists(JobScrapperSkeleton.get_maindb_path()):
@@ -12,27 +16,108 @@ def database():
         exit(1)
 
 @database.command()
-def job_columns():
-    """Display each column of the 'job' table."""
-    for col in JobScrapperSkeleton.get_sql_column_jobs_table():
-        print(col)
-
-@database.command()
 def tables_names():
     """Displays each table's names in the database"""
-    for names in JobScrapperSkeleton.get_sql_table_names():
+    for names in JobScrapperSkeleton.get_tables():
         print(names)
 
 @database.command()
-@click.argument(
+@cloup.argument(
     "table",
-    type=click.Choice(list(JobScrapperSkeleton.get_sql_table_names()), case_sensitive=True),
+    type=click.Choice(list(JobScrapperSkeleton.get_tables()), case_sensitive=True),
 )
 def table_columns(table):
     """Displays columns names attached to a table."""
-    for vals in JobScrapperSkeleton.get_sql_table_column_name(table):
-        print(vals)
+    all_tables = JobScrapperSkeleton.get_tables()
+    if table not in all_tables:
+        print(table, "is unknown. please use one of :", all_tables)
+        exit(1)
+    selected_table = all_tables[table]
 
+    for col_names in selected_table.get_columns_using_sql_name():
+        print(col_names)
+
+@database.command()
+@cloup.argument(
+    "table",
+    type=click.Choice(list(JobScrapperSkeleton.get_tables()), case_sensitive=True),
+)
+@cloup.argument(
+    "column_name",
+    type=str,
+)
+def describe_column(table, column_name):
+    # TODO: Displace in BaseTable
+    column_name = JobScrapperSkeleton.column_name_normaliser(column_name)
+    all_tables = JobScrapperSkeleton.get_tables()
+    if table not in all_tables:
+        print(table, "is unknown. please use one of :", all_tables)
+        exit(1)
+    selected_table = all_tables[table]
+
+    all_cols = selected_table.get_columns_using_sql_name()
+    if column_name not in all_cols:
+        print(column_name, f"is not a column of '{table}'. please use one of :", all_cols)
+
+    col = all_cols[column_name]
+
+    info = {
+        "name": col.name,
+        "type": str(col.type),
+        "nullable": col.nullable,
+        "primary_key": col.primary_key,
+        "default": str(col.default.arg) if col.default is not None else None,
+        "foreign_keys": [],
+        "check_constraints": [],
+        "table_constraints": [],
+        "indexes": []
+    }
+
+    # Foreign keys
+    for fk in col.foreign_keys:
+        info["foreign_keys"].append({
+            "constraint": str(fk.constraint),
+            "target": fk.target_fullname
+        })
+
+    # Column-level check constraints
+    for constr in col.constraints:
+        info["check_constraints"].append(str(constr))
+
+    # Table-level constraints involving this column
+    for constr in table.constraints:
+        if col.name in [c.name for c in constr.columns]:
+            info["table_constraints"].append(str(constr))
+
+    # Indexes involving this column
+    for idx in table.indexes:
+        if col.name in [c.name for c in idx.columns]:
+            info["indexes"].append({
+                "name": idx.name,
+                "columns": [c.name for c in idx.columns]
+            })
+
+    print(json.dumps(info, indent=4))
+
+@database.command()
+def archive_url():
+    pass
+
+@database.command()
+def restore_url():
+    pass
+
+@database.command()
+def archive_during_request():
+    pass
+
+@database.command()
+def restore_archive_during_request():
+    pass
+
+def request_archive():
+    pass
+'''
 @database.command()
 @click.option(
     "-c", "--columns",
@@ -202,7 +287,7 @@ def table_columns(table):
     "--no-display",
     is_flag=True,
     help="Do not display the result.",
-)
+)'''
 def request(
     columns=None,
     distances_from=None,
@@ -224,7 +309,7 @@ def request(
     file=None,
     no_display=False,
 ):
-    command, args = JobScrapperSkeleton.sql_generate_command(
+    '''command, args = JobScrapperSkeleton.sql_generate_command(
         columns=columns,
         distances_from=distances_from,
         keywords=keywords,
@@ -243,5 +328,4 @@ def request(
         title_blacklist=title_blacklist,
         title_whitelist=title_whitelist,
     )
-    JobScrapperSkeleton.sql_run_display_command(command, *args, file=file, display=not no_display)
-'''
+    JobScrapperSkeleton.sql_run_display_command(command, *args, file=file, display=not no_display)'''

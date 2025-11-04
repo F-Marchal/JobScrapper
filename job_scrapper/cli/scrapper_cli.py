@@ -1,4 +1,5 @@
-from cli.cli_base import click, cloup
+import click
+import cloup
 
 from job_scrapper import (
     CHUMtpScrapper,
