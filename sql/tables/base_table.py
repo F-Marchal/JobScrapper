@@ -2,8 +2,7 @@ import os
 import traceback
 from contextlib import contextmanager
 from logging import Logger
-from typing import Any
-
+from typing import Any, Generator
 from sqlalchemy import create_engine
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import (
@@ -51,7 +50,7 @@ class BaseTable(Base):
 
     @classmethod
     @contextmanager
-    def get_session(cls, database_path: str, logger: Logger | None = None):
+    def get_session(cls, database_path: str, logger: Logger | None = None) -> Generator[Session, None, None]:
         """
         Yields a session connected to a database. The database is created if needed.
         When closed, the session is commit. This commit is sanitised using _sanitise_and_commit.
