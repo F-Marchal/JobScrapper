@@ -294,6 +294,21 @@ class TestJobRequest(BaseTest):
         if request_validator.unexpected_lines:
             assert not request_validator.unexpected_lines.issubset(result_set)
 
+    def test_column_name_compatibility(self):
+        """
+        Ensure that Jobs' columns name are compatible with column_name_normaliser().
+        If not we might have conflict during column request.
+        There is no need to verify other table since all of them are lookup table
+        and column's names will not be passed inside column_name_normaliser().
+        (Only values in the 'label' column will.)
+        """
+        job_requester = self.make_job_requester()
+        for col_names in Jobs.get_columns_using_sql_name().keys():
+            cleaned_name = job_requester.column_name_normaliser(col_names)
+            self.screen_var(f"cleaned_{col_names}", cleaned_name)
+
+            assert col_names == cleaned_name
+
     #################################
     #           Utils               #
     #################################
