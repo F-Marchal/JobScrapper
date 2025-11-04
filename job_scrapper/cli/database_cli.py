@@ -5,8 +5,10 @@ import os
 import json
 
 @cloup.group()
-def database():
+@cloup.pass_context
+def database(ctx):
     """A small set of command that can be used to interact with the database."""
+    JobScrapperSkeleton.set_workdir(ctx.obj["workdir"])
     if not os.path.exists(JobScrapperSkeleton.get_maindb_path()):
         JobScrapperSkeleton.logger.critical(
             "Can not find the database ('%s'). "

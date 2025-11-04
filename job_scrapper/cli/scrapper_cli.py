@@ -121,6 +121,7 @@ def scrap(
     More specific information like job distance to a certain place (--ref-places) or the number of occurrences of
     certain keyword can also be obtains (--keywords)."""
     JobScrapperSkeleton.logger.debug("Scrap : %s", locals())
+    JobScrapperSkeleton.set_workdir(ctx.obj["workdir"])
     ctx.obj["OptionsScrapperMain"] = {
         "localisations_to_search_json": ref_places,
         "keywords_to_search_json": keywords,
