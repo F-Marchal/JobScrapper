@@ -1,20 +1,23 @@
 import pytest
+from sqlalchemy import Column, Integer, String
+
+from sql.tables.base_table import BaseTable
 from sql.tables.request_helpers.sql_request_wrapper import SQLRequestWrapper
 from tests.conftest import BaseTest
-from sql.tables.base_table import BaseTable
-from sqlalchemy import Column, String, Integer
 from tools.logger_core import CoreLogger
 
 
 @pytest.mark.sqlalchemy_wrappers
 class TestSqlRequestWrapper(BaseTest):
+    """Test SqlRequestWrapper functionalities"""
+
     def test_suffixes(self):
         """Test Suffix related methods"""
 
         srw1 = SQLRequestWrapper()
         srw2 = SQLRequestWrapper(
             suffixes={"Alpha": "A", "Number": "#"},
-            column_name_normaliser=lambda string: string.lower()
+            column_name_normaliser=lambda string: string.lower(),
         )
 
         assert not srw1.suffixes
@@ -37,7 +40,7 @@ class TestSqlRequestWrapper(BaseTest):
         sql_rw = SQLRequestWrapper(
             column_name_normaliser=lambda string: string.title(),
             column_label_value_normaliser=lambda string: string.lower(),
-            logger=CoreLogger.logger
+            logger=CoreLogger.logger,
         )
         sql_rw.set_suffixes(
             default=" #",
@@ -46,17 +49,13 @@ class TestSqlRequestWrapper(BaseTest):
 
         filter_generator = sql_rw.quick_filter_generator(
             table=self.TestLookupTable,
-            columns=[
-                'Alpha',
-                "beta",
-                "Gamma"
-            ],
+            columns=["Alpha", "beta", "Gamma"],
             column_creator=sql_rw.quick_column_creator(
                 label_col=self.TestLookupTable.label,
                 value_col=self.TestLookupTable.value,
-                else_value = -1,
-                suffix_name = "default",
-            )
+                else_value=-1,
+                suffix_name="default",
+            ),
         )
         self.screen_var("filter_", filter_generator)
 
@@ -69,13 +68,14 @@ class TestSqlRequestWrapper(BaseTest):
             assert cols.name in ("Alpha #", "Beta #", "Gamma #")
 
         with self.TestLookupTable.get_session(db) as session:
-            query = session.query(
-                self.TestLookupTable.fk,
-                *filter_generator.columns
-            ).group_by(
-                self.TestLookupTable.fk
-            ).order_by(
-                self.TestLookupTable.fk,
+            query = (
+                session.query(
+                    self.TestLookupTable.fk, *filter_generator.columns
+                )
+                .group_by(self.TestLookupTable.fk)
+                .order_by(
+                    self.TestLookupTable.fk,
+                )
             )
             result = session.execute(query)
 
@@ -102,7 +102,7 @@ class TestSqlRequestWrapper(BaseTest):
         sql_rw = SQLRequestWrapper(
             column_name_normaliser=lambda string: string.title(),
             column_label_value_normaliser=lambda string: string.lower(),
-            logger=CoreLogger.logger
+            logger=CoreLogger.logger,
         )
         sql_rw.set_suffixes(
             default=" #",
@@ -111,17 +111,13 @@ class TestSqlRequestWrapper(BaseTest):
 
         filter_generator = sql_rw.quick_filter_generator(
             table=self.TestLookupTable,
-            columns=[
-                'Alpha::>=::5',
-                "beta",
-                "Gamma"
-            ],
+            columns=["Alpha::>=::5", "beta", "Gamma"],
             column_creator=sql_rw.quick_column_creator(
                 label_col=self.TestLookupTable.label,
                 value_col=self.TestLookupTable.value,
                 else_value=-1,
                 suffix_name="default",
-            )
+            ),
         )
         self.screen_var("filter_", filter_generator)
 
@@ -134,15 +130,15 @@ class TestSqlRequestWrapper(BaseTest):
             assert cols.name in ("Alpha #", "Beta #", "Gamma #")
 
         with self.TestLookupTable.get_session(db) as session:
-            query = session.query(
-                self.TestLookupTable.fk,
-                *filter_generator.columns
-            ).group_by(
-                self.TestLookupTable.fk
-            ).having(
-                filter_generator.filters
-            ).order_by(
-                self.TestLookupTable.fk,
+            query = (
+                session.query(
+                    self.TestLookupTable.fk, *filter_generator.columns
+                )
+                .group_by(self.TestLookupTable.fk)
+                .having(filter_generator.filters)
+                .order_by(
+                    self.TestLookupTable.fk,
+                )
             )
             result = session.execute(query)
 
@@ -156,6 +152,7 @@ class TestSqlRequestWrapper(BaseTest):
     #############################
     class TestLookupTable(BaseTable):
         """Small lookup table for test purposes"""
+
         __abstract__ = False
         __tablename__ = "TestLookupTable"
         fk = Column(Integer, primary_key=True, nullable=False)
@@ -175,78 +172,3 @@ class TestSqlRequestWrapper(BaseTest):
         self.screen_multiple_vars("TLT", *entries)
         with self.TestLookupTable.get_session(path) as s:
             s.add_all(entries)
-
-
-
-
-
-
-
-
-    '''@classmethod
-    def sql_display_query(cls, query: Query) -> None:
-        """
-        Display a Query result in the terminal.
-        """
-        first = True
-        for row in query.all():
-            if first:
-                print(row.mapping.keys())
-                first = False
-            print(row)
-
-    @classmethod
-    def sql_display_result(cls, result: Result, sep="\t") -> None:
-        """
-        Display a Result in the terminal.
-        """
-        print(sep.join(result.keys()))
-        for lines in result:
-            print(sep.join([str(l) for l in lines]))
-
-    @classmethod
-    def compile_query(cls, query: Query) -> str:
-        """
-        Compile a query object to a string.
-        """
-        return str(
-            query.statement.compile(compile_kwargs={"literal_binds": True})
-        )
-
-
-    def sql_execute_query(self, session: Session, query: Query) -> Result:
-        """Execute a query object on a session and log the Query"""
-        if self.logger:
-            self.logger.debug("SQL run  : \n%s", self.compile_query(query))
-        return session.execute(query)
-
-    def build_request(
-        self,
-        session: Session,
-    ) -> Query:
-        """Build wrapper's request"""
-        raise NotImplementedError
-
-    def quick_filter_generator(
-        self,
-        table: Type[BaseTable],
-        column_creator: Callable[[str], ColumnElement] | None = None,
-        columns: list[str] | None = None,
-        fill_none_columns: bool = True,
-    ) -> FilterGenerator:
-        """Quicly generate a FilterGenerator for a Table."""
-        if columns is None:
-            if fill_none_columns:
-                columns = list(table.get_columns_using_sql_name().keys())
-            else:
-                columns = []
-
-        fp = FilterPart.list_init(
-            table.get_columns_using_sql_name(),
-            *columns,
-            generate_column_using=column_creator,
-            logger=self.logger,
-        )
-
-        return FilterGenerator(fp)
-'''

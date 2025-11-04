@@ -1,24 +1,29 @@
+import datetime
+
+import pytest
+
 from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
 from sql.tables.request_helpers.job_request import JobRequest, Jobs
-import pytest
 from tests.conftest import BaseTest
-import datetime
 
 TSS = ScrapperSQLightCore.time_stamp_suffix
 MS = ScrapperSQLightCore.metadata_suffix
 KS = ScrapperSQLightCore.keyword_suffix
 DS = ScrapperSQLightCore.distance_suffix
 
+
 class RequestValidator:
     """Ease the definition of pytest.parametrize for test_complex_requests.
     Contains input values required by test_complex_requests."""
+
+    # pylint: disable=R0913,R0917
     def __init__(
-            self,
-            name: str,
-            request_dict: dict[str, list[str]],
-            expected_keys: set[str],
-            expected_lines: set[tuple],
-            unexpected_lines: set[tuple]
+        self,
+        name: str,
+        request_dict: dict[str, list[str]],
+        expected_keys: set[str],
+        expected_lines: set[tuple],
+        unexpected_lines: set[tuple],
     ):
         self.name = name
         self.request_dict = request_dict
@@ -29,94 +34,109 @@ class RequestValidator:
     def __str__(self):
         return self.name
 
+
 COLUMN_SUBSET_REQUEST = RequestValidator(
     name="COLUMN_SUBSET_REQUEST",
-    request_dict={
-        "columns": ["url", "field", "contract"]
+    request_dict={"columns": ["url", "field", "contract"]},
+    expected_keys={"url", "field", "contract"},
+    expected_lines={
+        ("https://ftt.fr", "Marketing", "FREELANCE"),
+        ("https://hello-work.fr", "Data science", "CDI"),
+        ("https://indeed.fr", "Engineering", "CDD"),
+        ("https://linkedin.fr/", "Biology", "CDI"),
     },
-    expected_keys = {"url", "field", "contract"},
-    expected_lines = {
-            ('https://ftt.fr', 'Marketing', 'FREELANCE'),
-            ('https://hello-work.fr', 'Data science', 'CDI'),
-            ('https://indeed.fr', 'Engineering', 'CDD'),
-            ('https://linkedin.fr/', 'Biology', 'CDI')
-    },
-    unexpected_lines = set(),
+    unexpected_lines=set(),
 )
 URL_TIME_STAMPS = RequestValidator(
     name="URL_TIME_STAMPS",
     request_dict={
         "columns": ["url"],
-        "time_stamp": ["Check time", f"Scraping time{TSS}"] # Test both with and without suffix
+        "time_stamp": [
+            "Check time",
+            f"Scraping time{TSS}",
+        ],  # Test both with and without suffix
     },
-    expected_keys = {"url", f"check time{TSS}", f"scraping time{TSS}"},
-    expected_lines = {
-        ('https://ftt.fr', datetime.datetime(2024, 11, 3, 20, 25, 4), None),
-        ('https://indeed.fr', None, datetime.datetime(2025, 11, 3, 20, 25, 4)),
-        ('https://hello-work.fr', None, None),
-        ('https://linkedin.fr/', None, None)
+    expected_keys={"url", f"check time{TSS}", f"scraping time{TSS}"},
+    expected_lines={
+        ("https://ftt.fr", datetime.datetime(2024, 11, 3, 20, 25, 4), None),
+        ("https://indeed.fr", None, datetime.datetime(2025, 11, 3, 20, 25, 4)),
+        ("https://hello-work.fr", None, None),
+        ("https://linkedin.fr/", None, None),
     },
-    unexpected_lines = set(),
+    unexpected_lines=set(),
 )
 URL_KEYWORDS = RequestValidator(
     name="URL_KEYWORDS",
     request_dict={
         "columns": ["url"],
-        "keywords": ["Software", f"SEO{KS}"]  # Test both with and without suffix
+        "keywords": [
+            "Software",
+            f"SEO{KS}",
+        ],  # Test both with and without suffix
     },
     expected_keys={"url", f"software{KS}", f"seo{KS}"},
-    expected_lines = {
-        ('https://indeed.fr', 120, None),
-        ('https://ftt.fr', 47, 72),
-        ('https://hello-work.fr', None, None),
-        ('https://linkedin.fr/', None, None)
+    expected_lines={
+        ("https://indeed.fr", 120, None),
+        ("https://ftt.fr", 47, 72),
+        ("https://hello-work.fr", None, None),
+        ("https://linkedin.fr/", None, None),
     },
-    unexpected_lines = set(),
+    unexpected_lines=set(),
 )
 URL_KEYWORDS_ORDERED = RequestValidator(
     name="URL_KEYWORDS",
     request_dict={
         "columns": ["url"],
-        "keywords": ["Software", f"SEO{KS}"],  # Test both with and without suffix
-        "order_by": [f"seo{KS}", "url", f"software"]
+        "keywords": [
+            "Software",
+            f"SEO{KS}",
+        ],  # Test both with and without suffix
+        "order_by": [f"seo{KS}", "url", "software"],
     },
     expected_keys={"url", f"software{KS}", f"seo{KS}"},
-    expected_lines = {
-        (None, 'https://hello-work.fr', None),
-        (None, 'https://linkedin.fr/', None),
-        (72, 'https://ftt.fr', 47),
-        (None, 'https://indeed.fr', 120)},
-    unexpected_lines = set(),
+    expected_lines={
+        (None, "https://hello-work.fr", None),
+        (None, "https://linkedin.fr/", None),
+        (72, "https://ftt.fr", 47),
+        (None, "https://indeed.fr", 120),
+    },
+    unexpected_lines=set(),
 )
 URL_METADATA = RequestValidator(
     name="URL_KEYWORDS",
     request_dict={
         "columns": ["url"],
-        "metadata": ["Message", f"Account{MS}"]  # Test both with and without suffix
+        "metadata": [
+            "Message",
+            f"Account{MS}",
+        ],  # Test both with and without suffix
     },
     expected_keys={"url", f"message{MS}", f"account{MS}"},
-    expected_lines = {
-        ('https://indeed.fr', 'Looking_for_talent!', '12_345'),
-        ('https://linkedin.fr/', '<3', '9_000'),
-        ('https://ftt.fr', 'Excited_to_connect!', '5_678'),
-        ('https://hello-work.fr', 'Innovative_solutions!', '3_200')
+    expected_lines={
+        ("https://indeed.fr", "Looking_for_talent!", "12_345"),
+        ("https://linkedin.fr/", "<3", "9_000"),
+        ("https://ftt.fr", "Excited_to_connect!", "5_678"),
+        ("https://hello-work.fr", "Innovative_solutions!", "3_200"),
     },
-    unexpected_lines = set(),
+    unexpected_lines=set(),
 )
 URL_DISTANCES = RequestValidator(
     name="URL_DISTANCES",
     request_dict={
         "columns": ["url"],
-        "distances_from": ["Nice, France", f"Paris, France{DS}"]  # Test both with and without suffix
+        "distances_from": [
+            "Nice, France",
+            f"Paris, France{DS}",
+        ],  # Test both with and without suffix
     },
     expected_keys={"url", f"nice, france{DS}", f"paris, france{DS}"},
-    expected_lines = {
-        ('https://linkedin.fr/', None, 100.678),
-        ('https://ftt.fr', 900.0, None),
-        ('https://hello-work.fr', 600.4, None),
-        ('https://indeed.fr', None, None)
+    expected_lines={
+        ("https://linkedin.fr/", None, 100.678),
+        ("https://ftt.fr", 900.0, None),
+        ("https://hello-work.fr", 600.4, None),
+        ("https://indeed.fr", None, None),
     },
-    unexpected_lines = set(),
+    unexpected_lines=set(),
 )
 MASSIVE_REQUEST = RequestValidator(
     name="URL_DISTANCES",
@@ -125,41 +145,92 @@ MASSIVE_REQUEST = RequestValidator(
         "metadata": ["Message", f"Account{MS}"],
         "distances_from": ["Nice, France", f"Paris, France{DS}"],
         "keywords": ["Software", f"SEO{KS}"],
-        "order_by": [f"seo{KS}", "url", f"software", "Message",]
+        "order_by": [
+            f"seo{KS}",
+            "url",
+            "software",
+            "Message",
+        ],
     },
     expected_keys={
-        "url", "field", "contract",
-        f"message{MS}", f"account{MS}",
-        f"software{KS}", f"seo{KS}",
-        f"nice, france{DS}", f"paris, france{DS}"},
-    expected_lines = {
-        (None, 'https://linkedin.fr/', None, '<3', 'Biology', 'CDI', None, 100.678, '9_000'),
-        (72, 'https://ftt.fr', 47, 'Excited_to_connect!', 'Marketing', 'FREELANCE', 900.0, None, '5_678'),
-        (None, 'https://hello-work.fr', None, 'Innovative_solutions!', 'Data science', 'CDI', 600.4, None, '3_200'),
-        (None, 'https://indeed.fr', 120, 'Looking_for_talent!', 'Engineering', 'CDD', None, None, '12_345')
+        "url",
+        "field",
+        "contract",
+        f"message{MS}",
+        f"account{MS}",
+        f"software{KS}",
+        f"seo{KS}",
+        f"nice, france{DS}",
+        f"paris, france{DS}",
     },
-    unexpected_lines = set(),
+    expected_lines={
+        (
+            None,
+            "https://linkedin.fr/",
+            None,
+            "<3",
+            "Biology",
+            "CDI",
+            None,
+            100.678,
+            "9_000",
+        ),
+        (
+            72,
+            "https://ftt.fr",
+            47,
+            "Excited_to_connect!",
+            "Marketing",
+            "FREELANCE",
+            900.0,
+            None,
+            "5_678",
+        ),
+        (
+            None,
+            "https://hello-work.fr",
+            None,
+            "Innovative_solutions!",
+            "Data science",
+            "CDI",
+            600.4,
+            None,
+            "3_200",
+        ),
+        (
+            None,
+            "https://indeed.fr",
+            120,
+            "Looking_for_talent!",
+            "Engineering",
+            "CDD",
+            None,
+            None,
+            "12_345",
+        ),
+    },
+    unexpected_lines=set(),
 )
 
 
 @pytest.mark.sqlalchemy_wrappers
-class TestSqlRequestWrapper(BaseTest):
-    """Test TestSqlRequestWrapper with ScrapperSQLightCore configuration
+class TestJobRequest(BaseTest):
+    """Test JobRequest with ScrapperSQLightCore configuration
     as it will mostly be used that way."""
+
     icl = ScrapperSQLightCore
     icl.set_logging_level("INFO")
 
     def test_order_by__no_suffix(self):
+        """Test JobRequest.order_by in a situation where columns
+        possess suffixes"""
         cols = list(Jobs.get_columns_using_sql_name().values())
         names = [Jobs.field.key, Jobs.contract.key, Jobs.localisation.key]
         self.screen_var("cols", cols)
         self.screen_var("names", names)
 
         jr = self.make_job_requester()
-        results = jr.build_request_order_by(
-            cols,
-            names
-        )
+        results = jr.build_request_order_by(cols, names)
         self.screen_var("results", results)
 
         assert results[0].key == Jobs.field.key
@@ -167,6 +238,7 @@ class TestSqlRequestWrapper(BaseTest):
         assert results[2].key == Jobs.localisation.key
 
     def test_simplest_request(self):
+        """Test one of the simplest call of  JobRequest.build_request"""
         scrappers = {sqlc.url: sqlc for sqlc in self.create_database()}
         requester = ScrapperSQLightCore.get_job_requester()
 
@@ -196,16 +268,12 @@ class TestSqlRequestWrapper(BaseTest):
             URL_KEYWORDS_ORDERED,
             URL_METADATA,
             URL_DISTANCES,
-            MASSIVE_REQUEST
+            MASSIVE_REQUEST,
         ],
     )
-
-    def test_complex_requests(self,
-                request_validator: RequestValidator
-    ):
+    def test_complex_requests(self, request_validator: RequestValidator):
         """
         Main test body for JobRequest. Test a large amount of possible situation
-        :return:
         """
         self.create_database()
         self.screen_var("request_validator", request_validator)
@@ -213,36 +281,34 @@ class TestSqlRequestWrapper(BaseTest):
 
         with ScrapperSQLightCore.get_maindb_session() as session:
             query = requester.build_request(
-                session,
-                **request_validator.request_dict
+                session, **request_validator.request_dict
             )
             result = session.execute(query)
 
         result_set = set(result.all())
         self.screen_var("result keys", set(result.keys()))
-        self.screen_var('result_set', result_set)
+        self.screen_var("result_set", result_set)
 
         assert set(result.keys()) == request_validator.expected_keys
         assert request_validator.expected_lines.issubset(result_set)
         if request_validator.unexpected_lines:
             assert not request_validator.unexpected_lines.issubset(result_set)
 
-
-
-
     #################################
     #           Utils               #
     #################################
     @staticmethod
     def make_job_requester() -> JobRequest:
+        """Generate an initialised JobRequest"""
         return ScrapperSQLightCore.get_job_requester()
 
     @staticmethod
     def create_database():
+        """Create a database that can be requested by JobRequest returned by <make_job_requester>"""
         scrapers = []
 
         ssc1 = ScrapperSQLightCore(
-            f"https://linkedin.fr/",
+            "https://linkedin.fr/",
             title="data ingenier",
             localisation="Rouen, France",
             contract_type="CDI",
@@ -257,7 +323,7 @@ class TestSqlRequestWrapper(BaseTest):
         scrapers.append(ssc1)
 
         ssc2 = ScrapperSQLightCore(
-            f"https://indeed.fr",
+            "https://indeed.fr",
             title="Software Engineer",
             localisation="Lyon, France",
             contract_type="CDD",
@@ -272,13 +338,13 @@ class TestSqlRequestWrapper(BaseTest):
         scrapers.append(ssc2)
 
         ssc3 = ScrapperSQLightCore(
-            f"https://ftt.fr",
+            "https://ftt.fr",
             title="Digital Marketing Manager",
             localisation="Paris, France",
             contract_type="Freelance",
             field="Marketing",
         )
-        now =  datetime.datetime(2024, 11, 3, 20, 25, 4).timetuple()
+        now = datetime.datetime(2024, 11, 3, 20, 25, 4).timetuple()
         ssc3.add_metadata("Message", "Excited to connect!")
         ssc3.add_metadata("Account:", "5 \t678")
         ssc3.add_distance_to("Bordeaux, France", 500.9)
@@ -289,7 +355,7 @@ class TestSqlRequestWrapper(BaseTest):
         scrapers.append(ssc3)
 
         ssc4 = ScrapperSQLightCore(
-            f"https://hello-work.fr",
+            "https://hello-work.fr",
             title="Data Scientist",
             localisation="Toulouse, France",
             contract_type="CDI",
@@ -303,9 +369,6 @@ class TestSqlRequestWrapper(BaseTest):
         ssc4.add_keyword_count("Machine Learning", 89)
         scrapers.append(ssc4)
 
-        ScrapperSQLightCore.sql_batch_export(
-            *scrapers
-        )
+        ScrapperSQLightCore.sql_batch_export(*scrapers)
 
         return scrapers
-

@@ -58,8 +58,7 @@ class JobRequest(SQLRequestWrapper):
                 f"\nself={self}"
                 f"\nself.suffixes{self.suffixes}"
                 f"\nexpected={mandatory_suffixes}"
-        )
-
+            )
 
         # Parse inputs
         job_filter = self.build_jobs_filter_generator(columns)
@@ -67,8 +66,6 @@ class JobRequest(SQLRequestWrapper):
         keywords_filter = self.build_keywords_filter_generator(keywords)
         time_filter = self.build_time_stamp_filter_generator(time_stamp)
         metadata_filter = self.build_metadata_filter_generator(metadata)
-
-        self.logger.info(time_filter.columns)
 
         all_cols: list[ColumnElement] = [
             *job_filter.columns,
@@ -85,10 +82,10 @@ class JobRequest(SQLRequestWrapper):
             .join(Keywords, ope.eq(Keywords.url, Jobs.url))
             .join(
                 Distances,
-                ope.eq(Distances.job_localisation , Jobs.localisation),
+                ope.eq(Distances.job_localisation, Jobs.localisation),
             )
-            .join(TimeStamps, ope.eq(TimeStamps.url , Jobs.url))
-            .join(Metadata, ope.eq(Metadata.url , Jobs.url))
+            .join(TimeStamps, ope.eq(TimeStamps.url, Jobs.url))
+            .join(Metadata, ope.eq(Metadata.url, Jobs.url))
             .where(job_filter.safe_filters)
             .group_by(Jobs.url)
             .having(
@@ -125,9 +122,10 @@ class JobRequest(SQLRequestWrapper):
 
         return sorted(
             all_cols,
-            key=lambda col: order.get(self.column_name_normaliser(col.name), len(order))
+            key=lambda col: order.get(
+                self.column_name_normaliser(col.name), len(order)
+            ),
         )
-
 
     def build_jobs_filter_generator(self, columns: list[str] | None):
         """

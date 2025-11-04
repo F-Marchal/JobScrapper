@@ -1,5 +1,5 @@
 from logging import Logger
-from typing import Any, Callable, Type, Generator
+from typing import Any, Callable, Generator, Type
 
 from sqlalchemy import Column, ColumnElement, Result, case, func
 
@@ -44,6 +44,7 @@ class SQLRequestWrapper:
         it might be a good idea to have `column_label_value_normaliser=lambda string: string.lower.strip(' #')`
         in order to ensure that the string passed will match the label
     """
+
     # --- --- Attrs --- ---
     def __init__(
         self,
@@ -87,10 +88,13 @@ class SQLRequestWrapper:
         if suffix_name in self.suffixes:
             return self._suffixes[suffix_name]
         return ""
+
     # --- --- Attrs --- ---
     # --- --- utils --- ---
     @classmethod
-    def result_to_flat_file_generator(cls, result: Result, sep="\t") -> Generator[str, None, None]:
+    def result_to_flat_file_generator(
+        cls, result: Result, sep="\t"
+    ) -> Generator[str, None, None]:
         """
         Returns a generator of string that describe how
         the content of the query :
@@ -111,6 +115,7 @@ class SQLRequestWrapper:
         return str(
             query.statement.compile(compile_kwargs={"literal_binds": True})
         )
+
     # --- --- utils --- ---
     # --- --- main body --- ---
     def build_request(
@@ -177,4 +182,5 @@ class SQLRequestWrapper:
         ).label(col_name.removesuffix(selected_suffix) + selected_suffix)
         # Ugly way to ensure that the suffix is at the ↑
         # end of the label with no repetition          ↑
+
     # --- --- main body --- ---
