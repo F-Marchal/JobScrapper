@@ -36,8 +36,9 @@ class ComparisonWrapper(ClauseElementWrapper):
     def op(self, operator: Callable[[Column, Any], ColumnElement]):
         self._op = operator
 
-    def cast(self, value: str):
-        """Cast a value using cast functions in self.types."""
+    def cast(self, value: str, type_constraint: list[Callable[[str], Any]] = None):
+        """Cast a value using cast functions in self.types.
+        Use type_constraint to reduce allowed type to a subset."""
         if not self.types:
             raise ValueError(
                 f"Can not cast '{value}'. No type available in <self.types>"
@@ -47,8 +48,16 @@ class ComparisonWrapper(ClauseElementWrapper):
         i = 0
         errors = []
         true_value = None
+        if not type_constraint:
+            type_constraint = []
+
         while i < len(self.types) and not cast_succeed:
             try:
+                if type_constraint and self.types[i] not in type_constraint:
+                    raise ValueError(
+                        f"Can not use '{self.types[i]}'. '{self.types[i]}'"
+                        f" is not in type_constraint {type_constraint}"
+                    )
                 true_value = self._cast(value, self.types[i])
                 cast_succeed = True
             except ValueError as new_e:

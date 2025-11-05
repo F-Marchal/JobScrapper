@@ -76,6 +76,51 @@ class TestComparisonWrapper(BaseTest):
 
         assert cast == expected
 
+    @pytest.mark.parametrize(
+        "input_str, expected, constraint",
+        [
+            ("5", "5", None),
+            ("5.5", 5.5, [float]),
+            ("5", 5, [int]),
+        ],
+    )
+    def test_cast_constraint(self, input_str, expected, constraint):
+        """Test cast function"""
+        cw = ComparisonWrapper(
+            op=and_,
+            help_="Test cw",
+            symbols=["TEST"],
+            types=[str, int, float, to_datetime_ymd_or_ymd_hms],
+        )
+        self.screen_var("Test_cw", cw)
+        self.screen_var("Input", input_str)
+        self.screen_var("Expected", expected)
+        self.screen_var("Constraint", constraint)
+        cast = cw.cast(input_str, constraint)
+        self.screen_var("Cast", cast)
+
+        assert cast == expected
+
+
+    def test_cast_failed(self):
+        """Test cast function"""
+        cw = ComparisonWrapper(
+            op=and_,
+            help_="Test cw",
+            symbols=["TEST"],
+            types=[str, int, float, to_datetime_ymd_or_ymd_hms],
+        )
+        self.screen_var("Test_cw", cw)
+
+        # No error expected
+        cw.cast("2025-09-05 12:45:00", [str])
+        cw.cast("2025-09-05 12:45:00", [to_datetime_ymd_or_ymd_hms])
+
+        # Error expected
+        with pytest.raises(ValueError):
+            cw.cast("2025-09-05 12:45:00", [float])
+            cw.cast("2025-09-05 12:45:00", [int])
+
     def test_string_to_comparison_ope(self):
         """Test content of STRING_TO_COMPARISON_WRAPPERS"""
         for key, wrapper in STRING_TO_COMPARISON_WRAPPERS.items():
