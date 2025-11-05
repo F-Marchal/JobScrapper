@@ -106,7 +106,7 @@ class TestScrapperSQLightCore(BaseTest):
 
     def test_class_variable(self):
         """Ensure that table names can be used as table name in sqlite."""
-        for table_name, table in ScrapperSQLightCore.get_tables().items():
+        for table_name, table in ScrapperSQLightCore.get_all_tables().items():
             assert table_name == table.__tablename__
 
         # _database_file_name

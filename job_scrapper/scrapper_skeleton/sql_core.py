@@ -73,9 +73,14 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         return BaseTable.get_known_databases()
 
     @classmethod
-    def get_tables(cls) -> dict[str, Type[BaseTable]]:
+    def get_all_tables(cls) -> dict[str, Type[BaseTable]]:
         """Get a dict of tables used by Jobs during sql export / import."""
         return cls._tables.copy()
+
+    @classmethod
+    def get_table(cls, table_name: str) -> Type[BaseTable]:
+        """Get a table contained inside <get_all_tables>."""
+        return cls.get_all_tables()[table_name]
 
     def __init__(self, *args, **kwargs):
         """See ScrapperObjectCore __init__ method.
