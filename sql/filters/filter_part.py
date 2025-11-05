@@ -26,21 +26,28 @@ class FilterPart:
     @staticmethod
     def get_format_help() -> str:
         """Return a complete helps to configure strings used to initialise a FilterPart"""
-        comparators = {str_op: w.help for str_op, w in STRING_TO_COMPARISON_WRAPPERS.items()}
-        logical = {str_op: w.help for str_op, w in STRING_TO_LOGICAL_WRAPPERS.items()}
+        comparators = "\n\t".join(
+            f"'{str_op}': {w.help} ({', '.join(t.__name__ for t in w.types)})"
+            for str_op, w in STRING_TO_COMPARISON_WRAPPERS.items()
+        )
+
+        logical = "\n\t".join(
+            f"'{str_op}': {w.help} "
+            for str_op, w in STRING_TO_LOGICAL_WRAPPERS.items()
+        )
         return (
-            "For format are available. All format will add [Column name] to the result."
+            "Four format are available. All format will add [Column name] to the result.\n"
             "1. [Column name] ; \n"
             "2. [Column name]::[Comparator]::[Value] ; \n"
             "3. [Operator]::[Column name]::[Comparator]::[Value] ; \n"
-            "4. [Parenthesis]::[Operator]::[Column name]::[Comparator]::[Value] ; \n "
+            "4. [Parenthesis]::[Operator]::[Column name]::[Comparator]::[Value] ; \n\n"
             "With : \n"        
              "1. [Column name] : The name of the targeted column ; \n"
             f"2. [Comparator] : filters the entries to include only those that satisfy the "
             f"condition defined by the [Comparator] and [Value]."
-            f"Can be one of the following comparator : {comparators} ; \n"
+            f"Can be one of the following comparator : \n\t{comparators} \n"
              "3. [Value] : Any string that can be converted into a type compatible with [Comparator] ; \n"
-            f"4. [Operator] : Defines how the previous condition interacts with the current : {logical} ; \n"
+            f"4. [Operator] : Defines how the previous condition interacts with the current : \n\t{logical} ; \n"
              "5. [Parenthesis] : Allows you to group conditions together to control their evaluation"
             "use one of '(', ')', ')(' ; \n"
         )
