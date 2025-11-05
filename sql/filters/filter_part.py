@@ -23,16 +23,27 @@ class FilterPart:
     interface inside ScrapperSQLightCore
     """
 
-    format_help = (
-        "1. [Column name] --> Display the column in the result"
-        "\n2. [Column name]::[Comparator (==, <=, ilike, ...)]::[Value]"
-        " --> Display the column and filter results"
-        "\n3. [Operator (&, |, ^, |~, ...)]::[Column name]::[Comparator (==, <=, ilike, ...)]::[Value] "
-        "--> Display the column and filter results"
-        "\n4. [Parenthesis (')', '(', ')(')]::[Operator (&, |, ^, |~, ...)]::[Column name]::"
-        "[Comparator (==, <=, ilike, ...)]::[Value] "
-        " --> Display the column and filter results"
-    )
+    @staticmethod
+    def get_format_help() -> str:
+        """Return a complete helps to configure strings used to initialise a FilterPart"""
+        comparators = {str_op: w.help for str_op, w in STRING_TO_COMPARISON_WRAPPERS.items()}
+        logical = {str_op: w.help for str_op, w in STRING_TO_LOGICAL_WRAPPERS.items()}
+        return (
+            "For format are available. All format will add [Column name] to the result."
+            "1. [Column name] ; \n"
+            "2. [Column name]::[Comparator]::[Value] ; \n"
+            "3. [Operator]::[Column name]::[Comparator]::[Value] ; \n"
+            "4. [Parenthesis]::[Operator]::[Column name]::[Comparator]::[Value] ; \n "
+            "With : \n"        
+             "1. [Column name] : The name of the targeted column ; \n"
+            f"2. [Comparator] : filters the entries to include only those that satisfy the "
+            f"condition defined by the [Comparator] and [Value]."
+            f"Can be one of the following comparator : {comparators} ; \n"
+             "3. [Value] : Any string that can be converted into a type compatible with [Comparator] ; \n"
+            f"4. [Operator] : Defines how the previous condition interacts with the current : {logical} ; \n"
+             "5. [Parenthesis] : Allows you to group conditions together to control their evaluation"
+            "use one of '(', ')', ')(' ; \n"
+        )
 
     @classmethod
     def list_init(
@@ -47,7 +58,7 @@ class FilterPart:
         """
         initialize one FilterPart per string in *strings
         :param string_to_columns: A dictionary {string : ColumnElement}
-        :param strings: a list of string formated as in cls.format_help
+        :param strings: a list of string formated as in cls.get_format_help()
         :param separator: used in strings
         :param logger: A logger to display execution information
         :param generate_column_using: A command that allow column generation when a string
@@ -78,7 +89,7 @@ class FilterPart:
         generate_column_using: Callable[[str], ColumnElement] | None = None,
     ):
         """
-        :param unformatted_string: A string formated  as in cls.format_help
+        :param unformatted_string: A string formated  as in cls.get_format_help()
         :param string_to_columns: A dictionary {str : ColumnElement}
         :param string_formater: : A callable that ensure correct string formatting for column name usage.
         :param separator: used in unformatted_string as separator for each field
@@ -157,7 +168,7 @@ class FilterPart:
                             "Invalid format : '%s'. Only the first parti will be used (as column name).\n"
                             "%s",
                             unformatted_string,
-                            self.format_help,
+                            self.get_format_help(),
                         )
                     result["str_column"] = column
 
