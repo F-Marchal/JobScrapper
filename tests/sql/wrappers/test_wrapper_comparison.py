@@ -10,7 +10,7 @@ from sql.wrappers.wrapper_comparison import (
     COMPARISON_WRAPPERS,
     STRING_TO_COMPARISON_WRAPPERS,
     ComparisonWrapper,
-    to_datetime,
+    to_datetime_ymd_or_ymd_hms,
 )
 from tests.conftest import BaseTest
 from tests.table_for_test_only import StringTable
@@ -40,13 +40,13 @@ class TestComparisonWrapper(BaseTest):
     def test_to_datetime(self):
         """Test the to_datetime function"""
         d1 = datetime(2025, 9, 5)
-        d1_ref = to_datetime("2025-09-05")
+        d1_ref = to_datetime_ymd_or_ymd_hms("2025-09-05")
         self.screen_var("d1", d1)
         self.screen_var("d1_ref", d1_ref)
         assert d1 == d1_ref
 
         d2_ref = datetime(2025, 9, 5, 12, 45, 0)
-        d2 = to_datetime("2025-09-05 12:45:00")
+        d2 = to_datetime_ymd_or_ymd_hms("2025-09-05 12:45:00")
         self.screen_var("d2", d2)
         self.screen_var("d2_ref", d2_ref)
         assert d2 == d2_ref
@@ -66,7 +66,7 @@ class TestComparisonWrapper(BaseTest):
             op=and_,
             help_="Test cw",
             symbols=["TEST"],
-            types=[int, float, to_datetime],
+            types=[int, float, to_datetime_ymd_or_ymd_hms],
         )
         self.screen_var("Test_cw", cw)
         self.screen_var("Input", input_str)

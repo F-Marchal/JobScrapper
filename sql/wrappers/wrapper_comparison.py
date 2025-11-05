@@ -96,7 +96,7 @@ def to_datetime_ymd_hms(string: str):
     return datetime.strptime(string, "%Y-%m-%d %H:%M:%S")
 
 
-def to_datetime(string: str):
+def to_datetime_ymd_or_ymd_hms(string: str):
     """Transform a string to a datetime object using "%Y-%m-%d %H:%M:%S" or "%Y-%m-%d" format"""
     try:
         return to_datetime_ymd(string)
@@ -108,42 +108,42 @@ EQUAL_WRAPPER = ComparisonWrapper(
     op=ope.eq,
     help_="Column value is equal to <value>",
     symbols=["=="],
-    types=[int, float, to_datetime, str],
+    types=[int, float, to_datetime_ymd_or_ymd_hms, str],
 )
 
 NOT_EQUAL_WRAPPER = ComparisonWrapper(
     op=ope.ne,
     help_="Column value is not equal to <value>",
     symbols=["!="],
-    types=[int, float, to_datetime, str],
+    types=[int, float, to_datetime_ymd_or_ymd_hms, str],
 )
 
 GREATER_WRAPPER = ComparisonWrapper(
     op=ope.gt,
     help_="Column value is greater than <value>",
     symbols=[">"],
-    types=[int, float, to_datetime, str],
+    types=[int, float, to_datetime_ymd_or_ymd_hms, str],
 )
 
 GREATER_EQUAL_WRAPPER = ComparisonWrapper(
     op=ope.ge,
     help_="Column value is greater or equal to <value>",
     symbols=[">="],
-    types=[int, float, to_datetime, str],
+    types=[int, float, to_datetime_ymd_or_ymd_hms, str],
 )
 
 LESSER_WRAPPER = ComparisonWrapper(
     op=ope.lt,
     help_="Column value is lesser than <value>",
     symbols=["<"],
-    types=[int, float, to_datetime, str],
+    types=[int, float, to_datetime_ymd_or_ymd_hms, str],
 )
 
 LESSER_EQUAL_WRAPPER = ComparisonWrapper(
     op=ope.le,
     help_="Column value is lesser or equal to <value>",
     symbols=["<="],
-    types=[int, float, to_datetime, str],
+    types=[int, float, to_datetime_ymd_or_ymd_hms, str],
 )
 
 INSIDE_WRAPPER = ComparisonWrapper(
