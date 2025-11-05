@@ -20,6 +20,7 @@ from sql.tables import (
 )
 from sql.tables.request_helpers.job_request import JobRequest
 
+
 ScrapperSQLightCoreOrSubclass = TypeVar(
     "ScrapperSQLightCoreOrSubclass", bound="ScrapperSQLightCore"
 )
@@ -145,6 +146,38 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             "maindb": cls.get_maindb_session,
             "archive": cls.get_archive_session,
         }
+
+    @classmethod
+    @contextmanager
+    def get_sql_session(
+            cls,
+            workdir: str | None = None,
+            database_name: str | None = None
+    ) -> Generator[Session, None, None]:
+        """Give a session on the targeted database."""
+        available_databases = cls.get_available_databases()
+        database_session_command: SqlSessionFactory | None = None
+
+        if database_name is None:
+            database_session_command = cls.get_maindb_session
+
+        elif database_name in available_databases:
+            database_session_command = available_databases[database_name]
+
+        else:
+            raise KeyError(
+                f"<database_name> should be in `None` or in {available_databases.keys()}."
+                f" Got '{database_name}'"
+            )
+
+        if database_session_command is None:
+            raise ValueError(
+                "Internal error, <database_session_command> should not be None at this point."
+                f"locals={locals()}"
+            )
+
+        with database_session_command(workdir=workdir) as session:
+            yield session
 
     #  --- --- --- --- Sqlite --- --- --- ----
     # --- --- Names and paths --- ---
@@ -286,28 +319,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         :param workdir: A directory where the database will be written.
         """
 
-        available_databases = cls.get_available_databases()
-        database_session_command: SqlSessionFactory | None = None
-
-        if database_name is None:
-            database_session_command = cls.get_maindb_session
-
-        elif database_name in available_databases:
-            database_session_command = available_databases[database_name]
-
-        else:
-            raise KeyError(
-                f"<database_name> should be in `None` or in {available_databases.keys()}."
-                f" Got '{database_name}'"
-            )
-
-        if database_session_command is None:
-            raise ValueError(
-                "Internal error, <database_session_command> should not be None at this point."
-                f"locals={locals()}"
-            )
-
-        with database_session_command(workdir=workdir) as session:
+        with cls.get_sql_session(workdir=workdir, database_name=database_name) as session:
             cls.logger.debug("Exporting %s job offers...", len(jobs))
             cls._sql_batch_export(session, *jobs)
             cls.logger.debug("%s job offer exported !", len(jobs))
