@@ -1,15 +1,17 @@
 import os
 
 import pytest
-from tests.conftest import BaseTest
+from tests.job_scrapper.js_base_test import JobScrapperBaseTestClass
 
 from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore, time
 
 
-@pytest.mark.job_core
-class TestScrapperObjectCore(BaseTest):
+class TestScrapperObjectCore(JobScrapperBaseTestClass):
     """Test ScrapperObjectCore main functionalities."""
     icl = ScrapperObjectCore
+
+    def get_scrapper(self):
+        return ScrapperObjectCore
 
     # --- --- --- --- Attributes managements --- --- --- ----
     @pytest.mark.parametrize(

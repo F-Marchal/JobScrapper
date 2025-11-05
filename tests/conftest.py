@@ -63,7 +63,7 @@ class BaseTest:
         this folder is deleted."""
 
         # ---- Generate test dir names ----
-        test_name = request.node.name
+        test_name = re.sub(r'[<>:"/\\|?*]', "_", request.node.name)
         start_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         test_dir_name_in_progress = (
             f"IN_PROGRESS-{type(self).__name__}-{test_name}-{start_date}"

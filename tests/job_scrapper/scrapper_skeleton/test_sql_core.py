@@ -3,13 +3,14 @@ import os
 import pytest
 
 from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
-from tests.conftest import BaseTest
+from tests.job_scrapper.js_base_test import JobScrapperBaseTestClass
 
-
-@pytest.mark.job_core
-class TestScrapperSQLightCore(BaseTest):
+class TestScrapperSQLightCore(JobScrapperBaseTestClass):
     """Test ScrapperSQLightCore main functionalities."""
     icl = ScrapperSQLightCore
+
+    def get_scrapper(self):
+        return ScrapperSQLightCore
 
     def test_to_job_entry(self):
         """Ensure correct conversion of a ScrapperSQLightCore
@@ -113,21 +114,36 @@ class TestScrapperSQLightCore(BaseTest):
         # _databases
         # first_sighting_time_stamp_name
 
-    def test_database_creation(self):
+
+    @pytest.mark.parametrize(
+        "database_name, expected_path_cmd",
+        [
+            ("maindb", ScrapperSQLightCore.get_maindb_path),
+            (None, ScrapperSQLightCore.get_maindb_path),
+            ("archive", ScrapperSQLightCore.get_archive_path),
+        ],
+    )
+    def test_database_creation(
+            self,
+            database_name: str,
+            expected_path_cmd
+    ):
         """Ensure that a database is generated with get_database_session.
         Here to detect errors during the execution, not to test the content of the database
         """
-        assert not os.path.exists(ScrapperSQLightCore.get_maindb_path())
+
+        expected_path = expected_path_cmd()
+        assert not os.path.exists(expected_path)
 
         # Database creation
-        with ScrapperSQLightCore.get_maindb_session():
+        with ScrapperSQLightCore.get_sql_session(database_name=database_name):
             pass
 
         # Database reopened
-        with ScrapperSQLightCore.get_maindb_session():
+        with ScrapperSQLightCore.get_sql_session(database_name=database_name):
             pass
 
-        assert os.path.exists(ScrapperSQLightCore.get_maindb_path())
+        assert os.path.exists(expected_path)
 
     def test_archive_creation(self):
         """Ensure that an archive database is generated with get_archive_session.
@@ -160,12 +176,15 @@ class TestScrapperSQLightCore(BaseTest):
         ssc3_a.add_metadata("o", "b")
         self.screen_var("SSC3-A", ssc3_a)
 
-        with ScrapperSQLightCore.get_maindb_session() as session:
+        with ScrapperSQLightCore.get_sql_session() as session:
             ssc1_a.sql_export(session)
-            ssc2_a.sql_export(session)
-            ssc3_a.sql_export(session)
 
-        with ScrapperSQLightCore.get_maindb_session() as session:
+        ScrapperSQLightCore.sql_batch_export(
+            ssc2_a,
+            ssc3_a,
+        )
+
+        with ScrapperSQLightCore.get_sql_session() as session:
             reloaded_ssc = ScrapperSQLightCore.sql_import_jobs(session)
 
         assert len(reloaded_ssc) == 3
