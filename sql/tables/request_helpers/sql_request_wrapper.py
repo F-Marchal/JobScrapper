@@ -7,7 +7,7 @@ from sqlalchemy import Column, ColumnElement, Result, case, func
 from sqlalchemy.orm import Query, Session
 from sqlalchemy.sql import operators as ope
 
-from sql.filters.filter_generator import FilterGenerator, FilterPart
+from sql.filters.filter_generator import FilterGenerator, FilterPart, LogicalWrapper, ComparisonWrapper
 from sql.tables import BaseTable
 
 
@@ -125,6 +125,15 @@ class SQLRequestWrapper:
         """Build wrapper's request"""
         raise NotImplementedError
 
+    def execute_request(
+        self,
+        session: Session,
+        query: Query,
+    ) -> Result:
+        """Execute a request object and log it in self.logger"""
+        if self.logger: self.logger.debug("Executing : %s", self.compile_query(query))
+        return session.execute(query)
+
     def quick_filter_generator(
         self,
         table: Type[BaseTable],
@@ -184,3 +193,21 @@ class SQLRequestWrapper:
         # end of the label with no repetition          ↑
 
     # --- --- main body --- ---
+
+    def get_available_string_operators(self) -> dict[str, LogicalWrapper]:
+        """
+        returns a dict that associate strings that can be used as
+        logical operators with LogicalWrapper
+        """
+        return FilterPart.get_string_to_logic_operators()
+
+    def get_available_string_comparator(self) -> dict[str, ComparisonWrapper]:
+        """
+        returns a dict that associate strings that can be used as
+        comparison operators with ComparisonWrapper.
+        """
+        return FilterPart.get_string_to_comparison_operators()
+
+    def get_string_format_help(self):
+        return FilterPart.get_format_help()
+

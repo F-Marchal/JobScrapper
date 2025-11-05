@@ -77,7 +77,7 @@ class TestSqlRequestWrapper(BaseTest):
                     self.TestLookupTable.fk,
                 )
             )
-            result = session.execute(query)
+            result = sql_rw.execute_request(session, query)
 
         assert set(result.keys()) == {"fk", "Alpha #", "Beta #", "Gamma #"}
 
@@ -140,7 +140,7 @@ class TestSqlRequestWrapper(BaseTest):
                     self.TestLookupTable.fk,
                 )
             )
-            result = session.execute(query)
+            result = sql_rw.execute_request(session, query)
 
         assert set(result.keys()) == {"fk", "Alpha #", "Beta #", "Gamma #"}
         all_ = result.all()

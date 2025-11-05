@@ -246,7 +246,7 @@ class TestJobRequest(BaseTest):
             query = requester.build_request(
                 session,
             )
-            result = session.execute(query)
+            result = requester.execute_request(session, query)
 
         expected_keys = set(Jobs.get_columns_using_sql_name())
         assert set(result.keys()) == expected_keys
@@ -283,7 +283,7 @@ class TestJobRequest(BaseTest):
             query = requester.build_request(
                 session, **request_validator.request_dict
             )
-            result = session.execute(query)
+            result = requester.execute_request(session, query)
 
         result_set = set(result.all())
         self.screen_var("result keys", set(result.keys()))
