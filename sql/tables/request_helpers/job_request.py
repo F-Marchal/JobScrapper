@@ -79,13 +79,13 @@ class JobRequest(SQLRequestWrapper):
 
         query = (
             session.query(*order_by_cols)
-            .join(Keywords, ope.eq(Keywords.url, Jobs.url))
-            .join(
+            .outerjoin(Keywords, ope.eq(Keywords.url, Jobs.url))
+            .outerjoin(
                 Distances,
                 ope.eq(Distances.job_localisation, Jobs.localisation),
             )
-            .join(TimeStamps, ope.eq(TimeStamps.url, Jobs.url))
-            .join(Metadata, ope.eq(Metadata.url, Jobs.url))
+            .outerjoin(TimeStamps, ope.eq(TimeStamps.url, Jobs.url))
+            .outerjoin(Metadata, ope.eq(Metadata.url, Jobs.url))
             .where(job_filter.safe_filters)
             .group_by(Jobs.url)
             .having(
