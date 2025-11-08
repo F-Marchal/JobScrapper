@@ -60,6 +60,9 @@ class JobRequest(SQLRequestWrapper):
                 f"\nexpected={mandatory_suffixes}"
             )
 
+        if not columns:
+            columns = list(Jobs.get_columns_using_sql_name())
+
         # Parse inputs
         job_filter = self.build_jobs_filter_generator(columns)
         distance_filter = self.build_distance_filter_generator(distances_from)
@@ -136,6 +139,8 @@ class JobRequest(SQLRequestWrapper):
             table=Jobs,
             columns=columns,
             fill_none_columns=True,
+            column_creator=None,
+            cast_constraint=[str]
         )
 
     def build_distance_filter_generator(
@@ -149,6 +154,7 @@ class JobRequest(SQLRequestWrapper):
         return self.quick_filter_generator(
             table=Distances,
             columns=distances_from,
+            cast_constraint=[float], # Ensure that all value used by filter are float.
             column_creator=self.quick_column_creator(
                 label_col=Distances.reference_localisation,
                 value_col=Distances.distance,
@@ -168,6 +174,7 @@ class JobRequest(SQLRequestWrapper):
         return self.quick_filter_generator(
             table=Keywords,
             columns=keywords,
+            cast_constraint=[int], # Ensure that all value used by filter are integers.
             column_creator=self.quick_column_creator(
                 label_col=Keywords.keyword,
                 value_col=Keywords.occurrence,
@@ -187,6 +194,7 @@ class JobRequest(SQLRequestWrapper):
         return self.quick_filter_generator(
             table=TimeStamps,
             columns=time_stamps,
+            cast_constraint=[FilterGenerator.FilterPart.date_cast_function],
             column_creator=self.quick_column_creator(
                 label_col=TimeStamps.label,
                 value_col=TimeStamps.time_stamp,
@@ -205,6 +213,7 @@ class JobRequest(SQLRequestWrapper):
         return self.quick_filter_generator(
             table=Metadata,
             columns=metadata,
+            cast_constraint=[str],
             column_creator=self.quick_column_creator(
                 label_col=Metadata.key,
                 value_col=Metadata.value,

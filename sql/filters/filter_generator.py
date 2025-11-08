@@ -13,6 +13,7 @@ from .filter_part import FilterPart
 class FilterGenerator:
     """Generate a self.filters that can be used inside a query objet using
     a list of FilterPart."""
+    FilterPart = FilterPart
 
     def __init__(
         self,

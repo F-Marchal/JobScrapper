@@ -3,7 +3,7 @@ import traceback
 from contextlib import contextmanager
 from logging import Logger
 from typing import Any, Generator
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, distinct, Column
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -502,5 +502,21 @@ class BaseTable(Base):
             all_items = Table.get_all(session).all()
         """
         return session.query(cls)
+
+    @classmethod
+    def get_column_values(cls, session: Session, column_name : ColumnElement | str) -> Query:
+        if isinstance(column_name, str):
+            cols = cls.get_columns_using_sql_name()
+            if column_name not in cols:
+                raise KeyError(
+                    f"Unknown column '{column_name}' for {cls.__tablename__}. "
+                    f"Please use one of : {list(cols.keys())}")
+            column = cols[column_name]
+        else:
+            column = column_name
+
+        return session.query(
+            distinct(column)
+        )
 
     # --- --- Standard requests --- ---

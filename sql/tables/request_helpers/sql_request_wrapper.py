@@ -140,6 +140,7 @@ class SQLRequestWrapper:
         column_creator: Callable[[str], ColumnElement] | None = None,
         columns: list[str] | None = None,
         fill_none_columns: bool = False,
+        cast_constraint: list[Callable[[str], Any]] | None = None,
     ) -> FilterGenerator:
         """Quicly generate a FilterGenerator for a Table."""
         if columns is None:
@@ -154,6 +155,7 @@ class SQLRequestWrapper:
             generate_column_using=column_creator,
             logger=self.logger,
             string_formater=self.column_name_normaliser,
+            cast_constrain=cast_constraint
         )
 
         return FilterGenerator(fp)

@@ -211,7 +211,8 @@ MASSIVE_REQUEST = RequestValidator(
     },
     unexpected_lines=set(),
 )
-
+# TODO: Test with conditions
+# TODO: Test with Complex request (A And B) Or C...
 
 @pytest.mark.sqlalchemy_wrappers
 class TestJobRequest(BaseTest):
