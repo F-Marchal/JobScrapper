@@ -6,12 +6,12 @@ from sqlalchemy.sql.elements import ColumnElement
 from sql.wrappers.wrapper_comparison import (
     STRING_TO_COMPARISON_WRAPPERS,
     ComparisonWrapper,
+    to_datetime_ymd_or_ymd_hms
 )
 from sql.wrappers.wrapper_logical import (
     STRING_TO_LOGICAL_WRAPPERS,
     LogicalWrapper,
 )
-
 
 # pylint: disable=R0902,R0913,R0917
 # This is the amount of attribute that I need
@@ -22,6 +22,7 @@ class FilterPart:
     a string. The goal of this class is to be used as a program / user
     interface inside ScrapperSQLightCore
     """
+    date_cast_function = to_datetime_ymd_or_ymd_hms
 
     @staticmethod
     def get_format_help() -> str:
@@ -61,6 +62,7 @@ class FilterPart:
         logger: Logger | None = None,
         generate_column_using: Callable[[str], ColumnElement] | None = None,
         string_formater: Callable[[str], str] = lambda string: string,
+        cast_constrain: list[Callable[[str], Any]] | None = None,
     ) -> list["FilterPart"]:
         """
         initialize one FilterPart per string in *strings
@@ -71,6 +73,7 @@ class FilterPart:
         :param generate_column_using: A command that allow column generation when a string
          is not in string_to_columns. Will modify string_to_columns.
         :param string_formater: A callable that ensure correct string formatting for column name usage.
+        :param cast_constrain: A list of type or cast function that limit value cast for self.value.
         """
         all_items = []
         for item in strings:
@@ -82,6 +85,7 @@ class FilterPart:
                     string_to_columns=string_to_columns,
                     generate_column_using=generate_column_using,
                     string_formater=string_formater,
+                    cast_constrain=cast_constrain,
                 )
             )
         return all_items
@@ -94,6 +98,8 @@ class FilterPart:
         separator: str = "::",
         logger: Logger | None = None,
         generate_column_using: Callable[[str], ColumnElement] | None = None,
+        cast_constrain: list[Callable[[str], Any]] | None = None,
+        ignore_cast_error : bool = False,
     ):
         """
         :param unformatted_string: A string formated  as in cls.get_format_help()
@@ -103,9 +109,14 @@ class FilterPart:
         :param logger: A logger to display execution information
         :param generate_column_using: A command that allow column generation when a column name
          is not inside. string_to_columns. Will modify string_to_columns.
+        :param cast_constrain: A list of type or cast function that limit value cast for self.value.
+        :param ignore_cast_error: Default=False. When True, Cast error will not raise Error but will
+            be logged with self.logger
         """
 
         # Attributes without properties:
+        self.ignore_cast_error = ignore_cast_error
+        self.cast_constrain: list[Callable[[str], Any]] | None = cast_constrain
         self.generate_column_using: Callable[[str], ColumnElement] | None = (
             generate_column_using
         )
@@ -359,17 +370,25 @@ class FilterPart:
             return val
 
         try:
-            return cond_wrap.cast(val)
+            return cond_wrap.cast(val, self.cast_constrain)
         except ValueError as e:
+            msg = "Can not cast '%s' from '%s'. The column (%s) will be shown but no condition will be applied." \
+                  "\n%s\nAll Constraints are : %s".format(
+                val,
+                self.unformatted_string,
+                self.str_column,
+                str(e),
+                self.cast_constrain if self.cast_constrain else [],
+            )
+
+            if not self.ignore_cast_error:
+                raise ValueError(msg)
+
             if self.logger:
                 self.logger.error(
-                    "Can not cast '%s' from '%s'. The column (%s) will be shown but no condition will be applied."
-                    "\n%s",
-                    val,
-                    self.unformatted_string,
-                    self.str_column,
-                    e,
+                    msg=msg
                 )
+
             self.comp_operator = None
             return None
 

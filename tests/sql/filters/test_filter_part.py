@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 from sqlalchemy import case, func
@@ -62,11 +62,16 @@ class TestFilterPart(BaseTest):
 
     # pylint: disable=R0913,R0917
     @pytest.mark.parametrize(
-        "raw_string, column_name, comp_op, comp_value, logic_op",
+        "raw_string, column_name, comp_op, comp_value, logic_op, constraint",
         [
-            ("&::Url::<=::5.65", "url", "<=", 5.65, "&"),
-            ("|::Url::==::Alpha", "url", "==", "Alpha", "|"),
-            ("^::Url::!=::5", "url", "!=", 5, "^"),
+            ("&::Url::<=::5.65", "url", "<=", 5.65, "&", None),
+            ("|::Url::==::Alpha", "url", "==", "Alpha", "|", None),
+            ("^::Url::!=::5", "url", "!=", 5, "^", None),
+
+            ("&::Url::<=::5.65", "url", "<=", '5.65', "&", [str]),
+            ("^::Url::!=::5", "url", "!=", 5.0, "^", [float]),
+            ("|::Url::==::2025-12-20", "url",
+             "==",  FilterPart.date_cast_function("2025-12-20"), "|", [FilterPart.date_cast_function]),
         ],
     )
     def test_logic_initialisation(
@@ -76,10 +81,11 @@ class TestFilterPart(BaseTest):
         comp_op: str,
         comp_value: Any,
         logic_op: str,
+        constraint: list[Callable[[str], Any]] | None
     ):
         """Test initialisation using operator::url::comparator:value"""
         kwargs = self.common_kwargs()
-        fp = FilterPart(raw_string, **kwargs)
+        fp = FilterPart(raw_string, cast_constrain=constraint, **kwargs)
         self.screen_var("fp", fp)
         assert fp
         assert fp.str_column == column_name
@@ -87,6 +93,7 @@ class TestFilterPart(BaseTest):
         assert fp.comp_operator is not None
         assert fp.comp_operator == STRING_TO_COMPARISON_WRAPPERS[comp_op]
         assert fp.comp_value == comp_value
+        assert isinstance(fp.comp_value, type(comp_value)) # For int / float
         assert fp.logic_operator == STRING_TO_LOGICAL_WRAPPERS[logic_op]
         assert fp.start_parenthesis is False
         assert fp.close_parenthesis is False
