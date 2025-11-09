@@ -8,7 +8,7 @@ from inspect import getfile
 
 import pytest
 from tools.variable_tracker import VariableTracker
-
+from tools.logger_core import CoreLogger
 
 def pytest_addoption(parser):
     """Add --keep-test-dir option to keep  test folder even when they succeed"""
@@ -41,6 +41,8 @@ class BaseTest:
 
     In addition, a number of tool method are contained inside this class.
     """
+    icl = CoreLogger
+    enable_icl = True
 
     @property
     def get_test_folder_parent(self) -> str:
@@ -61,7 +63,7 @@ class BaseTest:
         this folder is deleted."""
 
         # ---- Generate test dir names ----
-        test_name = request.node.name
+        test_name = re.sub(r'[<>:"/\\|?*]', "_", request.node.name)
         start_date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         test_dir_name_in_progress = (
             f"IN_PROGRESS-{type(self).__name__}-{test_name}-{start_date}"
@@ -110,10 +112,29 @@ class BaseTest:
 
         return self.test_folder
 
+    @pytest.fixture(autouse=True)
+    # pylint: disable=W0201
+    # I can not define this attributes in an __init__ !
+    def redirect_logs_to_tempdir(self, _setup_tempdir):
+        self.test_logs =  f"{_setup_tempdir}/logs.log"
+        if not self.enable_icl:
+            yield self.test_logs
+            return
+
+        with open(self.test_logs, "w") as lof:
+
+            with self.icl.redirect_logs_to_file(lof, level="DEBUG"):
+                yield self.test_logs
+
     # ---- ---- Screening ---- ----
     def screen_var(self, name: str, obj: typing.Any) -> None:
         """LogFile.screen wrapper"""
         self.tracker.screen(name, obj)
+
+    def screen_multiple_vars(self, name: str, *obj: typing.Any):
+        """self.screen_var a number of <obj>. Each obj is named '<name>-<position in obj>'"""
+        for i, to_screen in enumerate(obj):
+            self.screen_var(f"{name}-{i}", to_screen)
 
     def re_screen_var(self, name: str, obj=None) -> None:
         """LogFile.re_screen wrapper"""

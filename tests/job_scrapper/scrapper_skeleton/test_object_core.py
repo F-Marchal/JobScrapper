@@ -1,14 +1,17 @@
 import os
 
 import pytest
-from tests.conftest import BaseTest
+from tests.job_scrapper.js_base_test import JobScrapperBaseTestClass
 
 from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore, time
 
 
-@pytest.mark.job_core
-class TestScrapperObjectCore(BaseTest):
+class TestScrapperObjectCore(JobScrapperBaseTestClass):
     """Test ScrapperObjectCore main functionalities."""
+    icl = ScrapperObjectCore
+
+    def get_scrapper(self):
+        return ScrapperObjectCore
 
     # --- --- --- --- Attributes managements --- --- --- ----
     @pytest.mark.parametrize(
@@ -32,6 +35,19 @@ class TestScrapperObjectCore(BaseTest):
         self.screen_var("cleaned_input", cleaned_input)
 
         assert cleaned_input == expected
+
+    @pytest.mark.parametrize(
+        "suffix",
+        [
+            ScrapperObjectCore.distance_suffix,
+            ScrapperObjectCore.keyword_suffix,
+            ScrapperObjectCore.time_stamp_suffix,
+            ScrapperObjectCore.metadata_suffix
+        ],
+    )
+    def test_suffixes(self, suffix):
+        assert ScrapperObjectCore.clean_string(suffix, keep_suffix=True) == suffix.strip().strip("_")
+        assert ScrapperObjectCore.clean_string(suffix, keep_suffix=False) == ""
 
     def test_initialization_and_properties_default(self):
         """
@@ -97,7 +113,7 @@ class TestScrapperObjectCore(BaseTest):
 
         # Metadat exist
         # If assert True : Text is correctly cleaned.
-        assert soc.metadata_exist("message for*/ you")
+        assert soc.metadata_exist("message for*/ you" + soc.metadata_suffix)
         assert soc.metadata_exist("Message for you")
         assert soc.distance_to_exist("pâris, france:\t" + soc.distance_suffix)
         assert soc.distance_to_exist("Paris, france")
@@ -142,6 +158,24 @@ class TestScrapperObjectCore(BaseTest):
             "Strasbourg", default_value_do_not_count=True
         )
         assert soc.keyword_exist("Strasbourg", default_value_do_not_count=False)
+
+    def test_full_empty_edge_case(self):
+        soc = ScrapperObjectCore("")
+        soc.add_keyword_count("", 5)
+        soc.add_distance_to("", 5)
+        soc.add_time_stamps("", soc.now())
+        soc.add_metadata("", "")
+        self.screen_var("soc", soc)
+
+        assert soc.url == ""
+        assert soc.title == ""
+        assert soc.localisation == ""
+        assert soc.contract_type == ""
+        assert soc.field == ""
+        assert soc.metadata_exist("")
+        assert soc.distance_to_exist("")
+        assert soc.keyword_exist("")
+        assert soc.time_stamps_exist("")
 
     def test_remove_value_from_dict(self):
         """Test remove_[dict name] methods.
@@ -245,24 +279,51 @@ class TestScrapperObjectCore(BaseTest):
         assert unflat.to_dict() == soc.to_dict()
         assert flat_unflat == flat_soc
 
+    def test_flat_unflat_edge_case(self):
+        soc = ScrapperObjectCore("")
+        soc.add_keyword_count("", 5)
+        soc.add_distance_to("", 5)
+        soc.add_time_stamps("", soc.now())
+        soc.add_metadata("", "")
+        soc.add_metadata("o", "b")
+        self.screen_var("soc3", soc)
+
+        flat_soc = soc.flat()
+        header, line, *_ = flat_soc.split("\n")
+        self.tracker.screen("header", header)
+        self.tracker.screen("line", line)
+
+        unflat = soc.unflat(header, line)
+        self.tracker.screen("unflat", unflat)
+
+        flat_unflat = soc.flat()
+        self.tracker.screen("flat_unflat", flat_unflat)
+
+        assert unflat.to_dict() == soc.to_dict()
+        assert flat_unflat == flat_soc
+
+
     def test_export_import_to_flat_file_and_equality(self):
         """Test ScrapperObjectCore.get_unique_path with file and folder"""
 
         soc1_a, _ = self._generate_a_test_soc(instance_name="SOC1-A")
         soc2_a, _ = self._generate_a_test_soc(instance_name="SOC2-A")
-        soc3_a, _ = self._generate_a_test_soc(instance_name="SOC3-A")
         soc1_a.url = "soc1"
         soc2_a.url = "soc2"
-        soc3_a.url = "soc3"
 
-        # soc2_a.remove_metadata("message for*/ you")
-        soc3_a.remove_distance_to("Paris, france")
+        soc3_a = ScrapperObjectCore("")
+        soc3_a.add_keyword_count("", 5)
+        soc3_a.add_distance_to("", 5)
+        soc3_a.add_time_stamps("", soc3_a.now())
+        soc3_a.add_metadata("", "")
+        soc3_a.add_metadata("o", "b")
+        self.screen_var("SOC3-A", soc3_a)
 
         self.tracker.re_screen_all()
 
-        ScrapperObjectCore.export_to_flat_file(None, [soc3_a, soc1_a, soc2_a])
+        ScrapperObjectCore.export_to_flat_file([soc3_a, soc1_a, soc2_a], None)
 
-        result = list(ScrapperObjectCore.import_from_flat_file(None))
+        result = list(ScrapperObjectCore.import_from_flat_file())
 
         assert len(result) == 3
 

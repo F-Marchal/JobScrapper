@@ -253,7 +253,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                     len(result),
                     flat_export,
                 )
-                cls.export_to_flat_file(flat_export, result)
+                cls.export_to_flat_file(result, flat_export)
 
         if display:
             cls.logger.info("Starting display of %s jobs", len(result))
@@ -261,8 +261,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
 
         if sql_export:
             cls.logger.info(
-                "Exporting %s jobs in %s", len(result), cls.get_database_path()
+                "Exporting %s jobs in %s", len(result), cls.get_maindb_path()
             )
-            cls.list_to_sql(result)
+            cls.sql_batch_export(*result)
 
         return result

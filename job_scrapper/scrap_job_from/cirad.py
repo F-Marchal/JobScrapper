@@ -29,7 +29,8 @@ class CiradScrapper(srk.JobScrapperSkeleton):
         ):
             # Extract title, ref and field
             title_ref_field = cells.find("a")["title"]
-            title_ref, field = title_ref_field.split(" - ")
+            *title_ref_elements, field = title_ref_field.split(" - ")
+            title_ref = "_".join(title_ref_elements)
             title, ref = title_ref.split("(Réf. :")
             ref = ref[:-1].strip()
 
