@@ -220,7 +220,6 @@ class FilterPart:
                 self._generate_new_column(column_name)
                 self.str_column = column_name
             except AttributeError as ae:
-                print("BOOM", self.logger)
                 if self.logger:
                     self.logger.error(
                         "Can not process '%s' (column='%s'). Invalid format. Please use one of"

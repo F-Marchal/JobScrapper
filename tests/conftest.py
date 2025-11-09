@@ -43,6 +43,7 @@ class BaseTest:
     """
     icl = CoreLogger
     enable_icl = True
+    icl.set_logging_level("CRITICAL")
 
     @property
     def get_test_folder_parent(self) -> str:
