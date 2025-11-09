@@ -4,6 +4,7 @@ import pytest
 
 from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
 from tests.job_scrapper.js_base_test import JobScrapperBaseTestClass
+NOW = ScrapperSQLightCore.now()
 
 class TestScrapperSQLightCore(JobScrapperBaseTestClass):
     """Test ScrapperSQLightCore main functionalities."""
@@ -211,7 +212,7 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
         tests/sql/tables/request_helpers/test_job_request.py"""
 
     def _generate_a_test_ssc(
-        self, instance_name: str = "SSC", now=ScrapperSQLightCore.now(),
+        self, instance_name: str = "SSC",
     ) -> ScrapperSQLightCore:
         ssc = ScrapperSQLightCore(
             f"https://{instance_name}.fr",
@@ -223,13 +224,13 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
         ssc.add_metadata("Message", "<3")
         ssc.add_metadata("Account :", "9 \t000")
         ssc.add_distance_to("Paris, france", 100.678)
-        ssc.add_time_stamps("Test time", now)
+        ssc.add_time_stamps("Test time", NOW)
         ssc.add_keyword_count("Informatics", 45)
 
         # Collision and default value
         ssc.add_keyword_count("Strasbourg", -1)
         ssc.add_distance_to("Strasbourg", -1)
-        ssc.add_time_stamps("Strasbourg", now)
+        ssc.add_time_stamps("Strasbourg", NOW)
 
         self.tracker.screen(instance_name, ssc)
 
