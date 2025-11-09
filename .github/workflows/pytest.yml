@@ -25,6 +25,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install poetry
+        sudo apt install tree
 
     - name: Install dependencies with Poetry
       run: |
@@ -34,9 +35,38 @@ jobs:
       run: |
         poetry run pytest tests/ --maxfail=1
 
+    - name: Collect pytest logs
+      if: always()
+      run: |
+        mkdir -p collected_logs
+        
+        # Iterate over each .tests directory
+        find tests/ -type d -name ".tests" | while read dir; do
+            echo "Processing: $dir" >> collected_logs/test_folders_copy.txt
+            echo "Dir path: ${dir}" >> collected_logs/test_folders_copy.txt
+        
+            if [ -d "$dir" ] && [ "$(ls -A "$dir")" ]; then
+                # Compute relative path
+                rel_path="$dir"
+                mkdir -p "collected_logs/$rel_path"
+                # Copy contents
+                rsync -a "$dir/"* "collected_logs/$rel_path/" # Should include hidden files 
+                echo "Copied $dir" >> collected_logs/test_folders_copy.txt
+
+            else
+                echo "Skipping empty or missing folder: $dir" >> collected_logs/test_folders_copy.txt
+            fi
+            echo "" >> collected_logs/test_folders_copy.txt
+        done
+        
+        echo "Full content :" >> collected_logs/test_folders_copy.txt
+        tree -a ./collected_logs/ >> collected_logs/test_folders_copy.txt
+
+
     - name: Upload pytest logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: pytest-logs
-        path: ./*/.tests
+        path: collected_logs
+        include-hidden-files: true
