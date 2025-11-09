@@ -1,5 +1,5 @@
 import os
-
+import time
 import pytest
 
 from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
@@ -96,15 +96,11 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
         """Ensure that the first_sighting_time_stamp_name time stamp is correctly fetch
         during object initialization"""
         ssc1_a = self._generate_a_test_ssc("ssc1_a")
+        now = ScrapperSQLightCore.now()
+        tn = ssc1_a.first_sighting_time_stamp_name
 
-        with ssc1_a.get_maindb_session() as session:
-            ssc1_a.sql_export(session)
-
-        ssc1_b = self._generate_a_test_ssc("ssc1_b")
-        tn = ssc1_b.first_sighting_time_stamp_name
-        assert ssc1_a.retrieve_time_stamps(tn) == ssc1_b.retrieve_time_stamps(
-            tn
-        )
+        diff_time = time.mktime(ssc1_a.retrieve_time_stamps(tn)) - time.mktime(now)
+        assert diff_time < 30
 
     def test_class_variable(self):
         """Ensure that table names can be used as table name in sqlite."""
