@@ -18,7 +18,11 @@ def pytest_addoption(parser):
         default=False,
         help="Keep test folder even when they succeed.",
     )
-
+    parser.addoption(
+        "--user-agent",
+        action="store",
+        help="User agent for geopy Nominatim"
+    )
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 # pylint: disable=W0613
