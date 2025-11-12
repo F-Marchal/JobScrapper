@@ -63,6 +63,8 @@ markers = [
     "logs: Test logging functions.",
     "testModules: Test module only used during test runs.",
     "jobScrapper: Test module only used during test runs.",
+    "mandatory_user_agent: Test that require the use of --user_agent",
+    "offline_simulation: Test that test functions that require connexion when internet conexion is offline",
 
     # Wrappers
     "sqlalchemy_wrappers: Test classes that wraps SQLAclhemy functionalities",
