@@ -1,5 +1,6 @@
 import os
 
+
 def get_unique_path(file_path: str, ext: str = "") -> str:
     """
     Give a filename that does not exist.
