@@ -31,12 +31,19 @@ jobs:
       run: |
         poetry install --no-interaction --no-root
 
+    - name: Run pytest (No network required)
+      run: |
+        poetry run pytest tests/ \
+          --maxfail=1 \
+          --user-agent="${{ github.server_url }}/${{ github.repository }} (${{ github.actor }})" \
+          -m "not offline_simulation and not online_simulation"
+
     - name: Run pytest (Network online)
       run: |
         poetry run pytest tests/ \
           --maxfail=1 \
           --user-agent="${{ github.server_url }}/${{ github.repository }} (${{ github.actor }})" \
-          -m "not offline_simulation"
+          -m "online_simulation"
 
     - name: Run pytest (Network offline)
       run: |
