@@ -12,7 +12,9 @@ from typing import Generator
 
 
 @contextmanager
-def redirect_logs_to_file(logger, file, level: str | None | int = None) -> Generator:
+def redirect_logs_to_file(
+    logger, file, level: str | None | int = None
+) -> Generator:
     """
     Redirect log into a file
     :param logger: A logger
@@ -37,12 +39,11 @@ def redirect_logs_to_file(logger, file, level: str | None | int = None) -> Gener
         logger.removeHandler(file_log_handler)
 
 
-
-
 class _ColorFormatter(logging.Formatter):
     """
     Class used to format logger output.
     """
+
     log_reset_color = "\033[0m"
     log_colors = {
         logging.DEBUG: "\033[38;5;67m",
@@ -99,7 +100,9 @@ class CoreLogger:
     log_file = None
 
     @classmethod
-    def start_file_logging(cls, path: str, level: str | None | int = None) -> bool:
+    def start_file_logging(
+        cls, path: str, level: str | None | int = None
+    ) -> bool:
         """
         Redirect logs into a file.
         :param path: A path that lead to a file
@@ -179,7 +182,9 @@ class CoreLogger:
         if level is None:
             level = list(cls.logger_levels)[0]
 
-        with redirect_logs_to_file(cls.logger, file=file, level=cls.logger_levels[level]):
+        with redirect_logs_to_file(
+            cls.logger, file=file, level=cls.logger_levels[level]
+        ):
             yield
 
 
