@@ -329,14 +329,14 @@ class BaseTable(Base):
         return self.are_equivalent(self, other, strict=strict)
 
     def __eq__(self, other):
-        """Says weather another BaseTableForJobScrapper is equivalent to self. (same primary keys).
+        """Says weather another BaseTableForJobScrapper is equal to self. (same primary keys and columns).
 
-        THIS DOES NOT PERFORM CLASS TYPE CHECK. TWO DIFFERENT TABLE WITH THE SAME PRIMARY KEYS WILL BE
+        THIS DOES NOT PERFORM CLASS TYPE CHECK. TWO DIFFERENT TABLE WITH THE SAME PRIMARY KEYS / COLUMNS WILL BE
         CONSIDERED IDENTICAL !!"""
         if not isinstance(other, BaseTable):
             return NotImplemented
 
-        return self.is_equivalent_to(other)
+        return self.is_equivalent_to(other, strict=True)
 
     def __str__(self):
         return f"{type(self).__name__}({self.flat(sep='|')})"
