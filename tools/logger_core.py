@@ -117,7 +117,8 @@ class CoreLogger:
                 cls.log_file,
             )
             return False
-
+        # pylint: disable=R1732
+        # This file should stay open until stop_file_logging is used.
         cls.log_file = open(path, "w", encoding="UTF-8")
 
         if level is None:

@@ -1,22 +1,26 @@
-from geopy.distance import geodesic  # type: ignore[import-untyped]
-from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
-from geopy.location import Location
-from sql.tables.places.places import Places
-from sql.tables.places.distances import Distances
-from sqlalchemy.orm import Session
 from logging import Logger
-from geopy.extra.rate_limiter import RateLimiter
+
+from geopy.distance import geodesic  # type: ignore[import-untyped]
+from geopy.exc import GeopyError  # type: ignore[import-untyped]
+from geopy.extra.rate_limiter import RateLimiter  # type: ignore[import-untyped]
+from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
+from geopy.location import Location  # type: ignore[import-untyped]
+from sqlalchemy.orm import Session
+
+from sql.tables.places.distances import Distances
+from sql.tables.places.places import Places
 
 
 class Geolocalisation:
     """Simple too class that wrap some geopy methods and adapt
-     them to JobScrapper."""
+    them to JobScrapper."""
+
     def __init__(
-            self,
-            contact: str,
-            logger: Logger | None = None,
-            timeout: int = 60,
-            **rate_limiter_kw,
+        self,
+        contact: str,
+        logger: Logger | None = None,
+        timeout: int = 60,
+        **rate_limiter_kw,
     ):
         """
         :param str contact: A way to contact the person that uses the program.
@@ -30,10 +34,10 @@ class Geolocalisation:
             "swallow_exceptions" : False,
         """
         rl_kw = {
-            "min_delay_seconds" : 2,
-            "max_retries" : 3,
-            "error_wait_seconds" : 30,
-            "swallow_exceptions" : True,
+            "min_delay_seconds": 2,
+            "max_retries": 3,
+            "error_wait_seconds": 30,
+            "swallow_exceptions": True,
         }
         rl_kw.update(rate_limiter_kw)
 
@@ -41,17 +45,16 @@ class Geolocalisation:
         self.logger: Logger | None = logger
         self._geolocator: Nominatim = Nominatim(user_agent=contact)
         self._rate_limiter: RateLimiter = RateLimiter(
-            self._geolocator.geocode,
-            **rl_kw
+            self._geolocator.geocode, **rl_kw
         )
 
     #  --- --- Main methods --- ---
     def geolocate(
-            self,
-            session: Session,
-            place: str,
-            lazy: bool = True,
-            add_in_database: bool = True
+        self,
+        session: Session,
+        place: str,
+        lazy: bool = True,
+        add_in_database: bool = True,
     ) -> tuple[float | None, float | None]:
         """
         Geolocate a place and returns longitude / latitude.
@@ -66,18 +69,13 @@ class Geolocalisation:
         existing_entry = self.get_localisation_from_database(session, place)
 
         if existing_entry and lazy:
-            return existing_entry.latitude, existing_entry.longitude
+            return existing_entry.lat, existing_entry.long
 
         lat, long = self.request(place)
 
-
         if add_in_database:
             session.add(
-                Places(
-                    localisation=place,
-                    longitude=long,
-                    latitude=lat
-                )
+                Places(localisation=place, longitude=long, latitude=lat)
             )
 
         return lat, long
@@ -86,7 +84,7 @@ class Geolocalisation:
         """Run the RateLimiter and returns the result"""
         return self._rate_limiter(place)
 
-    def request(self, place: str)-> tuple[float | None, float | None]:
+    def request(self, place: str) -> tuple[float | None, float | None]:
         """
         Request the coordinate of a place.
         :param place: The name of a place
@@ -94,34 +92,40 @@ class Geolocalisation:
         """
         try:
             # Try to run call geopy and to return the result.
-            if self.logger: self.logger.debug(
-                "Searching coordinates of '%s' using '%s'.",
-                place,
-                self._geolocator,
-            )
+            if self.logger:
+                self.logger.debug(
+                    "Searching coordinates of '%s' using '%s'.",
+                    place,
+                    self._geolocator,
+                )
             localisation: Location | None = self._request(place)
             if localisation is None:
                 return None, None
             return float(localisation.latitude), float(localisation.longitude)
 
-        except Exception as err:
+        except GeopyError as err:
             # If it fails, logs the error
-            if self.logger: self.logger.error(
-                "An error occurred during geolocalisation of '%s'."
-                "\nrate_limiter=%s"
-                "\ngeolocator=%s"
-                "\nError : %s",
-                place, self._rate_limiter, self._geolocator, err
-            )
+            if self.logger:
+                self.logger.error(
+                    "An error occurred during geolocalisation of '%s'."
+                    "\nrate_limiter=%s"
+                    "\ngeolocator=%s"
+                    "\nError : %s",
+                    place,
+                    self._rate_limiter,
+                    self._geolocator,
+                    err,
+                )
         return None, None
 
+    # pylint: disable=R0913,R0917
     def compute_distance(
-            self,
-            session: Session,
-            reference_localisation: str,
-            second_localisation: str,
-            lazy: bool = True,
-            add_in_database: bool = True,
+        self,
+        session: Session,
+        reference_localisation: str,
+        second_localisation: str,
+        lazy: bool = True,
+        add_in_database: bool = True,
     ) -> float | None:
         """
         Returns the distance between two localisation.
@@ -139,17 +143,23 @@ class Geolocalisation:
         """
         # Try to find an equivalent in
         existing_distance = self.get_distances_from_database(
-            session,
-            reference_localisation,
-            second_localisation
+            session, reference_localisation, second_localisation
         )
 
         if existing_distance and lazy:
-            return existing_distance.distance
+            return float(getattr(existing_distance, "distance"))
 
-        ref_entry = self.get_localisation_from_database(session, reference_localisation)
-        sec_entry = self.get_localisation_from_database(session, second_localisation)
+        ref_entry = self.get_localisation_from_database(
+            session, reference_localisation
+        )
+        sec_entry = self.get_localisation_from_database(
+            session, second_localisation
+        )
 
+        if not isinstance(ref_entry, Places):
+            return None
+        if not isinstance(sec_entry, Places):
+            return None
         if not self._compute_distance_valid_couple(ref_entry, sec_entry):
             return None
 
@@ -160,18 +170,16 @@ class Geolocalisation:
                 Distances(
                     reference_localisation=reference_localisation,
                     second_localisation=second_localisation,
-                    distance=geo.km
+                    distance=geo.km,
                 )
             )
 
-        if geo:
+        if isinstance(geo, Places):
             return geodesic(ref_entry.coord, sec_entry.coord).km
         return None
 
     def _compute_distance_valid_couple(
-            self,
-            ref_entry: Places,
-            sec_entry: Places
+        self, ref_entry: Places, sec_entry: Places
     ) -> bool:
         """
         Test if ref_entry and sec_entry can be used to compute
@@ -179,26 +187,34 @@ class Geolocalisation:
         """
 
         if not ref_entry:
-            if self.logger: self.logger.warning(
-                "Can not Process coordinates of '%s' : Unknown place.", ref_entry
-            )
+            if self.logger:
+                self.logger.warning(
+                    "Can not Process coordinates of '%s' : Unknown place.",
+                    ref_entry,
+                )
             return False
 
         if not sec_entry:
-            if self.logger: self.logger.warning(
-                "Can not Process coordinates of '%s' : Unknown place.", sec_entry
-            )
+            if self.logger:
+                self.logger.warning(
+                    "Can not Process coordinates of '%s' : Unknown place.",
+                    sec_entry,
+                )
             return False
 
         if not ref_entry.is_computable():
-            if self.logger: self.logger.warning(
-                "Can not Process coordinates of '%s'. Unknown coordinate.", ref_entry.localisation
-            )
+            if self.logger:
+                self.logger.warning(
+                    "Can not Process coordinates of '%s'. Unknown coordinate.",
+                    ref_entry.localisation,
+                )
             return False
         if not sec_entry.is_computable():
-            if self.logger: self.logger.warning(
-                "Can not Process coordinates of '%s'. Unknown coordinate.", ref_entry.localisation
-            )
+            if self.logger:
+                self.logger.warning(
+                    "Can not Process coordinates of '%s'. Unknown coordinate.",
+                    ref_entry.localisation,
+                )
             return False
         return True
 
@@ -206,8 +222,7 @@ class Geolocalisation:
     #  --- --- Tools --- ---
     @staticmethod
     def get_localisation_from_database(
-            session: Session,
-            localisation: str
+        session: Session, localisation: str
     ) -> Places | None:
         """
         Returns a Places entry based on a localisation.
@@ -216,27 +231,21 @@ class Geolocalisation:
         """
         # Create a dfault Places entry
         default_localisation = Places(
-            localisation=localisation,
-            longitude=None,
-            latitude=None
+            localisation=localisation, longitude=None, latitude=None
         )
 
         # Try to find an equivalent in the database
         existing = default_localisation.get_existing_self(
-            session,
-            include_session=True,
-            include_database=True
+            session, include_session=True, include_database=True
         )
-
 
         return existing
 
-
     @staticmethod
     def get_distances_from_database(
-            session: Session,
-            reference_localisation: str,
-            second_localisation: str,
+        session: Session,
+        reference_localisation: str,
+        second_localisation: str,
     ) -> Distances | None:
         """
         Returns a Distances entry that represent the distance between to places.
@@ -246,13 +255,12 @@ class Geolocalisation:
         default_distance = Distances(
             reference_localisation=reference_localisation,
             job_localisation=second_localisation,
-            distance=None
+            distance=None,
         )
         existing = default_distance.get_existing_self(
-            session,
-            include_session=True,
-            include_database=True
+            session, include_session=True, include_database=True
         )
 
         return existing
+
     #  --- --- Tools --- ---
