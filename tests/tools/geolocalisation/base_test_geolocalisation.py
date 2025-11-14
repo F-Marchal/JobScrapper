@@ -1,10 +1,12 @@
-from tests.conftest_mandatory_identifier import MandatoryIdentifierTestClass
 import os
-from tools.geolocalisation import Geolocalisation, Places, Distances
+
+from tests.conftest_mandatory_identifier import MandatoryIdentifierTestClass
+from tools.geolocalisation import Distances, Geolocalisation, Places
 
 
 class BaseGeoTest(MandatoryIdentifierTestClass):
     """Base class for Geolocalisation related tests"""
+
     def make_geo(self):
         """Generate a Geolocalisation object"""
         geo = Geolocalisation(
@@ -21,31 +23,27 @@ class BaseGeoTest(MandatoryIdentifierTestClass):
 
     def make_small_db(self):
         """Generate a small database that contains a few Places / Distances"""
-        with Distances.get_session(self.get_db_path(), logger=self.icl.logger) as session:
+        with Distances.get_session(
+            self.get_db_path(), logger=self.icl.logger
+        ) as session:
             session.add_all(
                 [
-                Places(
-                    localisation="Paris, France",
-                    latitude=48.85341,
-                    longitude=2.3488,
-                ),
-                Places(
-                    localisation="Knokke-le-Zoute, Belgium",
-                    latitude=51.35,
-                    longitude=3.26667,
-                ),
-
-                Distances(
-                    reference_localisation="Paris, France",
-                    job_localisation="Knokke-le-Zoute, Belgium",
-                    distance=315
-                )
+                    Places(
+                        localisation="Paris, France",
+                        latitude=48.85341,
+                        longitude=2.3488,
+                    ),
+                    Places(
+                        localisation="Knokke-le-Zoute, Belgium",
+                        latitude=51.35,
+                        longitude=3.26667,
+                    ),
+                    Distances(
+                        reference_localisation="Paris, France",
+                        job_localisation="Knokke-le-Zoute, Belgium",
+                        distance=315,
+                    ),
                 ]
             )
 
         return Geolocalisation
-
-
-
-
-
