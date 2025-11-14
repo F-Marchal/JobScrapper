@@ -12,7 +12,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 from sqlalchemy.sql.elements import ColumnElement, NamedColumn
-
+from typing import Self, Optional
 
 class Base(DeclarativeBase):
     """DeclarativeBase can not be inherited directly by BaseTable so
@@ -376,7 +376,7 @@ class BaseTable(Base):
         strict: bool = False,
         include_session: bool = False,
         include_database: bool = True,
-    ) -> "None | BaseTable":
+    ) -> Optional[Self]:
         """
         Returns an entry equivalent to self.
         :param session: A session connected to a database
