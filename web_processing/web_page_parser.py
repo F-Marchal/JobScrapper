@@ -26,7 +26,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from tools.secondary_logger_user import SecondaryLoggerUser, logging
 from web_processing.enhanced_chrome_browser import EnhancedChrome, PreparePage, ButtonFinder
 import time
-
+from contextlib import contextmanager
 from tools.get_unique_path import get_unique_path
 
 class WebPageProcessor(SecondaryLoggerUser):
@@ -102,27 +102,24 @@ class WebPageProcessor(SecondaryLoggerUser):
         :return: A html soup that represent the <self.block_of_interest> extracted from the url
         """
 
-        browser = self.start_browser_on(url, retry=retry, failed_sleep=failed_sleep)
+        with self.start_browser_on(url, retry=retry, failed_sleep=failed_sleep) as browser:
+            time.sleep(pre_preparation_wait_time)
 
-        time.sleep(pre_preparation_wait_time)
+            if prepare_page:
+                prepare_page(browser)
 
-        if prepare_page:
-            prepare_page(browser)
+            time.sleep(post_preparation_wait_time)
 
-        time.sleep(post_preparation_wait_time)
-
-        html = browser.page_source
-
-        self.logger.debug("Closing browser : '%s' (current url : %s)", browser, url)
-        browser.quit()
-
+            html = browser.page_source
 
         return BeautifulSoup(html, "html.parser")
 
-    def start_browser_on(self, url: str, retry=2, failed_sleep: int=5) -> EnhancedChrome:
+    @contextmanager
+    def start_browser_on(self, url: str, retry=2, failed_sleep: int=5) -> Iterator[EnhancedChrome]:
         """
-        Create a new EnhancedChrome that load <url>
-        :param str url: An url
+        Create a new EnhancedChrome that load <url>. browser.quit() is call
+        at the end of the context manager.
+        :param str url: A url
         :param int retry: How many times this loading can be retried.
         :param int failed_sleep: How long the program wait if the browser
             fails to open <url>.
@@ -132,7 +129,11 @@ class WebPageProcessor(SecondaryLoggerUser):
 
         browser = EnhancedChrome(options=self.chrome_options, logger=self.logger)
         self._start_browser_on(browser, url, retry, failed_sleep)
-        return browser
+
+        yield browser
+
+        self.logger.debug("Closing browser : '%s' (current url : %s)", browser, url)
+        browser.quit()
 
     def _start_browser_on(
             self,
