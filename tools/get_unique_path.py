@@ -4,7 +4,7 @@ import os
 def get_unique_path(file_path: str, ext: str = "") -> str:
     """
     Give a filename that does not exist.
-    if <file_path>.<ext> exist, <file_path>-<#>.<ext> will be tested. <#> is incremented
+    if <file_path>.<ext> exist, <file_path>-<#>.<ext> will be tested. <#> (1, 2, 3, ...) is incremented
     until an unoccupied file name is found.
     :param str file_path: folder/filename
     :param str ext: file extension that should be added to  folder/filename (-->  folder/filename.ext)
@@ -12,6 +12,7 @@ def get_unique_path(file_path: str, ext: str = "") -> str:
     """
     if ext and ext[0] != ".":
         ext = "." + ext
+    file_path = file_path.removesuffix(ext)
 
     default_name = file_path + ext
 
