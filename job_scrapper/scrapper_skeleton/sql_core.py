@@ -246,7 +246,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             localisation=self.localisation if self.localisation else None,
             contract=self.contract_type if self.localisation else None,
             field=self.field if self.localisation else None,
-            origin=self.get_class_name(),
+            origin=self.get_standardised_class_name(),
         )
 
     def to_metadata_entries(self) -> list[Metadata]:

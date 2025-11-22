@@ -216,7 +216,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         dump_localisations: bool = True,
     ) -> list[ScrapperRequestCore]:
         cls.logger.info(
-            "Starting %s's main scrapping method.", cls.get_class_name()
+            "Starting %s's main scrapping method.", cls.get_standardised_class_name()
         )
         cls.logger.debug("Locals : %s", locals())
 
