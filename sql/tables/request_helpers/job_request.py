@@ -1,4 +1,4 @@
-from sqlalchemy import ColumnElement, or_
+from sqlalchemy import ColumnElement, and_
 
 # pylint: disable=E0611
 from sqlalchemy.orm import Query, Session
@@ -92,7 +92,7 @@ class JobRequest(SQLRequestWrapper):
             .where(job_filter.safe_filters)
             .group_by(Jobs.url)
             .having(
-                or_(
+                and_(
                     distance_filter.safe_filters,
                     keywords_filter.safe_filters,
                     time_filter.safe_filters,
