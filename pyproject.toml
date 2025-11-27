@@ -62,7 +62,7 @@ max-line-length = 120
 
 [tool.pytest.ini_options]
 markers = [
-    "NotImplemented: Test classes / function not implemented.",
+    "unautomatedTest: Tests that can not be runs in an automated environement due to the request of certains webservices",
 
     "logs: Test logging functions.",
     "testModules: Test module only used during test runs.",
