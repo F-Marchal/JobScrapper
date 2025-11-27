@@ -1,44 +1,48 @@
-import os
-import re
-import shutil
-import tempfile
-import time
-import zipfile
-from typing import Iterator, Protocol, TypeVar, Generic, Literal
-from urllib.parse import unquote, urlparse
+from typing import Iterator
+from urllib.parse import urlparse
 
 import bs4
 from bs4 import BeautifulSoup
-from geopy.distance import geodesic  # type: ignore[import-untyped]
-from geopy.exc import GeocoderServiceError  # type: ignore[import-untyped]
-from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
-from selenium import webdriver
 from selenium.common.exceptions import (
-    TimeoutException,
     WebDriverException,
 )
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By, ByType
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support import expected_conditions as cond
-from selenium.webdriver.support.ui import WebDriverWait
+
 from tools.secondary_logger_user import SecondaryLoggerUser, logging
-from web_processing.enhanced_chrome_browser import EnhancedChrome, PreparePage, ButtonFinder
+from web_processing.enhanced_chrome_browser import EnhancedChrome, PreparePage
 import time
 from contextlib import contextmanager
-from tools.get_unique_path import get_unique_path
 
 class WebPageProcessor(SecondaryLoggerUser):
-    work_dir = tempfile.TemporaryDirectory()
+    """
+    Contains a number of method that helps with the usage of
+    EnhancedChrome. This class act as a rate limiter.
+    """
 
     def __init__(
             self,
             logger: logging.Logger | None=None,
             chrome_options: Options | None=None,
+            add_default_experimental_options: bool=True,
             rate_limit: int = 2,
     ):
+        """
+        :param logger: A logger
+        :param chrome_options: Options for the browser. This object might
+            be modified due to `add_default_experimental_options`
+        :param add_default_experimental_options:
+                If True, Some experimental options will be added to chrome_options.
+               `options`. This will alter chrome_options. Without these options, some methods might break.
+                add_default_experimental_options can not be changed after initialization.
+        :param rate_limit: Minimal interval between two call to the same website.
+        """
         super().__init__(logger)
+
+        # Will add experimental opt to chrome_options
+        # When a browser is created at this point
+        # the Option passed as chrome_options will
+        # be updated with these option
+        self._add_default_experimental_options = add_default_experimental_options
         self.wait_between_calls = rate_limit
         self.all_cals: dict[str, float] = {}
 
@@ -50,20 +54,12 @@ class WebPageProcessor(SecondaryLoggerUser):
                 "--headless"
             )
 
-        self.chrome_options.add_experimental_option(
-            "prefs",
-            {
-                # Change default directory for downloads
-                "download.default_directory": os.path.abspath(
-                    self.work_dir.name
-                ),
-                # Auto download the file
-                "download.prompt_for_download": False,
-                "download.directory_upgrade": True,
-                # It will not show PDF directly in chrome
-                "plugins.always_open_pdf_externally": True,
-            },
-        )
+    @property
+    def add_default_experimental_options(self):
+        """ If True, Some experimental options will be added to self.chrome_options.
+        `options`. Without these options, some methods might break.
+        add_default_experimental_options can not be changed after initialization."""
+        return self._add_default_experimental_options
 
     def wait_before_calling(self, url: str):
         base_url = self.extract_baseurl(url)
@@ -79,7 +75,6 @@ class WebPageProcessor(SecondaryLoggerUser):
 
         self.all_cals[base_url] = now
 
-
     def extract_html_from(
             self,
             url: str,
@@ -88,8 +83,6 @@ class WebPageProcessor(SecondaryLoggerUser):
             post_preparation_wait_time: int = 0.5,
             retry: int = 2,
             failed_sleep: int = 5,
-
-
     ) -> bs4.BeautifulSoup:
         """
         Extract html from a url.
@@ -127,7 +120,11 @@ class WebPageProcessor(SecondaryLoggerUser):
         """
         self.logger.debug("Starting Chrome on %s", url)
 
-        browser = EnhancedChrome(options=self.chrome_options, logger=self.logger)
+        browser = EnhancedChrome(
+            options=self.chrome_options,
+            logger=self.logger,
+            add_default_experimental_options=self._add_default_experimental_options,
+        )
         self._start_browser_on(browser, url, retry, failed_sleep)
 
         yield browser
@@ -143,6 +140,7 @@ class WebPageProcessor(SecondaryLoggerUser):
             failed_sleep: int,
             exceptions: list[str] | None = None
     ) -> None:
+        """Open url in a browser and manage errors."""
         if not exceptions:
             exceptions = []
 
@@ -185,93 +183,3 @@ class WebPageProcessor(SecondaryLoggerUser):
         parsed_url = urlparse(url)
         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
         return base_url
-
-    def download_html(self):
-        pass
-
-    def download_file(
-            self,
-            url: str,
-            retry: int = 2,
-            timeout: int = 360,
-            failed_sleep: int=5,
-    ) -> str | None:
-        # https://stackoverflow.com/questions/43149534/selenium-webdriver-how-to-download-a-pdf-file-with-python
-
-        download_dir = self.work_dir.name
-        parsed_url = urlparse(url)
-        filename = os.path.basename(parsed_url.path)
-        filename = unquote(filename)  # Avoid encoding errors
-        filepath = os.path.join(download_dir, filename)
-
-        self.logger.debug(
-            "Downloading file : %s\ntimeout=%s\tExpected path : %s",
-            url,
-            timeout,
-            filepath,
-        )
-
-        browser = EnhancedChrome(options=self.chrome_options, logger=self.logger)
-        self.wait_before_calling(url)
-
-        i = 0
-        try:
-            browser.get(url)
-            while not os.path.exists(filepath) and i < timeout:
-                time.sleep(1)
-                i += 1
-
-        except WebDriverException as exception:
-            self.logger.warning("%s\n%s retry left", exception, retry)
-            if retry <= 0:
-                self.logger.error(
-                    "Multiple exception during interrogation of %s. \n%s",
-                    url,
-                    exception,
-                )
-                raise
-
-            time.sleep(failed_sleep)
-            return self.download_file(
-                url=url,
-                retry=retry - 1,
-                timeout=timeout,
-                failed_sleep=failed_sleep,
-            )
-        finally:
-            browser.quit()
-
-        if not os.path.exists(filepath):
-            self.logger.error("Download failed : %s", filepath)
-            if i >= timeout :
-                raise FileExistsError(f"File download from '{url}' failed : timeout ({i} >= {timeout})")
-            else:
-                raise FileExistsError(f"File download from '{url}' failed : {filepath} does not exist.")
-
-        self.logger.debug("Download completed : %s", filepath)
-        return filepath
-
-wpp = WebPageProcessor()
-f = wpp.download_file(
-    url="https://rh.inserm.fr/nous-rejoindre/Lists/Emploi%20ITA/"
-        "Attachments/5758/MOTTA_Inge%cc%81nieur-e%20d'e%cc%81tudes%20en%20techniques%20biologiques_112025.pdf"
-)
-print(os.path.abspath(f))
-time.sleep(20)
-
-
-# wpp = WebPageParser(chrome_options=Options())
-# bro = wpp.start_browser_on("https://umontpellier.nous-recrutons.fr/offres-emploi/")
-# for item in bro.iter_through_pages_using_buttons(
-#     prepare_page=lambda _: bro.scroll_down(),
-#     button_finder={
-#         "by": By.CSS_SELECTOR,
-#         "button_id": "div.jet-filters-pagination__item.prev-next.next",
-#     },
-#     wait_after_prepare_page=2,
-#     wait_scroll_to_view_button=2,
-#     # By.CSS_SELECTOR, "div.jet-filters-pagination__link", 15
-# ):
-#     print(item)
-#
-# time.sleep(5)
