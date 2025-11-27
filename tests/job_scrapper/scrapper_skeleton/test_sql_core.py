@@ -24,7 +24,7 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
         assert entry.localisation == ssc.localisation
         assert entry.contract == ssc.contract_type
         assert entry.field == ssc.field
-        assert entry.origin == ssc.get_class_name()
+        assert entry.origin == ssc.get_standardised_class_name()
 
     def test_to_metadata_entries(self):
         """Test the generation of Metadata entries from
