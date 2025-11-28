@@ -13,6 +13,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.sql.elements import ColumnElement, NamedColumn
 from typing import Self, Optional
+from sqlalchemy import event
 
 class Base(DeclarativeBase):
     """DeclarativeBase can not be inherited directly by BaseTable so
@@ -46,6 +47,13 @@ class BaseTable(Base):
     def _get_engine(cls, database_path: str):
         os.makedirs(os.path.dirname(database_path), exist_ok=True)
         engine = create_engine(f"sqlite:///{database_path}", echo=False)
+
+        @event.listens_for(engine, "connect")
+        def enable_foreign_keys(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON;")
+            cursor.close()
+
         return engine
 
     @classmethod
