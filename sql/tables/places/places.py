@@ -23,11 +23,8 @@ But it appears that for multiple columns, this will not be as efficient as to us
 a case (require multiple joins).
 ```
 """
-
-
 from sqlalchemy import Column, Float, String, func, ColumnElement, case, Label, true
 from sqlalchemy.orm import relationship
-from sql.tables.jobs import Jobs
 
 from sql.tables.base_table import BaseTable
 
