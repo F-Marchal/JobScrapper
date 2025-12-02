@@ -23,10 +23,11 @@ But it appears that for multiple columns, this will not be as efficient as to us
 a case (require multiple joins).
 ```
 """
-from sqlalchemy import Column, Float, String, func, ColumnElement, case, Label, true
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Float, String, func, ColumnElement, case, Label
+from sqlalchemy.orm import relationship, Session
 
 from sql.tables.base_table import BaseTable
+from sql.tables.jobs import Jobs
 
 EARTH_RADIUS = 6371.0
 
@@ -162,3 +163,30 @@ class Places(BaseTable):
 
         return nearest_place_case, nearest_distance
 
+    @classmethod
+    def get_default_entry(cls, localisation: str | None) -> 'Places':
+        """Give a Places object with longitude / latitude = None"""
+        return Places(
+            localisation=localisation,
+            longitude=None,
+            latitude=None,
+        )
+
+    @classmethod
+    def get_job_place(
+            cls,
+            session: Session,
+            localisation: Jobs | str | None = None,
+    ) -> "Places | None":
+
+        """Gives a Places object related to a localisation / a Job entry.
+        None if there is no associated place. A place object otherwise."""
+        default_localisation = cls.get_default_entry(
+            localisation.localisation if isinstance(localisation, Jobs) else localisation
+        )
+
+        return default_localisation.get_existing_self(
+            session,
+            include_session=True,
+            include_database=True
+        )

@@ -208,3 +208,26 @@ class TestPlaces(BaseTest):
                     assert place == "Paris, France"
                 else:
                     assert place == "Strasbourg, France"
+
+    def test_get_job_place(self):
+        p1 = Places(
+            localisation="Paris, France",
+            longitude=48.85341,
+            latitude=2.3488,
+        )
+        self.screen_multiple_vars("p", p1)
+
+        j1 = Jobs(url="Alpha", localisation="Paris, France")
+        self.screen_multiple_vars("j", j1)
+
+        with Jobs.get_session("db1.db") as session:
+            # No correspondent place in database
+            assert Places.get_job_place(session, j1) is None
+            session.add(p1)
+
+            # Correspondent place in session.new
+            assert Places.get_job_place(session, j1).localisation == "Paris, France"
+
+        with Jobs.get_session("db1.db") as session:
+            # Correspondent place in database
+            assert Places.get_job_place(session, j1).localisation == "Paris, France"
