@@ -1,11 +1,11 @@
 from sqlalchemy import ColumnElement, and_
-
+from typing import Callable
 # pylint: disable=E0611
 from sqlalchemy.orm import Query, Session
 from sqlalchemy.sql import operators as ope
 
 from sql.filters.filter_generator import FilterGenerator
-from sql.tables import Distances, Jobs, Keywords, Metadata, TimeStamps
+from sql.tables import Distances, Jobs, Keywords, Metadata, TimeStamps, Places
 
 from .sql_request_wrapper import SQLRequestWrapper
 
@@ -14,6 +14,21 @@ class JobRequest(SQLRequestWrapper):
     """
     Build a huge Query object to request all information related to a job in Jobs (JobExtraBase, Jobs and Distances)
     """
+    def __init__(
+        self,
+        *args,
+        place_name_normaliser: Callable[
+            [str], str
+        ] = Places.format_localisation,
+        **kwargs,
+    ):
+        """
+        :param place_name_normaliser: A command to normalise places names such as Places.format_localisation.
+        :param args: see SQLRequestWrapper.__init__
+        :param kwargs: see SQLRequestWrapper.__init__
+        """
+        super().__init__(*args, **kwargs)
+        self.place_name_normaliser = place_name_normaliser
 
     # --- --- Request --- ---
     # pylint: disable=R0913,R0917,R0914
@@ -65,7 +80,7 @@ class JobRequest(SQLRequestWrapper):
 
         # Parse inputs
         job_filter = self.build_jobs_filter_generator(columns)
-        distance_filter = self.build_distance_filter_generator(distances_from)
+        distance_filter = self.build_distance_filter_generator(session, distances_from)
         keywords_filter = self.build_keywords_filter_generator(keywords)
         time_filter = self.build_time_stamp_filter_generator(time_stamp)
         metadata_filter = self.build_metadata_filter_generator(metadata)
@@ -82,11 +97,8 @@ class JobRequest(SQLRequestWrapper):
 
         query = (
             session.query(*order_by_cols)
+            .join(Jobs.places_entry) # Replace .outerjoin(Distances, Distances.job_localisation == Jobs.localisation))
             .outerjoin(Keywords, ope.eq(Keywords.url, Jobs.url))
-            .outerjoin(
-                Distances,
-                ope.eq(Distances.job_localisation, Jobs.localisation),
-            )
             .outerjoin(TimeStamps, ope.eq(TimeStamps.url, Jobs.url))
             .outerjoin(Metadata, ope.eq(Metadata.url, Jobs.url))
             .where(job_filter.safe_filters)
@@ -145,23 +157,75 @@ class JobRequest(SQLRequestWrapper):
 
     def build_distance_filter_generator(
         self,
+        session: Session,
         distances_from: list[str] | None = None,
     ) -> FilterGenerator:
         """
         Build a FilterGenerator for the Distances table from a list of string compatible with FilterParts.
         The column name used inside the strings should be an item in Distances.reference_localisation
         """
+
+
         return self.quick_filter_generator(
             table=Distances,
             columns=distances_from,
             cast_constraint=[float], # Ensure that all value used by filter are float.
-            column_creator=self.quick_column_creator(
-                label_col=Distances.reference_localisation,
-                value_col=Distances.distance,
-                suffix_name="distance",
-                else_value=None,
-            ),
+            column_creator=lambda col_name: self.distance_column_command_generator(
+                session=session,
+                col_name=col_name,
+                suffix_name="distance"
+            )
         )
+
+    def distance_column_command_generator(
+            self,
+            session: Session,
+            col_name: str,
+            suffix_name: str
+    ) -> ColumnElement:
+        """
+        Generate a new column like object that compute the distances
+        between two places.
+        :param session: A session connected to the requested database
+        :param col_name: The name of the column passed by the user
+        :param suffix_name: The suffix to add at the end of the colun name
+        :return: ColumnElement
+        """
+        selected_suffix = self.get_suffix(suffix_name)
+        col_name = self.place_name_normaliser(col_name)
+        place_column = Places.get_job_place(session, col_name)
+
+        if not place_column:
+            raise KeyError(f"Unable to find a place named '{col_name}' in database.")
+
+        if not place_column.is_computable():
+            raise KeyError(
+                f"Although the database contains a place named '%s', the coordinate"
+                f"of this place can not be used : %s".format(col_name, place_column.to_dict())
+            )
+
+        return place_column.get_column_distance_to_self(col_name.removesuffix(selected_suffix) + selected_suffix)
+
+
+    # def build_distance_filter_generator(
+    #     self,
+    #     distances_from: list[str] | None = None,
+    # ) -> FilterGenerator:
+    #     """
+    #     Build a FilterGenerator for the Distances table from a list of string compatible with FilterParts.
+    #     The column name used inside the strings should be an item in Distances.reference_localisation
+    #     """
+    #     return self.quick_filter_generator(
+    #         table=Distances,
+    #         columns=distances_from,
+    #         cast_constraint=[float], # Ensure that all value used by filter are float.
+    #         column_creator=self.quick_column_creator(
+    #             label_col=Distances.reference_localisation,
+    #             value_col=Distances.distance,
+    #             suffix_name="distance",
+    #             else_value=None,
+    #         ),
+    #     )
 
     def build_keywords_filter_generator(
         self,
