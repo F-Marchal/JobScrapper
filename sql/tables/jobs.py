@@ -9,6 +9,7 @@ class Jobs(BaseTable):
     Main table. Contains main information related to jobs offers :
     contract, field, url ...
     """
+    DEFAULT_LOCALISATION = "UNKNOWN"
 
     __abstract__ = False
     __tablename__ = "jobs"
@@ -22,7 +23,7 @@ class Jobs(BaseTable):
             "places.localisation",
             ondelete="RESTRICT" # Cannot delete a Place if any Job points to it.
         ),
-        nullable=True,
+        nullable=False,
     )
     origin = Column(String, nullable=True)
     title = Column(String, nullable=True)

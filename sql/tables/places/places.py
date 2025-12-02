@@ -165,9 +165,10 @@ class Places(BaseTable):
 
     @classmethod
     def get_default_entry(cls, localisation: str | None) -> 'Places':
-        """Give a Places object with longitude / latitude = None"""
+        """Give a Places object with longitude / latitude = None.
+        If localisation is None or "", localisation is replaced with Jobs.DEFAULT_LOCALISATION"""
         return Places(
-            localisation=localisation,
+            localisation=localisation if localisation else Jobs.DEFAULT_LOCALISATION,
             longitude=None,
             latitude=None,
         )
