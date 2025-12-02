@@ -9,9 +9,9 @@ from sqlalchemy.sql import operators as ope
 
 from sql.filters.filter_generator import FilterGenerator, FilterPart, LogicalWrapper, ComparisonWrapper
 from sql.tables import BaseTable
+from tools.secondary_logger_user import SecondaryLoggerUser
 
-
-class SQLRequestWrapper:
+class SQLRequestWrapper(SecondaryLoggerUser):
     """Class that helps with the generation of sql queries.
     This class should be used for queries that require the
     creation of new columns "on the fly" to extract values from
@@ -63,7 +63,7 @@ class SQLRequestWrapper:
          that might be contained inside a column during the creation of new columns during <build_request>.
         :param logger: A logger objet
         """
-        self.logger: None | Logger = logger
+        super().__init__(logger)
         self._suffixes: dict[str, str] = {}
         self.column_name_normaliser: Callable[[str], str] = (
             column_name_normaliser
@@ -131,7 +131,7 @@ class SQLRequestWrapper:
         query: Query,
     ) -> Result:
         """Execute a request object and log it in self.logger"""
-        if self.logger: self.logger.debug("Executing : %s", self.compile_query(query))
+        self.logger.debug("Executing : %s", self.compile_query(query))
         return session.execute(query)
 
     def quick_filter_generator(
