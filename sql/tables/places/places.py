@@ -24,7 +24,7 @@ a case (require multiple joins).
 ```
 """
 from sqlalchemy import Column, Float, String, func, ColumnElement, case, Label
-from sqlalchemy.orm import relationship, Session
+from sqlalchemy.orm import relationship, Session, validates
 
 from sql.tables.base_table import BaseTable
 from sql.tables.jobs import Jobs
@@ -42,6 +42,15 @@ class Places(BaseTable):
     latitude = Column(Float, nullable=True)
 
     jobs_entry = relationship("Jobs", back_populates="places_entry")
+
+    @validates("localisation")
+    def _validate_localisation(self, key, value):
+        return self.format_localisation(value)
+
+    @staticmethod
+    def format_localisation(string: str) -> str:
+        """Format localisation column"""
+        return string.strip().title()
 
     @property
     def lat(self) -> float | None:
@@ -64,6 +73,7 @@ class Places(BaseTable):
         lon1: ColumnElement[float],
         lat2: ColumnElement[float],
         lon2: ColumnElement[float],
+        round_: float = 3
     ):
         """
         Return SQL expression for the distance between (lat1, lon1) and (lat2, lon2) in km.
@@ -92,9 +102,9 @@ class Places(BaseTable):
             else_=distance_expr
         )
 
-        return distance_expr
+        return  func.round(distance_expr, round_)
 
-    def get_column_distance_to_self(self, label: str | None = None) -> Label:
+    def get_column_distance_to_self(self, label: str | None = None, round_: int=3) -> Label:
         """
         Returns a sql expression that compute the distance to this reference place for all jobs.
 
@@ -109,6 +119,7 @@ class Places(BaseTable):
         )
 
         :param label: A Label for this column. Default : self.localisation + " KM"
+        :param round_: Round to [round_] digit after '.'
         """
         if label is None:
             label = self.localisation + " KM"
@@ -116,11 +127,12 @@ class Places(BaseTable):
             lat1=self.latitude,
             lon1=self.longitude,
             lat2=Places.latitude,
-            lon2=Places.longitude
+            lon2=Places.longitude,
+            round_=round_
         ).label(label)
 
     @staticmethod
-    def get_column_nearest_place_to(label: str, *places: "Places") -> tuple[Label, Label]:
+    def get_column_nearest_place_to(label: str, *places: "Places", round_: int=3) -> tuple[Label, Label]:
         """
         AI GENERATED
 
@@ -130,6 +142,7 @@ class Places(BaseTable):
 
         :param label: Name of those columns.
         :param places: One or more Places instances
+        :param round_: Round to [round_] digit after '.'
         """
         if not places:
             raise ValueError("At least one reference place must be provided")
@@ -140,7 +153,8 @@ class Places(BaseTable):
                 lat1=p.latitude,
                 lon1=p.longitude,
                 lat2=Places.latitude,
-                lon2=Places.longitude
+                lon2=Places.longitude,
+                round_=round_,
             ), p.localisation)
             for p in places
         ]
