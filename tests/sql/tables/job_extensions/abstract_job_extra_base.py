@@ -157,13 +157,13 @@ class TestJobExtraBase(BaseTest):
             raise NotImplementedError()
 
         p1 = Places(
-            localisation="Nowhere",
+            localisation=Jobs.DEFAULT_LOCALISATION,
             longitude=None,
             latitude=None,
         )
 
-        j1 = Jobs(url="Alpha")
-        j2 = Jobs(url="Beta")
+        j1 = Jobs(url="Alpha", localisation=Jobs.DEFAULT_LOCALISATION)
+        j2 = Jobs(url="Beta", localisation=Jobs.DEFAULT_LOCALISATION)
 
         # pylint: disable=E1102:
         # If typing is respected, __tested_class__ is either None (NotImplementedError)
