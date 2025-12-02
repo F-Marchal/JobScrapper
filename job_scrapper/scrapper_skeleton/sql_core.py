@@ -54,10 +54,16 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     def localisation(self) -> str:
         """Returns the location of this job if job localisation is unknown (None or ""),
         Jobs.DEFAULT_LOCALISATION is returned."""
-        localisation = super().localisation
+        localisation =  super(ScrapperSQLightCore, self).localisation
         if not localisation:
             return Jobs.DEFAULT_LOCALISATION
         return localisation
+
+    @localisation.setter
+    def localisation(self, value: str | None):
+        # Localisation might be used as a column name since it might generate
+        # a Places entry.
+        self._localisation = self.place_column_name_normaliser(value)
 
     @classmethod
     def get_job_requester(cls) -> JobRequest:
@@ -70,6 +76,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 "keyword": cls.keyword_suffix,
                 "distance": cls.distance_suffix,
             },
+            place_name_normaliser=cls.place_column_name_normaliser,
             # All 'label' contained in time_stamp, metadata ...
             # are passed inside cls.clean_string
             column_label_value_normaliser=cls.column_label_value_normaliser,
@@ -444,5 +451,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         if string2:
             return string2
         return ""
+
+    @classmethod
+    def place_column_name_normaliser(cls, string: str) -> str:
+        return Places.format_localisation(cls.clean_string(string))
 
     # --- --- Utils --- ---
