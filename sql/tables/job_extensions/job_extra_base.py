@@ -10,6 +10,14 @@ class JobExtraBase(BaseTable):
 
     ASSOCIATION ARE DEFINED IN JOBS AND IN SUBCLASS"""
 
+    __abstract__ = True
+
+    url = Column(
+        String,
+        ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
     @classmethod
     def get_for_job(cls, session: Session, url: str | Jobs) -> Query:
         """
@@ -20,18 +28,6 @@ class JobExtraBase(BaseTable):
         """
         raise NotImplementedError
 
-class JobExtraURLBased(JobExtraBase):
-    """Abstract class use to extend data attached to Jobs. Each table that inherit JobExtraBase uses Job.Url
-    as primary key and are deleted when the attached jobs is deleted.
 
-    ASSOCIATION ARE DEFINED IN JOBS AND IN SUBCLASS"""
-
-    __abstract__ = True
-
-    url = Column(
-        String,
-        ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"),
-        primary_key=True,
-    )
 
 
