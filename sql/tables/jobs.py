@@ -24,6 +24,7 @@ class Jobs(BaseTable):
             ondelete="RESTRICT" # Cannot delete a Place if any Job points to it.
         ),
         nullable=False,
+        default=DEFAULT_LOCALISATION
     )
     origin = Column(String, nullable=True)
     title = Column(String, nullable=True)
