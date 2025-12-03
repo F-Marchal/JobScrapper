@@ -16,7 +16,7 @@ from sql.tables import (
     Jobs,
     Keywords,
     Metadata,
-    TimeStamps,
+    TimeStamps, Places,
 )
 from sql.tables.request_helpers.job_request import JobRequest
 
@@ -50,6 +50,21 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     }
     first_sighting_time_stamp_name = "First sighting"
 
+    @property
+    def localisation(self) -> str:
+        """Returns the location of this job if job localisation is unknown (None or ""),
+        Jobs.DEFAULT_LOCALISATION is returned."""
+        localisation =  super(ScrapperSQLightCore, self).localisation
+        if not localisation:
+            return Jobs.DEFAULT_LOCALISATION
+        return localisation
+
+    @localisation.setter
+    def localisation(self, value: str | None):
+        # Localisation might be used as a column name since it might generate
+        # a Places entry.
+        self._localisation = self.place_column_name_normaliser(value)
+
     @classmethod
     def get_job_requester(cls) -> JobRequest:
         """Generate a JobRequest configured to be used
@@ -61,6 +76,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 "keyword": cls.keyword_suffix,
                 "distance": cls.distance_suffix,
             },
+            place_name_normaliser=cls.place_column_name_normaliser,
             # All 'label' contained in time_stamp, metadata ...
             # are passed inside cls.clean_string
             column_label_value_normaliser=cls.column_label_value_normaliser,
@@ -217,12 +233,20 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         """
         self.logger.debug("Exporting '%s' using '%s'", self, session)
 
+        # Main entries
+        place_entry = self.to_place_entry(session)
         job_entry = self.to_job_entry()
         metadata_entries = self.to_metadata_entries()
         keyword_entries = self.to_keywords_entries()
         time_stamp_entries = self.to_time_stamps_entries()
         distance_entries = self.to_distances_entries()
+
+        # Ensure Place entry existence (mandatory to export job_entry)
+
+
+        #
         all_entries = [
+            place_entry,
             job_entry,
             *metadata_entries,
             *keyword_entries,
@@ -238,15 +262,33 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             len(all_entries),
         )
 
+    def to_place_entry(
+            self,
+            session: Session,
+    ) -> Places:
+        """Turn self.localisation to a Place entry.
+        If the localisation is known, the place object
+        is extracted from the database. Else, a new one is
+        generated with `longitude=None` and `latitude=None`."""
+        existing_entry = Places.get_job_place(
+            session,
+            self.localisation
+        )
+
+        if existing_entry is not None:
+            return existing_entry
+
+        return Places.get_default_entry(self.localisation) # if self.localisation else None
+
     def to_job_entry(self) -> Jobs:
         """Generate a Jobs entry that represent self"""
         return Jobs(
             url=self.url,
             title=self.title if self.title else None,
-            localisation=self.localisation if self.localisation else None,
+            localisation=self.localisation, # if self.localisation else None
             contract=self.contract_type if self.localisation else None,
             field=self.field if self.localisation else None,
-            origin=self.get_class_name(),
+            origin=self.get_standardised_class_name(),
         )
 
     def to_metadata_entries(self) -> list[Metadata]:
@@ -409,5 +451,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         if string2:
             return string2
         return ""
+
+    @classmethod
+    def place_column_name_normaliser(cls, string: str) -> str:
+        return Places.format_localisation(cls.clean_string(string))
 
     # --- --- Utils --- ---

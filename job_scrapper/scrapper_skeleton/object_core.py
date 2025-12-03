@@ -88,7 +88,7 @@ class ScrapperObjectCore(CoreLogger):
             self.strftime(
                 self._time_stamps[self.init_time_stamp_name]
             ),
-            self.get_class_name(),
+            self.get_standardised_class_name(),
             self.localisation,
             self.field,
             self.contract_type,
@@ -311,7 +311,7 @@ class ScrapperObjectCore(CoreLogger):
                 print(job.flat(with_header=False))
 
     @classmethod
-    def get_class_name(cls) -> str:
+    def get_standardised_class_name(cls) -> str:
         """Returns cls.__name__"""
         return cls.__name__
 

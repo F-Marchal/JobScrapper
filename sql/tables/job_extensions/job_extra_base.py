@@ -4,7 +4,6 @@ from sqlalchemy.orm import Query, Session
 from sql.tables.base_table import BaseTable
 from sql.tables.jobs import Jobs
 
-
 class JobExtraBase(BaseTable):
     """Abstract class use to extend data attached to Jobs. Each table that inherit JobExtraBase uses Job.Url
     as primary key and are deleted when the attached jobs is deleted.
@@ -28,3 +27,7 @@ class JobExtraBase(BaseTable):
         :return: A query object
         """
         raise NotImplementedError
+
+
+
+

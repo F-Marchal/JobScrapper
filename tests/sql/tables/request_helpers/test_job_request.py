@@ -3,7 +3,7 @@ import datetime
 import pytest
 
 from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
-from sql.tables.request_helpers.job_request import JobRequest, Jobs
+from sql.tables.request_helpers.job_request import JobRequest, Jobs, Places
 from tests.conftest import BaseTest
 
 TSS = ScrapperSQLightCore.time_stamp_suffix
@@ -129,12 +129,12 @@ URL_DISTANCES = RequestValidator(
             f"Paris, France{DS}",
         ],  # Test both with and without suffix
     },
-    expected_keys={"url", f"nice, france{DS}", f"paris, france{DS}"},
+    expected_keys={"url",  f"Nice, France{DS}",  f"Paris, France{DS}"},
     expected_lines={
-        ("https://linkedin.fr/", None, 100.678),
-        ("https://ftt.fr", 900.0, None),
-        ("https://hello-work.fr", 600.4, None),
-        ("https://indeed.fr", None, None),
+        ('https://indeed.fr', 297.579, 392.11),
+        ('https://hello-work.fr', 468.077, 588.134),
+        ('https://ftt.fr', 685.108, 0.0),
+        ('https://linkedin.fr/', 792.038, 112.054)
     },
     unexpected_lines=set(),
 )
@@ -160,54 +160,14 @@ MASSIVE_REQUEST = RequestValidator(
         f"account{MS}",
         f"software{KS}",
         f"seo{KS}",
-        f"nice, france{DS}",
-        f"paris, france{DS}",
+        f"Nice, France{DS}",
+        f"Paris, France{DS}",
     },
     expected_lines={
-        (
-            None,
-            "https://linkedin.fr/",
-            None,
-            "<3",
-            "Biology",
-            "CDI",
-            None,
-            100.678,
-            "9_000",
-        ),
-        (
-            72,
-            "https://ftt.fr",
-            47,
-            "Excited_to_connect!",
-            "Marketing",
-            "FREELANCE",
-            900.0,
-            None,
-            "5_678",
-        ),
-        (
-            None,
-            "https://hello-work.fr",
-            None,
-            "Innovative_solutions!",
-            "Data science",
-            "CDI",
-            600.4,
-            None,
-            "3_200",
-        ),
-        (
-            None,
-            "https://indeed.fr",
-            120,
-            "Looking_for_talent!",
-            "Engineering",
-            "CDD",
-            None,
-            None,
-            "12_345",
-        ),
+        (None, 'https://linkedin.fr/', None, '<3', 'Biology', 'CDI', 792.038, 112.054, '9_000'),
+        (None, 'https://indeed.fr', 120, 'Looking_for_talent!', 'Engineering', 'CDD', 297.579, 392.11, '12_345'),
+        (72, 'https://ftt.fr', 47, 'Excited_to_connect!', 'Marketing', 'FREELANCE', 685.108, 0.0, '5_678'),
+        (None, 'https://hello-work.fr', None, 'Innovative_solutions!', 'Data science', 'CDI', 468.077, 588.134, '3_200')
     },
     unexpected_lines=set(),
 )
@@ -304,6 +264,7 @@ class TestJobRequest(BaseTest):
         (Only values in the 'label' column will.)
         """
         job_requester = self.make_job_requester()
+
         for col_names in Jobs.get_columns_using_sql_name().keys():
             cleaned_name = job_requester.column_name_normaliser(col_names)
             self.screen_var(f"cleaned_{col_names}", cleaned_name)
@@ -318,8 +279,7 @@ class TestJobRequest(BaseTest):
         """Generate an initialised JobRequest"""
         return ScrapperSQLightCore.get_job_requester()
 
-    @staticmethod
-    def create_database():
+    def create_database(self):
         """Create a database that can be requested by JobRequest returned by <make_job_requester>"""
         scrapers = []
 
@@ -333,7 +293,7 @@ class TestJobRequest(BaseTest):
         now = datetime.datetime(2025, 11, 3, 20, 25, 4).timetuple()
         ssc1.add_metadata("Message", "<3")
         ssc1.add_metadata("Account :", "9 \t000")
-        ssc1.add_distance_to("Paris, France", 100.678)
+        # ssc1.add_distance_to("Paris, France", 100.678)
         ssc1.add_time_stamps("Test time", now)
         ssc1.add_keyword_count("Informatics", 45)
         scrapers.append(ssc1)
@@ -348,7 +308,7 @@ class TestJobRequest(BaseTest):
         now = datetime.datetime(2025, 11, 3, 20, 25, 4).timetuple()
         ssc2.add_metadata("Message", "Looking for talent!")
         ssc2.add_metadata("Account:", "12 \t345")
-        ssc2.add_distance_to("Marseille, France", 300.5)
+        # ssc2.add_distance_to("Marseille, France", 300.5)
         ssc2.add_time_stamps("Scraping time", now)
         ssc2.add_keyword_count("Software", 120)
         scrapers.append(ssc2)
@@ -363,8 +323,8 @@ class TestJobRequest(BaseTest):
         now = datetime.datetime(2024, 11, 3, 20, 25, 4).timetuple()
         ssc3.add_metadata("Message", "Excited to connect!")
         ssc3.add_metadata("Account:", "5 \t678")
-        ssc3.add_distance_to("Bordeaux, France", 500.9)
-        ssc3.add_distance_to("Nice, France", 900)
+        # ssc3.add_distance_to("Bordeaux, France", 500.9)
+        # ssc3.add_distance_to("Nice, France", 900)
         ssc3.add_time_stamps("Check time", now)
         ssc3.add_keyword_count("SEO", 72)
         ssc3.add_keyword_count("Software", 47)
@@ -380,11 +340,47 @@ class TestJobRequest(BaseTest):
         now = datetime.datetime(2024, 11, 11, 11, 11, 4).timetuple()
         ssc4.add_metadata("Message", "Innovative solutions!")
         ssc4.add_metadata("Account:", "3 \t200")
-        ssc4.add_distance_to("Nice, France", 600.4)
+        # ssc4.add_distance_to("Nice, France", 600.4)
         ssc4.add_time_stamps("Last checked", now)
         ssc4.add_keyword_count("Machine Learning", 89)
         scrapers.append(ssc4)
 
+        self.screen_multiple_vars("ssc", *scrapers)
+
+        nice = Places(
+            localisation="Nice, France",
+            longitude=7.2620,
+            latitude=43.7102
+        )
+        paris = Places(
+            localisation="Paris, France",
+            longitude=2.3522,
+            latitude=48.8566
+        )
+        rouen = Places(
+            localisation="Rouen, France",
+            longitude=1.0993,
+            latitude=49.4431
+        )
+        lyon = Places(
+            localisation="Lyon, France",
+            longitude=4.8357,
+            latitude=45.7578
+        )
+        toulouse = Places(
+            localisation="Toulouse, France",
+            longitude=1.4442,
+            latitude=43.6047
+        )
+
+        self.screen_var("nice", nice)
+        self.screen_var("paris", paris)
+        self.screen_var("rouen", rouen)
+        self.screen_var("lyon", lyon)
+        self.screen_var("toulouse", toulouse)
+
+        with ScrapperSQLightCore.get_maindb_session() as session:
+            session.add_all((nice, paris, rouen, lyon, toulouse))
         ScrapperSQLightCore.sql_batch_export(*scrapers)
 
         return scrapers

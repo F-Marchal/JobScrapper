@@ -5,6 +5,7 @@ import pytest
 
 from sql.tables.job_extensions.job_extra_base import JobExtraBase
 from sql.tables.jobs import Jobs
+from sql.tables.places.places import Places
 from tests.conftest import BaseTest
 
 
@@ -45,7 +46,7 @@ class TestJobExtraBase(BaseTest):
         db_path = f"{self.test_folder}/database.db"
         db = self.make_small_database()
 
-        ref_job = db[0]
+        ref_job = db[1]
         ref_url = ref_job.url
 
         # Add database
@@ -116,7 +117,7 @@ class TestJobExtraBase(BaseTest):
             self.log("No testsing class defined.")
             return
 
-        j1, j2, ob1, ob2, ob3 = self.make_small_database()
+        p1, j1, j2, ob1, ob2, ob3 = self.make_small_database()
 
         assert j1.url == ob1.url
         assert j1.url == ob2.url
@@ -149,14 +150,20 @@ class TestJobExtraBase(BaseTest):
 
     def make_small_database(
         self, screen_prefix: str = ""
-    ) -> tuple[Jobs, Jobs, JobExtraBase, JobExtraBase, JobExtraBase]:
+    ) -> tuple[Places, Jobs, Jobs, JobExtraBase, JobExtraBase, JobExtraBase]:
         """Make a small database for test purposes."""
         if self.__tested_class__ is None:
             self.log("No tested class defined.")
             raise NotImplementedError()
 
-        j1 = Jobs(url="Alpha")
-        j2 = Jobs(url="Beta")
+        p1 = Places(
+            localisation=Jobs.DEFAULT_LOCALISATION,
+            longitude=None,
+            latitude=None,
+        )
+
+        j1 = Jobs(url="Alpha", localisation=Jobs.DEFAULT_LOCALISATION)
+        j2 = Jobs(url="Beta", localisation=Jobs.DEFAULT_LOCALISATION)
 
         # pylint: disable=E1102:
         # If typing is respected, __tested_class__ is either None (NotImplementedError)
@@ -168,4 +175,4 @@ class TestJobExtraBase(BaseTest):
         self.screen_multiple_vars(screen_prefix + "job", j1, j2)
         self.screen_multiple_vars(screen_prefix + "obj", ob1, ob2, ob3)
 
-        return j1, j2, ob1, ob2, ob3
+        return p1, j1, j2, ob1, ob2, ob3

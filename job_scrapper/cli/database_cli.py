@@ -115,8 +115,8 @@ def enumerate_column_value(ctx, table_name, column_name):
     multiple=True,
     help=(
         "Add columns that contains distances from reference places. "
-        f"e.g. `-d Paris, france` -> add a column named 'Paris, france{JobScrapperSkeleton.distance_suffix}' "
-        f"that contains the distance from each job to `Paris, france`. "
+        f"e.g. `-d Paris, france` -> add a column named 'Paris, France{JobScrapperSkeleton.distance_suffix}' "
+        f"that contains the distance from each job to `Paris, France`. "
         "See `request-format-help` to known how to filter results. "
         f"Use `enumerate-column-value {DISTANCES.__tablename__} reference_localisation` to have a list of all column "
         f"available in the current database."

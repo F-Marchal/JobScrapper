@@ -571,7 +571,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
         sanitized_name = re.sub(r'[<>"/\\|?*\x00-\x1F]', "", name)
         sanitized_name = sanitized_name.strip()
 
-        folder = os.path.join(self.get_workdir(), self.get_class_name())
+        folder = os.path.join(self.get_workdir(), self.get_standardised_class_name())
         if not os.path.exists(folder):
             os.mkdir(folder)
         return folder, sanitized_name

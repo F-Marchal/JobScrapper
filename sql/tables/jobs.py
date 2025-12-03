@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import relationship
 
 from .base_table import BaseTable
@@ -9,6 +9,7 @@ class Jobs(BaseTable):
     Main table. Contains main information related to jobs offers :
     contract, field, url ...
     """
+    DEFAULT_LOCALISATION = "UNKNOWN"
 
     __abstract__ = False
     __tablename__ = "jobs"
@@ -16,7 +17,15 @@ class Jobs(BaseTable):
     # Table columns
     contract = Column(String, nullable=True)
     field = Column(String, nullable=True)
-    localisation = Column(String, nullable=True)
+    localisation = Column(
+        String,
+        ForeignKey(
+            "places.localisation",
+            ondelete="RESTRICT" # Cannot delete a Place if any Job points to it.
+        ),
+        nullable=False,
+        default=DEFAULT_LOCALISATION
+    )
     origin = Column(String, nullable=True)
     title = Column(String, nullable=True)
     url = Column(String, primary_key=True, nullable=False)
@@ -45,11 +54,8 @@ class Jobs(BaseTable):
         lazy="dynamic",
     )
 
-    # Ease requests
-    # distances_from_job = relationship(
-    #    "Distances",
-    #    primaryjoin="Jobs.localisation==Distances.job_localisation",
-    #    back_populates="job",
-    #    lazy='dynamic',  # important pour filtrer avec .filter()
-    #    viewonly=True
-    # )
+    places_entry = relationship(
+        "Places",
+        back_populates="jobs_entry"
+    )
+
