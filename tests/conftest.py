@@ -137,9 +137,13 @@ class BaseTest:
         self.tracker.screen(name, obj)
 
     def screen_multiple_vars(self, name: str, *obj: typing.Any):
-        """self.screen_var a number of <obj>. Each obj is named '<name>-<position in obj>'"""
+        """self.screen_var a number of <obj>. Each obj is named '<name>-<position in obj>'.
+        You can add '{count}' inside <name> as a format option : '{count}Sheep' --> '1Sheep', '2Sheep', '3Sheep'..."""
         for i, to_screen in enumerate(obj):
-            self.screen_var(f"{name}-{i}", to_screen)
+            if "{count}" in name:
+                self.screen_var(name.format(count=i), to_screen)
+            else:
+                self.screen_var(f"{name}-{i}", to_screen)
 
     def re_screen_var(self, name: str, obj=None) -> None:
         """LogFile.re_screen wrapper"""
