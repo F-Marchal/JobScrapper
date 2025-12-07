@@ -121,7 +121,7 @@ class BaseTest:
     # pylint: disable=W0201
     # I can not define this attributes in an __init__ !
     def redirect_logs_to_tempdir(self, _setup_tempdir):
-        self.test_logs =  f"{_setup_tempdir}/logs.log"
+        self.test_logs =  f"{_setup_tempdir}/logger.log"
         if not self.enable_icl:
             yield self.test_logs
             return
