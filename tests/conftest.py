@@ -90,7 +90,7 @@ class BaseTest:
 
         # ---- Generate logs ----
         self.tracker = VariableTracker(
-            os.path.join(self.test_folder, "tests.logs")
+            os.path.join(self.test_folder, "screening.log")
         )
 
         # ---- Yield access to test function ----
