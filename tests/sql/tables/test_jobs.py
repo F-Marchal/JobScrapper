@@ -1,6 +1,7 @@
 import pytest
 
-# from sql.tables.jobs import Jobs
+from sql.tables.jobs import Jobs
+from sql.tables.places.places import Places
 from tests.conftest import BaseTest
 
 
@@ -21,3 +22,21 @@ class TestJobs(BaseTest):
         """This test method should not test relationship related to JobExtraBase"""
         # At this time, all relationship are related to JobExtraBase"
         return
+
+    def test_default_value(self):
+        """Ensure that Jobs.DEFAULT_LOCALISATION is compatible with both Jobs and Places"""
+        default_place = Places(
+            localisation = Jobs.DEFAULT_LOCALISATION
+        )
+        default_job = Jobs(
+            url = "TMP",
+            localisation = Jobs.DEFAULT_LOCALISATION
+        )
+
+        self.screen_var("Default localisation", Jobs.DEFAULT_LOCALISATION)
+        self.screen_var("Jobs", default_job)
+        self.screen_var("Place", default_place)
+
+        assert default_place.localisation == default_job.localisation
+        assert default_place.localisation == Jobs.DEFAULT_LOCALISATION
+        assert default_job.localisation == Jobs.DEFAULT_LOCALISATION

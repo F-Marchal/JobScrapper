@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 
 from .base_table import BaseTable
 
@@ -9,7 +9,7 @@ class Jobs(BaseTable):
     Main table. Contains main information related to jobs offers :
     contract, field, url ...
     """
-    DEFAULT_LOCALISATION = "UNKNOWN"
+    DEFAULT_LOCALISATION = "Unknown"
 
     __abstract__ = False
     __tablename__ = "jobs"
@@ -59,3 +59,11 @@ class Jobs(BaseTable):
         back_populates="jobs_entry"
     )
 
+    @validates("localisation")
+    def _validate_localisation(self, key, value):
+        return self.format_localisation(value)
+
+    @staticmethod
+    def format_localisation(string: str) -> str:
+        """Format localisation column"""
+        return string.strip().title()

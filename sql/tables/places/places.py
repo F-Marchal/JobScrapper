@@ -50,7 +50,7 @@ class Places(BaseTable):
     @staticmethod
     def format_localisation(string: str) -> str:
         """Format localisation column"""
-        return string.strip().title()
+        return Jobs.format_localisation(string)
 
     @property
     def lat(self) -> float | None:
@@ -180,9 +180,9 @@ class Places(BaseTable):
     @classmethod
     def get_default_entry(cls, localisation: str | None) -> 'Places':
         """Give a Places object with longitude / latitude = None.
-        If localisation is None or "", localisation is replaced with Jobs.DEFAULT_LOCALISATION"""
+        If localisation is None or "", localisation is replaced with cls.get_default_localisation"""
         return Places(
-            localisation=localisation if localisation else Jobs.DEFAULT_LOCALISATION,
+            localisation=localisation if localisation else cls.get_default_localisation(),
             longitude=None,
             latitude=None,
         )
@@ -205,3 +205,7 @@ class Places(BaseTable):
             include_session=True,
             include_database=True
         )
+
+    @staticmethod
+    def get_default_localisation() -> str:
+        return Jobs.DEFAULT_LOCALISATION
