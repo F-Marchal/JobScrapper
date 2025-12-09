@@ -15,6 +15,9 @@ class KeywordVersion(BaseTable):
     regex_entries = relationship(
         "KeywordRegex",
     )
+    keyword_entries = relationship(
+        "Keywords",
+    )
 
     @classmethod
     def get_available_versions(cls, session: Session, keyword: str) -> Query:

@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKeyConstraint
 from sqlalchemy.orm import Query, Session, relationship
 
-from .job_extra_base import JobExtraBase, Jobs
+from sql.tables.job_extensions.job_extra_base import JobExtraBase, Jobs
 
 
 class Keywords(JobExtraBase):
@@ -13,10 +13,20 @@ class Keywords(JobExtraBase):
 
     # url = Column(String, ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"), primary_key=True)
     keyword = Column(String, primary_key=True, nullable=False)
+    version = Column(Integer, primary_key=True, nullable=False)
     occurrence = Column(Integer, nullable=True)
 
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["keyword", "version"],
+            ["keyword_version.keyword", "keyword_version.version"]
+        ),
+    )
     main_entry = relationship(
         "Jobs", back_populates="keywords_entries", passive_deletes=True
+    )
+    version_entry = relationship(
+        "KeywordVersion",
     )
 
     @classmethod
