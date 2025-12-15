@@ -20,5 +20,5 @@ job offer's url is used as primary key which can lead to duplicates inside the d
 if the same offer has multiple url.
 
 ---
-## SQL Request Helpers (`reqests_helpers/`)
+## Helpers (`helpers/`)
 Classes that wraps complex sql requests. 

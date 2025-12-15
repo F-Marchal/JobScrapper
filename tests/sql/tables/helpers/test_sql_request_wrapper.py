@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import Column, Integer, String
 
 from sql.tables.base_table import BaseTable
-from sql.tables.request_helpers.sql_request_wrapper import SQLRequestWrapper
+from sql.tables.helpers.sql_request_wrapper import SQLRequestWrapper
 from tests.conftest import BaseTest
 from tools.logger_core import CoreLogger
 

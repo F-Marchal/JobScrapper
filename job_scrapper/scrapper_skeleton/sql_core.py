@@ -19,7 +19,7 @@ from sql.tables import (
     Metadata,
     TimeStamps, Places,
 )
-from sql.tables.request_helpers.job_request import JobRequest
+from sql.tables.helpers.job_request import JobRequest
 
 
 ScrapperSQLightCoreOrSubclass = TypeVar(

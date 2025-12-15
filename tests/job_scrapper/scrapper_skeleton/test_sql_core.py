@@ -233,7 +233,7 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
 
     def test_job_requester(self):
         """job_requester is tested inside its own file :
-        tests/sql/tables/request_helpers/test_job_request.py"""
+        tests/sql/tables/helpers/test_job_request.py"""
 
     def _generate_a_test_ssc(
         self, instance_name: str = "SSC",
