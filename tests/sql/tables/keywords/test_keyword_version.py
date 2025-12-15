@@ -101,5 +101,10 @@ class TestKeywordVersion(BaseTest):
             assert newest_ver.keyword == kr1_bis.keyword
             assert newest_ver == ver2_bis
 
+    def test_get_newest_version_empty_db(self):
+        db = os.path.join(self.test_folder, "db1.db")
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            assert KeywordVersion.get_newest_version(session, keyword="NOTHING") is None
+
 
 

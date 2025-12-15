@@ -25,8 +25,11 @@ class KeywordVersion(BaseTable):
         return session.query(cls).filter_by(keyword=keyword)
 
     @classmethod
-    def get_newest_version(cls, session: Session, keyword: str) -> 'KeywordVersion':
+    def get_newest_version(cls, session: Session, keyword: str) -> 'KeywordVersion | None' :
         """Get the newest version for a certain keyword (query object)"""
-        return max(cls.get_available_versions(session, keyword).all(),  key=lambda x: x.version)
+        all_ver = cls.get_available_versions(session, keyword).all()
+        if len(all_ver) == 0:
+            return None
+        return max(all_ver,  key=lambda x: x.version)
 
 
