@@ -107,4 +107,54 @@ class TestKeywordVersion(BaseTest):
             assert KeywordVersion.get_newest_version(session, keyword="NOTHING") is None
 
 
+    def test_summarise_versions(self):
+        db = os.path.join(self.test_folder, "db1.db")
+        ver1 = KeywordVersion(
+            keyword="Alpha",
+            version=1,
+        )
+        ver2 = KeywordVersion(
+            keyword="Alpha",
+            version=2,
+        )
+        ver3 = KeywordVersion(
+            keyword="Beta",
+            version=1,
+        )
+        self.screen_multiple_vars("ver", ver1, ver2, ver3)
 
+        regex1 = KeywordRegex(keyword="Alpha", version=1, regex=".*A.*")
+        regex2 = KeywordRegex(keyword="Alpha", version=1, regex=".*Alpha.*")
+        regex3 = KeywordRegex(keyword="Alpha", version=2, regex="Hello")
+        regex4 = KeywordRegex(keyword="Beta", version=1, regex=".*Beta.*")
+        self.screen_multiple_vars("regex", regex1, regex2, regex3, regex4)
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            session.add_all([ver1, ver2, ver3, regex1, regex2, regex3, regex4])
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            summary = KeywordVersion.summarise_versions(session)
+            expected = {('Alpha', 1): {'.*Alpha.*', '.*A.*'}, ('Alpha', 2): {'Hello'}, ('Beta', 1): {'.*Beta.*'}}
+
+            self.screen_var("summary", summary)
+            self.screen_var("expected", expected)
+
+            assert summary == expected
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            summary = KeywordVersion.summarise_versions(session, keyword='Alpha')
+            expected = {('Alpha', 1): {'.*Alpha.*', '.*A.*'}, ('Alpha', 2): {'Hello'}}
+
+            self.screen_var("summary", summary)
+            self.screen_var("expected", expected)
+
+            assert summary == expected
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            summary = KeywordVersion.summarise_versions(session, keyword='Beta')
+            expected = {('Beta', 1): {'.*Beta.*'}}
+
+            self.screen_var("summary", summary)
+            self.screen_var("expected", expected)
+
+            assert summary == expected

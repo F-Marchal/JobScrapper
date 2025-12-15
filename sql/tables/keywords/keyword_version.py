@@ -32,4 +32,21 @@ class KeywordVersion(BaseTable):
             return None
         return max(all_ver,  key=lambda x: x.version)
 
+    @classmethod
+    def summarise_versions(cls, session: Session, keyword: str | None=None) -> dict[tuple[str, int], set[str]]:
+        """Summarize versions object for a certain keyword (keyword='keyword') if for all keywords.
+        Returns a dictionary (keyword, version): set of regexes attached to this keyword version."""
+        if not keyword:
+            query = session.query(KeywordVersion)
 
+        else:
+            query = session.query(KeywordVersion).where(KeywordVersion.keyword == keyword)
+
+        result: dict[tuple[str, int], set[str]] = {}
+
+        for versions in query.all():
+            key = str(versions.keyword), int(str(versions.version))
+            regexes = {str(regex_entry.regex) for regex_entry in versions.regex_entries}
+            result[key] = regexes
+
+        return result
