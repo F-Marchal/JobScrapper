@@ -1,7 +1,7 @@
 import datetime
 import os
 from contextlib import contextmanager
-from typing import Any, ContextManager, Generator, Protocol, Type, TypeVar
+from typing import Any, ContextManager, Generator, Protocol, Type, Self
 
 from sqlalchemy import and_
 
@@ -21,12 +21,6 @@ from sql.tables import (
 )
 from sql.tables.helpers.job_request import JobRequest
 from sql.tables.helpers.keyword_manager import KeywordManager
-
-
-ScrapperSQLightCoreOrSubclass = TypeVar(
-    "ScrapperSQLightCoreOrSubclass", bound="ScrapperSQLightCore"
-)
-
 
 class SqlSessionFactory(Protocol):
     """Typing class mostly used for ScrapperSQLightCore.get_available_databases"""
@@ -412,10 +406,10 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     # --- --- Imports --- ---
     @classmethod
     def sql_import_jobs(
-        cls: Type[ScrapperSQLightCoreOrSubclass],
+        cls,
         session: Session,
         request: Query | None = None,
-    ) -> list[ScrapperSQLightCoreOrSubclass]:
+    ) -> list[Self]:
         """
         Generate a list of ScrapperSQLightCore (or current subclass) from a query.
         If this query is None Jobs.get_all(session) is used.
