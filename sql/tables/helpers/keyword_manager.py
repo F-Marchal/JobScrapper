@@ -19,6 +19,15 @@ class KeywordManager(SecondaryLoggerUser):
     def regexes(self, keyword: str) -> set[str]:
         return self._keywords[keyword].copy()
 
+    @property
+    def keyword_patterns(self) -> dict[str, re.Pattern[str]]:
+        result = {}
+        for keyword, patterns in self.keywords.items():
+            # Merge all pattern and ensure the largest pattern are at
+            # the beginning of the list
+            result[keyword] = re.compile("|".join(sorted(patterns, key=len, reverse=True)))
+        return result
+
     @staticmethod
     def get_keywords_in_database(session: Session) -> list[str]:
         """Returns all versioned keywords contained in the database"""
