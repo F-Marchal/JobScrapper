@@ -20,6 +20,7 @@ from sql.tables import (
     TimeStamps, Places,
 )
 from sql.tables.helpers.job_request import JobRequest
+from sql.tables.helpers.keyword_manager import KeywordManager
 
 
 ScrapperSQLightCoreOrSubclass = TypeVar(
@@ -84,6 +85,15 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             column_name_normaliser=cls.column_name_normaliser,
             logger=cls.logger,
         )
+
+    @classmethod
+    def get_keyword_manager(cls) -> KeywordManager:
+        """Generate a KeywordManager configured to be used
+        with a ScrapperSQLightCore"""
+        return KeywordManager(
+            logger=cls.logger,
+        )
+
 
     @classmethod
     def get_known_databases(cls) -> dict[str, dict[str, Any]]:
