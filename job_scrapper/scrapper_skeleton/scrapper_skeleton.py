@@ -8,7 +8,7 @@ from contextlib import contextmanager
 
 from bs4 import BeautifulSoup
 
-from .request_core import ScrapperRequestCore
+from .legacy_request_core import ScrapperRequestCore
 
 
 class JobScrapperSkeleton(ScrapperRequestCore):
