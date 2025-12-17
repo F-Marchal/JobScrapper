@@ -5,7 +5,7 @@ from logging import Logger
 from sql.tables.keywords.keyword_regex import KeywordRegex
 from sql.tables.keywords.keyword_version import KeywordVersion
 from sqlalchemy import and_
-
+import re
 
 class KeywordManager(SecondaryLoggerUser):
     def __init__(self, logger: Logger | None = None):
@@ -48,11 +48,24 @@ class KeywordManager(SecondaryLoggerUser):
         
         return final_version
 
-    def add_regex(self, keyword: str, regex: str) -> None:
+    def add_regex(self, keyword: str, regex: str, strict: bool=True) -> None:
         """Add a new regex to a keyword. Do not forget to use self.commit() to
         commit changes to database."""
+        try:
+            re.compile(regex)
+        except re.error as e:
+            if strict:
+                raise ValueError(f"Invalid regex for '{keyword}' : {regex}.\nError: {e}")
+            else:
+                self.logger.warning(
+                    "Ignoring regex for '%s' : %s.\n"
+                    "Error: %s",
+                    keyword, regex, e
+                )
+
         if keyword not in self._keywords:
             self._keywords[keyword] = set()
+
         self._keywords[keyword].add(regex)
 
     def remove_regex(self, keyword: str, regex: str) -> None:
