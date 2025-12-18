@@ -14,9 +14,11 @@ class KeywordVersion(BaseTable):
 
     regex_entries = relationship(
         "KeywordRegex",
+        back_populates="version_entry",
     )
     keyword_entries = relationship(
         "Keywords",
+        back_populates="version_entry",
     )
 
     @classmethod

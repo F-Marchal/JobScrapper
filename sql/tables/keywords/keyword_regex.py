@@ -24,6 +24,7 @@ class KeywordRegex(BaseTable):
 
     version_entry = relationship(
         "KeywordVersion",
+        back_populates="regex_entries",
     )
 
     @validates("regex")

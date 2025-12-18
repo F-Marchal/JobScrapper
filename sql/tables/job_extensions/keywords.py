@@ -27,6 +27,7 @@ class Keywords(JobExtraBase):
     )
     version_entry = relationship(
         "KeywordVersion",
+        back_populates="keyword_entries",
     )
 
     @classmethod

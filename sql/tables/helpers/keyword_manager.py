@@ -19,6 +19,11 @@ class KeywordManager(SecondaryLoggerUser):
     def regexes(self, keyword: str) -> set[str]:
         return self._keywords[keyword].copy()
 
+    def versions(self, session: Session):
+        return {
+            keyword: self.get_keyword_version(session=session, keyword=keyword) for keyword in self._keywords.keys()
+        }
+
     @property
     def keyword_patterns(self) -> dict[str, re.Pattern[str]]:
         result = {}
@@ -40,14 +45,14 @@ class KeywordManager(SecondaryLoggerUser):
         return KeywordVersion.get_newest_version(session, keyword=keyword)
     
     @staticmethod
-    def get_keyword_versions(session: Session, keyword: str | None = None) -> dict[tuple[str, int], set[str]]:
+    def get_existing_keyword_versions(session: Session, keyword: str | None = None) -> dict[tuple[str, int], set[str]]:
         return KeywordVersion.summarise_versions(session, keyword=keyword)
 
     @classmethod
     def existing_version(cls, session: Session, keyword: str, regexes: set[str]) -> tuple[str, int] | None:
         """Say if a keyword version exists in the database. A version exist
         if it has the same set of regexes."""
-        existing_version = cls.get_keyword_versions(session, keyword=keyword)
+        existing_version = cls.get_existing_keyword_versions(session, keyword=keyword)
 
         final_version: tuple[str, int] | None = None
         for version, version_regex in existing_version.items():
@@ -85,7 +90,7 @@ class KeywordManager(SecondaryLoggerUser):
 
     def load(self, session: Session, keyword_version: KeywordVersion | str) -> None:
         if isinstance(keyword_version, str):
-            keyword_version = self.get_keyword_versions(session=session, keyword=keyword_version)
+            keyword_version = self.get_existing_keyword_versions(session=session, keyword=keyword_version)
 
         regex = self.find_regexes(session=session, keyword=keyword_version)
         key =  keyword_version.keyword
@@ -115,23 +120,24 @@ class KeywordManager(SecondaryLoggerUser):
 
         return {reg.regex for reg in regex_entry}
 
+    def get_keyword_version(self, session: Session, keyword: str) -> KeywordVersion:
+        version_tup = self.existing_version(session=session, keyword=keyword, regexes=self.regexes(keyword))
+
+        if version_tup is not None:
+            return KeywordVersion(keyword=keyword, version=version_tup[1])
+
+        latest = self.get_latest_version(session=session, keyword=keyword)
+        if latest is None:
+            new_ver = 1
+        else:
+            new_ver = max(latest.version + 1, 1)  # Avoid version=0 when latest.version < 0
+
+        return KeywordVersion(keyword=keyword, version=new_ver)
+
     def commit(self, session: Session) -> None:
         """Commit regex modification to database. A new Version will be added to database when needed."""
         for keywords, regexes in self._keywords.items():
-            # Since we often use get_latest_version and since this function rely
-            # on the KeywordVersion.version,
-            # get_latest_version will return an older version
-            #
-            # version_tup = self.existing_version(session=session, keyword=keywords, regexes=regexes)
-            #
-            # if version_tup is not None:
-            #     continue
-
-            latest = self.get_latest_version(session=session, keyword=keywords)
-            if latest is None:
-                new_ver = 1
-            else:
-                new_ver = max(latest.version + 1, 1) # Avoid version=0 when latest.version < 0
+            new_ver = self.get_keyword_version(session=session, keyword=keywords)
 
             new_version = KeywordVersion(keyword=keywords, version=new_ver)
             regexes = [
@@ -144,5 +150,5 @@ class KeywordManager(SecondaryLoggerUser):
 
             session.add(new_version)
             session.add_all(regexes)
-            
+
             
