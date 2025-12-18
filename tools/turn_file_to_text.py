@@ -36,14 +36,14 @@ class FileToText:
                 result.append(char)
                 i += 1
         return ''.join(result)
-    
+
     @classmethod
     def pdf_to_text(cls, pdf_path: str) -> Iterator[str]:
         """Yield each page of a pdf as a string."""
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
                 text = page.extract_text()
-    
+
                 yield cls.combine_accents(text)
 
     @classmethod
@@ -58,9 +58,9 @@ class FileToText:
 
         yield soup.get_text(strip=True)
 
-    conversion_map: dict[str, Callable[..., Iterator[str]]] = {
-        "pdf": pdf_to_text,
-        "html": html_to_text,
+    conversion_map: dict[str, str | Callable[..., Iterator[str]]] = {
+        "pdf": 'pdf_to_text',
+        "html": 'html_to_text',
     }
 
     @classmethod
@@ -87,4 +87,9 @@ class FileToText:
                 f" Supported types are : {list(cls.conversion_map)}"
             )
 
-        return cls.conversion_map[var_type](var_type, **kwargs)
+        if isinstance(cls.conversion_map[var_type], str):
+            method_name = cls.conversion_map[var_type]
+            method = getattr(cls, method_name)
+            return method(path, **kwargs)
+        else:
+            return cls.conversion_map[var_type](path, **kwargs)
