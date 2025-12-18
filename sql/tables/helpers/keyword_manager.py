@@ -137,18 +137,17 @@ class KeywordManager(SecondaryLoggerUser):
     def commit(self, session: Session) -> None:
         """Commit regex modification to database. A new Version will be added to database when needed."""
         for keywords, regexes in self._keywords.items():
-            new_ver = self.get_keyword_version(session=session, keyword=keywords)
+            new_ver_entry = self.get_keyword_version(session=session, keyword=keywords)
 
-            new_version = KeywordVersion(keyword=keywords, version=new_ver)
             regexes = [
                 KeywordRegex(
-                    keyword=new_version.keyword,
-                    version=new_version.version,
+                    keyword=new_ver_entry.keyword,
+                    version=new_ver_entry.version,
                     regex=reg,
                 ) for reg in regexes
             ]
 
-            session.add(new_version)
+            session.add(new_ver_entry)
             session.add_all(regexes)
 
             

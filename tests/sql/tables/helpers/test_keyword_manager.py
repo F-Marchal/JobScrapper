@@ -155,13 +155,17 @@ class TestKeywordManager(BaseTest):
         km.add_regex("Beta", ".*Beta.*")
         self.re_screen_var("km")
 
+        self.tracker.write("Test empty db")
         with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
             # Database is empty
             assert len(session.query(KeywordVersion).all()) == 0
 
+        self.tracker.write("Commit km")
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
             # Add newly added keyword to database
             km.commit(session)
 
+        self.tracker.write("Request db")
         with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
             alpha_ver1_l = session.query(KeywordVersion).where(KeywordVersion.keyword == "Alpha").all()
             self.screen_var("alpha_ver_l", alpha_ver1_l)
