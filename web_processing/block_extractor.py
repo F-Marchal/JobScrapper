@@ -45,8 +45,6 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
         self.block_convertor = block_convertor
         self.block_extractor: HTMLBlockExtractor = block_extractor
 
-    BlockType = Literal["Alpha", "Beta", "Gamma"]
-
     def extract_block_across_multiple_pages_using_buttons(
             self,
             w_url: str,
@@ -117,6 +115,10 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
                 retry=retry,
                 failed_sleep=failed_sleep,
             )
+            # We have to use the generator now in
+            # order to fill <known_block> for the first
+            # kill switch
+            new_elements = list(new_elements_gen)
             # ======== Load and process website page ========
 
             # == Kill switch 1 ==
@@ -131,7 +133,7 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
                 continue
             # == Kill switch 1 ==
 
-            for ne in new_elements_gen:
+            for ne in new_elements:
                 total += 1
                 yield ne
 
