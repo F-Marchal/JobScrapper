@@ -31,22 +31,25 @@ class Geolocalisation:
             "min_delay_seconds" : 2,
             "max_retries" : 3,
             "error_wait_seconds" : 30,
-            "swallow_exceptions" : False,
+            "swallow_exceptions" : True,
         """
         rl_kw = {
-            "min_delay_seconds": 2,
+            "min_delay_seconds": 3,
             "max_retries": 3,
             "error_wait_seconds": 30,
             "swallow_exceptions": True,
         }
         rl_kw.update(rate_limiter_kw)
 
-        self.timeout: int = timeout
         self.logger: Logger | None = logger
-        self._geolocator: Nominatim = Nominatim(user_agent=contact)
+        self._geolocator: Nominatim = Nominatim(
+            user_agent=contact,
+            timeout=timeout,
+        )
         self._rate_limiter: RateLimiter = RateLimiter(
             self._geolocator.geocode, **rl_kw
         )
+        self._contact = contact
 
     #  --- --- Main methods --- ---
     def geolocate(
@@ -93,10 +96,11 @@ class Geolocalisation:
         try:
             # Try to run call geopy and to return the result.
             if self.logger:
-                self.logger.debug(
-                    "Searching coordinates of '%s' using '%s'.",
+                self.logger.info(
+                    "Searching coordinates of '%s' using '%s' ('%s').",
                     place,
                     self._geolocator,
+                    self._contact,
                 )
             localisation: Location | None = self._request(place)
             if localisation is None:
