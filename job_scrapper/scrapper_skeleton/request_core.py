@@ -133,7 +133,8 @@ class ScrapperRequestCore(ScrapperSQLightCore):
                     new_name="snapshot",
                 )
                 self.add_time_stamps(str(self.URLInspectionTimeStamp.DOWNLOAD), self.now())
-                self.add_metadata("Folder", self.get_self_dir())
+                rel_path = os.path.relpath(self.get_self_dir(), start=self.get_workdir())
+                self.add_metadata("Folder", rel_path)
 
             if keywords_to_search is not None:
                 self.search_keywords_in_offer(
@@ -286,16 +287,18 @@ class ScrapperRequestCore(ScrapperSQLightCore):
 
     def get_self_dir(self) -> str:
         title = self.title.lower()
-        title = re.sub(r'[^a-z0-9_-]+', '-', title)  # remplace les caractères interdits
-        title = re.sub(r'-+', '-', title).strip('-')  # évite les doublons
+        title = re.sub(r'[^a-zA-Z0-9_-]+', '-', title)
+        title = re.sub(r'-+', '-', title).strip('-')
 
         class_dir = self.get_class_dir()
         url = self.hash_text(self.url)[0:6]
 
-        if self.field:
+        if not self.field:
             field = "Unknown"
         else:
             field = self.field
+        field = re.sub(r'[^a-zA-Z0-9_-]+', '-', field)
+        field = re.sub(r'-+', '-', field).strip('-')
 
         folder_name = f"{field}-{title}-{url}"
 
