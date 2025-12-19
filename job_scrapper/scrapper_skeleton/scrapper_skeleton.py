@@ -5,264 +5,140 @@ Skeleton for JobScrapperClass
 import json
 import os.path
 from contextlib import contextmanager
+from typing import Self, Iterator
 
-from bs4 import BeautifulSoup
+from astroid import Raise
 
-from .legacy_request_core import ScrapperRequestCore
+from web_processing.block_extractor import WebBlockExtractor
+
+from .request_core import ScrapperRequestCore, KeywordManager, ExportBrowserPage, BeautifulSoup
+
 
 
 class JobScrapperSkeleton(ScrapperRequestCore):
-    """
-    Skeleton for JobScrapperClass. Those class should be able to :
-    - Represent a job offer
-    - Scrap a website to extract job offer
-    - Parse job offer url to find more intel on the offer
-    - Compute a distance between a location and the offer
-    """
-
     @classmethod
-    def extract_block_of_interest(cls, soup) -> BeautifulSoup:
-        """
-        Extract a block of html that contain the job offers.
-        """
-        raise NotImplementedError("Should be reimplemented when inherited")
+    def run(
+            cls,
+            contact: str,
+            keywords_to_search: KeywordManager | None = None,
+            page_exporter: ExportBrowserPage | None = None,
+            tsv_export: bool = True,
 
-    @classmethod
-    def complete_job_page_parsing(
-        cls,
-        offers: list["ScrapperRequestCore"],
-        soup,
+            search_offer_text: bool = True,
+            search_offer_html: bool = True,
+            retry_offer_fetch: int = 2,
+            failed_sleep: int = 5,
     ):
-        """Scrap <cls.website_url> to find a number of job offer.
-        Those job offer are stored inside 'offers'.
-        :param offers: A list of job offer
-        :param soup: A Beautiful soup object (html)
-        :return:
-        """
-        raise NotImplementedError("Should be reimplemented when inherited")
+        # Initialize geolocalisator with a contact.
+        cls.logger.info("Initialisation of geopy rate limiter... (%s)", contact)
+        cls.get_geolocator(contact)
 
-    class ConfigurationFile:
-        """
-        A file that represent a configuration file used by JobScrapperSkeleton.
-        """
+        # Keyword management
+        with cls.get_maindb_session() as session:
+            if keywords_to_search is None:
+                cls.logger.info("Using default keywords to search configuration : Loading database...")
+                keywords_to_search = KeywordManager(logger=cls.logger)
+                keywords_to_search.load_all(session)
 
-        def __init__(self, logger, path: str | None, name: str, workdir: str):
-            """
-            :param logger: The same logger as the JobScrapperSkeleton that create it
-            :param path: path that lead to the configuration file
-            :param name: the default name of this configuration file
-            :param workdir: The same workdir as the JobScrapperSkeleton that create it
-            """
-            self.workdir = workdir
-            self.logger = logger
-            self.name = name
-            self.path = path
-
-        def find_file_path(self, path: str | None):
-            """
-            When path is str:
-                - Ensure that the path lead to a file
-            When path is None:
-                - Try to generate a default path to use instead of None.
-            :param path: A path that lead to a json
-            :return:
-            """
-            if path:
-                if os.path.exists(path) and not os.path.isfile(path):
-                    raise FileNotFoundError(
-                        f"{path} is not a file. Can not load or create {self.name}."
-                    )
-
-                self.logger.info("'%s' will be used as '%s'.", path, self.name)
-                return path
-            fallback_path = os.path.join(self.workdir, self.name + ".json")
-            return self.find_file_path(fallback_path)
-
-        @property
-        def path(self) -> str:
-            """Path of this file"""
-            return self._path
-
-        @path.setter
-        def path(self, value):
-            """Set the path of this file using self.find_file_path(value)"""
-            self._path = self.find_file_path(value)
-
-        def load(self):
-            """Load the content of self.path. if self.path do not exist, None is returns"""
-            if not os.path.exists(self.path):
-                return None
-            with open(self.path, "r", encoding="utf-8") as file:
-                return json.load(file)
-
-        def dump(self, data):
-            """Dump data into a json file using self.path"""
-            with open(self.path, "w", encoding="utf-8") as file:
-                json.dump(data, file, ensure_ascii=False, indent=4)
-
-    # pylint: disable=R0917
-    # pylint: disable=R0913
-    # having many arguments is expected for this command
-    @classmethod
-    @contextmanager
-    def full_setup(
-        cls,
-        localisations_to_search_json: None | str = None,
-        keywords_to_search_json: str | None = None,
-        known_localisations_json: str | None = None,
-        known_urls_json: str | None = None,
-        dumb_urls: bool = True,
-        dump_localisations: bool = True,
-    ):
-        """
-        Use this with the <with> statement to manage the configuration files. The files will
-        be parsed and output as dict / list or sets. When the with statement will end. The content of each
-        file will be updated.
-        ```python3
-        with JobScrapperSkeleton.full_setup(*args) as (lts, kts, kl, ku):
-            # Functions using those configurations files
-        ```
-        :param str or None localisations_to_search_json: A json (list[str]) that contain a list of places.
-            The distances between those places and the offer will be estimated.
-        :param str or None keywords_to_search_json: A json (dict[str, list[str]]) that contain a
-            dictionary of keywords. Each keyword is searched inside the offer a counted.
-        :param str or None known_localisations_json: A json (dict[str, tuple[float, float]]) that contain
-          a dictionary of known localisations : "localisation1": (latitude, longitude)
-        :param str or None known_urls_json: A json that contain a list[str] of url that should not be parsed.
-            Each job object with its url in this set will be ignored.
-        :param bool dumb_urls: Do known_urls_json is updated with new localisations ?
-            (Default True)
-        :param bool dump_localisations: Do known_localisations_json file is updated with new localisations ?
-            (default True)
-        """
-        # pylint: disable=R0914
-        # Locals variables help me to understand my code
-        workdir = cls.get_workdir()
-
-        if not os.path.isdir(workdir):
-            cls.logger.info("Creation of %s", workdir)
-            os.mkdir(workdir)
-
-        localisations_search_file = cls.ConfigurationFile(
-            name="researched-localisation",
-            path=localisations_to_search_json,
-            logger=cls.logger,
-            workdir=workdir,
-        )
-        keywords_search_file = cls.ConfigurationFile(
-            name="researched-keywords",
-            path=keywords_to_search_json,
-            logger=cls.logger,
-            workdir=workdir,
-        )
-        known_localisations_file = cls.ConfigurationFile(
-            name="known-localisation",
-            path=known_localisations_json,
-            logger=cls.logger,
-            workdir=workdir,
-        )
-        known_urls_file = cls.ConfigurationFile(
-            name="known-urls",
-            path=known_urls_json,
-            logger=cls.logger,
-            workdir=workdir,
-        )
-
-        tmp_lts: list[str] | None = localisations_search_file.load()
-        tmp_kts: dict[str, list[str]] | None = keywords_search_file.load()
-        tmp_kl: dict[str, tuple[float, float]] | None = (
-            known_localisations_file.load()
-        )
-        tmp_kut: list[str] | None = known_urls_file.load()
-
-        localisations_to_search: list[str] = tmp_lts if tmp_lts else []
-        keywords_to_search: dict[str, list[str]] = tmp_kts if tmp_kts else {}
-        known_localisations: dict[str, tuple[float, float]] = (
-            tmp_kl if tmp_kl else {}
-        )
-        ku_tmp: list[str] = tmp_kut if tmp_kut else []
-        known_urls: set[str] = set(ku_tmp)
-
-        yield localisations_to_search, keywords_to_search, known_localisations, known_urls
-
-        cls.logger.debug("Save configurations files' state")
-        if dump_localisations:
-            known_localisations_file.dump(known_localisations)
-
-        if dumb_urls:
-            known_urls_file.dump(list(known_urls))
-
-        # localisations_search_file.dump(localisations_to_search)
-        # keywords_search_file.dump(keywords_to_search)
-
-    # pylint: disable=R0913
-    # pylint: disable=R0914
-    # pylint: disable=R0917
-    # having many arguments is expected for this command
-    @classmethod
-    def main(
-        cls,
-        # Setting
-        localisations_to_search_json: None | str = None,
-        keywords_to_search_json: str | None = None,
-        known_localisations_json: str | None = None,
-        known_urls_json: str | None = None,
-        # Export methods
-        sql_export: bool = True,
-        display: bool = True,
-        flat_export: str | None = None,
-        save_job_page: bool = False,
-        dumb_urls: bool = True,
-        dump_localisations: bool = True,
-    ) -> list[ScrapperRequestCore]:
-        cls.logger.info(
-            "Starting %s's main scrapping method.", cls.get_standardised_class_name()
-        )
-        cls.logger.debug("Locals : %s", locals())
-
-        with cls.full_setup(
-            localisations_to_search_json,
-            keywords_to_search_json,
-            known_localisations_json,
-            known_urls_json,
-            dumb_urls=dumb_urls,
-            dump_localisations=dump_localisations,
-        ) as (lts, kts, kl, ku):
-            result = cls.interrogate_website()
-            cls.analyse_jobs(
-                *result,
-                keywords=kts,
-                localisations=lts,
-                known_localisations=kl,
-                known_urls=ku,
-                save_job_page=save_job_page,
-            )
-
-            cls.logger.info("%s analysis done.", len(result))
-
-        if flat_export:
-            if os.path.exists(flat_export) and not os.path.isfile(flat_export):
-                cls.logger.warning(
-                    "Can not export jobs to '%s'. The export will be done in the terminal. ",
-                    flat_export,
-                )
-                display = True
             else:
-                cls.logger.info(
-                    "Starting the export of %s jobs in '%s'",
-                    len(result),
-                    flat_export,
-                )
-                cls.export_to_flat_file(result, flat_export)
+                # Ensure that all keywords version exist in database.
+                keywords_to_search.commit(session)
 
-        if display:
-            cls.logger.info("Starting display of %s jobs", len(result))
-            cls.complete_display_list_of_offers(result)
+        with cls.get_maindb_session() as session:
+            keyword_ver = keywords_to_search.versions(session)
 
-        if sql_export:
-            cls.logger.info(
-                "Exporting %s jobs in %s", len(result), cls.get_maindb_path()
+        cls.logger.info(
+            "%s keyword(s) found : \n%s",
+            len(keyword_ver), "\n".join([f"{k}: {v}" for k, v in keyword_ver.items()])
+        )
+
+        tsv_folder = os.path.join(cls.get_class_dir(), "TSVs")
+        if not os.path.exists(tsv_folder):
+            os.mkdir(tsv_folder)
+        tsv_file = cls.get_unique_path(os.path.join(tsv_folder, f"{cls.strftime(cls.now())}.tsv"))
+
+        for i, offers in enumerate(cls.extract_offers_from_website()):
+            cls.logger.info("Processing offer %s : %s", i + 1, offers)
+
+            cls.logger.debug("Proceeding to offer inspection of %s (%s)", offers, i + 1)
+            offers.offer_inspection(
+                keywords_to_search=keywords_to_search,
+                page_exporter=page_exporter,
+                search_offer_html=search_offer_html,
+                search_offer_text=search_offer_text,
+                retry=retry_offer_fetch,
+                failed_sleep=failed_sleep,
             )
-            cls.sql_batch_export(*result)
 
-        return result
+            cls.logger.debug("Proceeding to sql exportation of %s (%s)", offers, i + 1)
+            with cls.get_maindb_session() as session:
+                offers.sql_export(
+                    session=session,
+                    keywords_ver=keyword_ver,
+                )
+
+            if tsv_export:
+                if i == 0:
+                    tsv_line = offers.flat(with_header=True)
+                else:
+                    tsv_line = offers.flat(with_header=False)
+
+                with open(tsv_file, "a", encoding="UTF-8") as file:
+                    file.write(tsv_line)
+                    file.write("\n")
+
+    @classmethod
+    def get_offer_listing_url(cls) -> str:
+        """Returns a url that lead to an online listing of offers."""
+        raise NotImplementedError
+
+    def get_expected_download_time(self) -> int:
+        """If offers on the scrapped website are contained inside files
+        (pdf ...), the file should be downloaded.
+        This function says how long the download is expected to take.
+        Returns -1 if no download (file) is expected."""
+        raise NotImplementedError
+
+    @classmethod
+    def iter_trough_offer_listing(cls, url: str) -> Iterator["Self"]:
+        """Iter through each pages of the online listing <get_offer_listing_url>.
+        If you need to (re)write this method the simplest method are :
+
+        When only one page is expected:
+            - `cls.get_web_processor().extract_block_on_one_page(url)`
+
+        When the url contains the page number :
+            - `cls.get_web_processor().extract_block_across_multiple_pages_using_url(url)`
+
+        When the url does not contain the page number:
+            - `cls.get_web_processor().extract_block_across_multiple_pages_using_buttons(
+                url,
+                button_finder
+            )`
+
+            with `button_finder`:
+                A. Function  (driver: "EnhancedChrome"() -> WebElement | None)
+                    that find the button that can
+                    be clicked to  load the next page. Generally a lambda
+                    that trigger <browser.get_next_page_button>.
+                B. Use a dictionary if you want to use <self.get_next_page_button>
+                   as <button_finder>. In this case, make sure that the dict contains
+                        - by: ByType,
+                        - button_id: str,
+
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def find_offer_listing_on_page(cls, soup: BeautifulSoup) -> BeautifulSoup:
+        """Should return a BeautifulSoup that only contains the offer listing.
+        (This soup should not contain webpage header / footer other metadata.)"""
+
+        raise NotImplementedError
+
+    @classmethod
+    def generate_offer_from_listing(cls, soup: BeautifulSoup) -> Iterator[Self]:
+        """Generate a number of scrapper object from a block of HTML code that
+        should correspond to the listing of offers."""
+        raise NotImplementedError
+
