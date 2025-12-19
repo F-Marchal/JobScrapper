@@ -10,14 +10,17 @@ from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
 from web_processing.enhanced_chrome_browser import EnhancedChrome
 from enum import Enum
 
+from urllib.parse import urlparse
+
 from .sql_core import ScrapperSQLightCore, KeywordManager
 from web_processing.block_extractor import WebBlockExtractor
 from tools.turn_file_to_text import FileToText
 from web_processing.export_browser_file import ExportBrowserPage
 from tools.geolocalisation import Geolocalisation, Session, Places
+from bs4 import BeautifulSoup
 
 class ScrapperRequestCore(ScrapperSQLightCore):
-    _web_processor: WebBlockExtractor = None
+
 
     class URLInspectionTimeStamp(Enum):
         DOWNLOAD = "Download"
@@ -25,51 +28,60 @@ class ScrapperRequestCore(ScrapperSQLightCore):
         HTML = "HTML Research"
 
     SaveTypes = ExportBrowserPage.SaveTypes
+
+    ################################################################
+    #                     Foreign tool class                       #
+    ################################################################
+    _web_processor: WebBlockExtractor = None
+    _geolocator: Geolocalisation = None
+
     @classmethod
-    def make_page_exporter(cls) -> ExportBrowserPage:
+    def get_web_processor(cls) -> WebBlockExtractor:
+        if cls._web_processor is None:
+            cls._web_processor = cls.initialise_web_processor()
+        return cls._web_processor
+
+    @classmethod
+    def initialise_web_processor(cls) -> WebBlockExtractor:
+        return WebBlockExtractor(
+            block_extractor=cls.find_offer_listing_on_page,
+            block_convertor=cls.generate_offer_from_listing,
+        )
+
+    @classmethod
+    def get_geolocator(cls, contact: str | None = None, **kwargs) -> Geolocalisation:
+        if cls._geolocator is not None:
+            return cls._geolocator
+
+        if contact is None:
+            raise KeyError("Please provide a contact for geopy compliance.")
+
+        cls._geolocator = Geolocalisation(
+                contact=contact,
+                logger=cls.logger,
+                **kwargs
+            )
+        return cls._geolocator
+
+    @classmethod
+    def get_page_exporter(cls, save_type: SaveTypes = SaveTypes.MHTML) -> ExportBrowserPage:
         return ExportBrowserPage(
-            save_type=cls.SaveTypes.MHTML,
+            save_type=save_type,
             compress=False,
             logger=cls.logger
         )
 
-    @classmethod
-    def make_geolocator(cls, contact: str, **kwargs) -> Geolocalisation:
-        return Geolocalisation(
-            contact=contact,
-            logger=cls.logger,
-            **kwargs
-        )
+
 
     ################################################################
-    # Prepare 'Questions' that should be answered by all scrappers #
+    #                  Surcharge  methods                          #
     ################################################################
-    @classmethod
-    def get_website_url(cls) -> str:
-        """Returns website attached to cls. (The website that this crapper should scrap)"""
-        raise NotImplementedError
-
-    @classmethod
-    def find_online_offers(cls, url: str) -> Iterator["Self"]:
-        """Iter through the offer contained on cls.get_website_url """
-        raise NotImplementedError
-
-    @classmethod
-    def initialise_web_processor(cls) -> WebBlockExtractor:
-        """Method used to find the block of html code that
-         contains offers on cls.get_website_url """
-        raise NotImplementedError
-
-    def get_expected_download_time(self) -> int:
-        """If offers on the scrapped website are contained inside files
-        (pdf ...), the file should be downloaded.
-        This function says how long the download is expected to take.
-        Returns -1 if no download (file) is expected."""
-        raise NotImplementedError
-
-    def __init__(self, *args, geolocator: Geolocalisation, **kwargs):
+    def __init__(self, *args, geolocator: Geolocalisation | str | None = None, **kwargs):
         super().__init__(*args, **kwargs)
-        self._geolocator = geolocator
+        if isinstance(geolocator, Geolocalisation):
+            self._geolocator = geolocator
+        else:
+            self._geolocator = self.get_geolocator(contact=geolocator)
 
     @property
     def geolocator(self):
@@ -91,56 +103,9 @@ class ScrapperRequestCore(ScrapperSQLightCore):
         )
 
 
-
     ################################################################
-    #                                                              #
+    #                      Main methods                            #
     ################################################################
-    def url_point_to_file(self) -> bool:
-        # Does self.url is expected to point on a file
-        return self.get_expected_download_time() >= 0
-
-    @classmethod
-    def get_web_processor(cls) -> WebBlockExtractor:
-        if cls._web_processor is None:
-            cls._web_processor = cls.initialise_web_processor()
-        return cls._web_processor
-
-    # --- --- Retrieve jobs  --- ---
-    @classmethod
-    def extract_offers_from_website(
-            cls,
-            ensure_url_uniqueness: bool = True,
-    ) -> Iterator["Self"]:
-        """
-        Interrogate the website url returned in <cls.get_website_url()>
-        to extract job offers.
-        """
-        cls.logger.info("Fetching offers from %s", cls.get_website_url())
-        known_urls = set()
-
-        i = 0
-        for i, offers in enumerate(cls.find_online_offers(cls.get_website_url())):
-            if ensure_url_uniqueness:
-                if offers.url in known_urls:
-                    cls.logger.warning("Ignore offers #%s because of url collision ('%s').", i+1, offers.url)
-                    continue
-
-                known_urls.add(offers.url)
-
-            if i % 25 == 0:
-                cls.logger.info(
-                    "%s offers fetched from %s. Loop still in progress",
-                    i+1,
-                    cls.get_website_url()
-                )
-
-            known_urls.add(offers.url)
-
-            yield offers
-
-        cls.logger.info("%s offers fetched from %s. Loop finished.", i + 1, cls.get_website_url())
-
-    # --- --- Parse offer  --- ---
     def offer_inspection(
             self,
             keywords_to_search: KeywordManager | None = None,
@@ -167,6 +132,8 @@ class ScrapperRequestCore(ScrapperSQLightCore):
                     text_file=text_file,
                     new_name="snapshot",
                 )
+                self.add_time_stamps(str(self.URLInspectionTimeStamp.DOWNLOAD), self.now())
+                self.add_metadata("Folder", self.get_self_dir())
 
             if keywords_to_search is not None:
                 self.search_keywords_in_offer(
@@ -223,7 +190,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
         # I choose to use a dictionary instead of calling
         # retrieve / set keyword count for each loop
         result_dict = {
-            keyword: self.retrieve_keyword_count(keyword) for keyword in keyword_pattern
+            keyword: self.retrieve_keyword_count(keyword) if self.keyword_exist(keyword) else 0 for keyword in keyword_pattern
         }
 
         # Read offer content
@@ -254,6 +221,58 @@ class ScrapperRequestCore(ScrapperSQLightCore):
             downloaded_html_page: str,
     ):
         pass
+
+
+    @classmethod
+    def extract_offers_from_website(
+            cls,
+            ensure_url_uniqueness: bool = True,
+    ) -> Iterator["Self"]:
+        """
+        Interrogate the website url returned in <cls.get_website_url()>
+        to extract job offers.
+        """
+        cls.logger.info("Fetching offers from %s", cls.get_offer_listing_url())
+        known_urls = set()
+
+        i = 0
+        for i, offers in enumerate(cls.iter_trough_offer_listing(cls.get_offer_listing_url())):
+            if ensure_url_uniqueness:
+                if offers.url in known_urls:
+                    cls.logger.warning("Ignore offers #%s because of url collision ('%s').", i+1, offers.url)
+                    continue
+
+                known_urls.add(offers.url)
+
+            if (i + 1) % 5 == 0:
+                cls.logger.info(
+                    "%s offers fetched from %s. Loop still in progress",
+                    i+1,
+                    cls.get_offer_listing_url()
+                )
+
+            known_urls.add(offers.url)
+
+            yield offers
+
+        cls.logger.info("%s offers fetched from %s. Loop finished.", i + 1, cls.get_offer_listing_url())
+    ################################################################
+    #                     Tools functions                          #
+    ################################################################
+    def url_point_to_file(self) -> bool:
+        # Does self.url is expected to point on a file
+        return self.get_expected_download_time() >= 0
+
+    @classmethod
+    def get_website_base_url(cls):
+        return cls.extract_baseurl(cls.get_offer_listing_url())
+
+    @staticmethod
+    def extract_baseurl(url: str):
+        """Extract the base url of a url."""
+        parsed_url = urlparse(url)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        return base_url
 
     @classmethod
     def get_class_dir(cls):
@@ -292,6 +311,60 @@ class ScrapperRequestCore(ScrapperSQLightCore):
     def hash_text(text: str):
         return hashlib.sha1(text.encode("utf-8")).hexdigest()
 
+    ################################################################
+    # Prepare 'Questions' that should be answered by all scrappers #
+    ################################################################
+    @classmethod
+    def get_offer_listing_url(cls) -> str:
+        """Returns a url that lead to an online listing of offers."""
+        raise NotImplementedError
 
+    def get_expected_download_time(self) -> int:
+        """If offers on the scrapped website are contained inside files
+        (pdf ...), the file should be downloaded.
+        This function says how long the download is expected to take.
+        Returns -1 if no download (file) is expected."""
+        raise NotImplementedError
 
+    @classmethod
+    def iter_trough_offer_listing(cls, url: str) -> Iterator["Self"]:
+        """Iter through each pages of the online listing <get_offer_listing_url>.
+        If you need to (re)write this method the simplest method are :
 
+        When only one page is expected:
+            - `cls.get_web_processor().extract_block_on_one_page(url)`
+
+        When the url contains the page number :
+            - `cls.get_web_processor().extract_block_across_multiple_pages_using_url(url)`
+
+        When the url does not contain the page number:
+            - `cls.get_web_processor().extract_block_across_multiple_pages_using_buttons(
+                url,
+                button_finder
+            )`
+
+            with `button_finder`:
+                A. Function  (driver: "EnhancedChrome"() -> WebElement | None)
+                    that find the button that can
+                    be clicked to  load the next page. Generally a lambda
+                    that trigger <browser.get_next_page_button>.
+                B. Use a dictionary if you want to use <self.get_next_page_button>
+                   as <button_finder>. In this case, make sure that the dict contains
+                        - by: ByType,
+                        - button_id: str,
+
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def find_offer_listing_on_page(cls, soup: BeautifulSoup) -> BeautifulSoup:
+        """Should return a BeautifulSoup that only contains the offer listing.
+        (This soup should not contain webpage header / footer other metadata.)"""
+
+        raise NotImplementedError
+
+    @classmethod
+    def generate_offer_from_listing(cls, soup: BeautifulSoup) -> Iterator[Self]:
+        """Generate a number of scrapper object from a block of HTML code that
+        should correspond to the listing of offers."""
+        raise NotImplementedError
