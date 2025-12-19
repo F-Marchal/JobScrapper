@@ -138,8 +138,8 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
                 yield ne
 
             # == Kill switch 2 ==
-            if initial_total == initial_total:
-                self.logger.debug("Page %s (url=%s) does nor contain new elements ! ", page_index, url)
+            if initial_total == total:
+                self.logger.debug("Page %s (url=%s) does not contain new elements ! ", page_index, url)
                 if no_element_in_last_page:
                     page_already_reached = True
                     self.logger.debug(
