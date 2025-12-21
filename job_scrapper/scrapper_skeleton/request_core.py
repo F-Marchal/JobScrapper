@@ -34,18 +34,27 @@ class ScrapperRequestCore(ScrapperSQLightCore):
     ################################################################
     _web_processor: WebBlockExtractor = None
     _geolocator: Geolocalisation = None
+    hide_web_driver = True
 
     @classmethod
-    def get_web_processor(cls) -> WebBlockExtractor:
+    def get_web_processor(cls, *args, **kwargs) -> WebBlockExtractor[Self]:
         if cls._web_processor is None:
-            cls._web_processor = cls.initialise_web_processor()
+            cls._web_processor = cls.initialise_web_processor(*args, **kwargs)
         return cls._web_processor
 
     @classmethod
-    def initialise_web_processor(cls) -> WebBlockExtractor:
+    def initialise_web_processor(cls, *args, **kwargs) -> WebBlockExtractor[Self]:
+        if "hide_web_driver" not in kwargs:
+            kwargs["hide_web_driver"] = cls.hide_web_driver
+
+        if "default_page_preparation" not in kwargs:
+            kwargs["default_page_preparation"] = cls.prepare_page
+
         return WebBlockExtractor(
+            *args,
             block_extractor=cls.find_offer_listing_on_page,
             block_convertor=cls.generate_offer_from_listing,
+            **kwargs,
         )
 
     @classmethod
@@ -102,6 +111,9 @@ class ScrapperRequestCore(ScrapperSQLightCore):
             longitude=long,
         )
 
+    @classmethod
+    def prepare_page(cls, browser: EnhancedChrome):
+        browser.scroll_to_bottom()
 
     ################################################################
     #                      Main methods                            #
@@ -219,7 +231,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
 
     def search_in_text_offer(
             self,
-            downloaded_html_page: str,
+            downloaded_text_page: str,
     ):
         pass
 
@@ -300,12 +312,12 @@ class ScrapperRequestCore(ScrapperSQLightCore):
         field = re.sub(r'[^a-zA-Z0-9_-]+', '-', field)
         field = re.sub(r'-+', '-', field).strip('-')
 
-        folder_name = f"{field}-{title}-{url}"
+        folder_name = f"{field[0:10]}-{title[0:20]}-{url}"
 
         self_dir = os.path.join(class_dir, folder_name)
 
         if not os.path.isdir(self_dir):
-            self.logger.debug("Make dir as it does not exist: %s", self_dir)
+            self.logger.debug("Makedir as it does not exist: %s", self_dir)
             os.mkdir(self_dir)
 
         return self_dir
