@@ -167,6 +167,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             "maindb": cls.get_maindb_session,
             "archive": cls.get_archive_session,
         }
+    DEFAULT_DATABASE = "maindb"
 
     @classmethod
     @contextmanager
@@ -180,9 +181,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         database_session_command: SqlSessionFactory | None = None
 
         if database_name is None:
-            database_session_command = cls.get_maindb_session
+            database_name = cls.DEFAULT_DATABASE
 
-        elif database_name in available_databases:
+        if database_name in available_databases:
             database_session_command = available_databases[database_name]
 
         else:
