@@ -25,6 +25,8 @@ class WebPageProcessor(SecondaryLoggerUser):
             chrome_options: Options | None=None,
             add_default_experimental_options: bool=True,
             rate_limit: int = 2,
+            hide_web_driver: bool = True,
+            default_page_preparation: PreparePage | None = None
     ):
         """
         :param logger: A logger
@@ -50,9 +52,12 @@ class WebPageProcessor(SecondaryLoggerUser):
             self.chrome_options = chrome_options
         else:
             self.chrome_options = Options()
-            self.chrome_options.add_argument(
-                "--headless"
-            )
+            if hide_web_driver:
+                self.chrome_options.add_argument(
+                    "--headless"
+                )
+
+        self.default_page_preparation = default_page_preparation
 
     @property
     def add_default_experimental_options(self):
@@ -94,8 +99,10 @@ class WebPageProcessor(SecondaryLoggerUser):
         :param int failed_sleep: see <start_browser_on> 'failed_sleep' option.
         :return: A html soup that represent the <self.block_of_interest> extracted from the url
         """
+        if prepare_page is None:
+            prepare_page = self.default_page_preparation
 
-        with self.start_browser_on(url, retry=retry, failed_sleep=failed_sleep) as browser:
+        with self.start_browser_on(url=url, retry=retry, failed_sleep=failed_sleep) as browser:
             time.sleep(pre_preparation_wait_time)
 
             if prepare_page:
