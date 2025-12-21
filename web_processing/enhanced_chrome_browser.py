@@ -22,9 +22,16 @@ from selenium.webdriver.chrome.service import Service
 
 
 class ButtonFinder(Protocol):
-    """Function type that can be used to detect a button on a webpage."""
+    """Function type that can be used to detect a button on a webpage.
+
+    TODO: Expected behavior"""
     def __call__(self, driver: "EnhancedChrome") -> WebElement | None: ...
 
+class ButtonFinderIterator(Protocol):
+    """Function type that can be used to detect a button on a webpage.
+
+    TODO: Expected behavior"""
+    def __call__(self, driver: "EnhancedChrome") -> Iterator[WebElement]: ...
 
 class PreparePage(Protocol):
     """Function type that can be used to prepare a page before parsing it."""
@@ -87,7 +94,7 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
         return self._workdir.name
 
     # Page movement
-    def scroll_down(self) -> None:
+    def scroll_to_bottom(self) -> None:
         """Scroll a page until the end of said page to see the bottom of it."""
         self.execute_script(
             "window.scrollTo(0, document.body.scrollHeight);"
@@ -209,11 +216,10 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
 
         while is_enabled:
             # Extract current page html
-            if prepare_page:
-                prepare_page(self)
-            time.sleep(wait_after_prepare_page)
-
-            yield BeautifulSoup(self.page_source, "html.parser")
+            yield self._iter_through_pages_using_button__extract_html(
+                prepare_page=prepare_page,
+                wait_after_prepare_page=wait_after_prepare_page,
+            )
 
             # ---------- Find button state --------------
             self.logger.debug("Seeking 'next' button on page %s using %s", i, button_finder)
@@ -231,12 +237,65 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
                 time.sleep(wait_scroll_to_view_button)
                 next_page_btn.click()
 
-
             else:
                 self.logger.debug("No 'next' button found on page %s ! Quitting page iteration ", i)
 
             i += 1
 
+    def iter_through_pages_using_button_iterator(
+            self,
+            button_finder: ButtonFinderIterator,
+            prepare_page: PreparePage | None = None,
+
+            wait_after_prepare_page: int = 0.5,
+            wait_scroll_to_view_button: int = 0.5,
+    ) -> Iterator[BeautifulSoup]:
+        """
+        Iterator that contains a number of BeautifulSoup HTML code.
+        :param button_finder: An iterator function that find the button that load the
+            next page. All pages are parsed from the first (before any button
+            has been clicked) to the last (after last button has been clicked).
+        :param prepare_page: A function that prepare page each web pages.
+            Default : self.scroll_down
+        :param int wait_after_prepare_page: How long (sec) should the
+            function wait after <prepare_page> was run.
+        :param int wait_scroll_to_view_button: How long (sec) should the
+            function wait for press the button that go to page.
+        """
+
+        # Loop variables
+        i = 1
+
+        for next_page_btn in button_finder(self):
+            # Extract current page html
+            yield self._iter_through_pages_using_button__extract_html(
+                prepare_page=prepare_page,
+                wait_after_prepare_page=wait_after_prepare_page,
+            )
+
+            # Go to next page
+            self.logger.debug("'Next' button found on page %s : %s ", i, next_page_btn)
+            self.scroll_to_view(next_page_btn)
+            time.sleep(wait_scroll_to_view_button)
+            next_page_btn.click()
+
+        # Extract last page HTML
+        yield self._iter_through_pages_using_button__extract_html(
+            prepare_page=prepare_page,
+            wait_after_prepare_page=wait_after_prepare_page,
+        )
+
+
+    def _iter_through_pages_using_button__extract_html(
+            self,
+            prepare_page: PreparePage | None = None,
+            wait_after_prepare_page: int = 0.5,
+    ) -> BeautifulSoup:
+        if prepare_page:
+            prepare_page(self)
+        time.sleep(wait_after_prepare_page)
+
+        return BeautifulSoup(self.page_source, "html.parser")
 
     # Page navigation
 
