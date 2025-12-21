@@ -1,8 +1,4 @@
-import os
-import re
-import tempfile
-import time
-import zipfile
+
 from typing import Iterator, Protocol, TypeVar, Generic, Literal
 
 
@@ -11,20 +7,11 @@ from bs4 import BeautifulSoup
 from geopy.distance import geodesic  # type: ignore[import-untyped]
 from geopy.exc import GeocoderServiceError  # type: ignore[import-untyped]
 from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
-from selenium import webdriver
-from selenium.common.exceptions import (
-    TimeoutException,
-    WebDriverException,
-)
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By, ByType
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support import expected_conditions as cond
-from selenium.webdriver.support.ui import WebDriverWait
-from tools.secondary_logger_user import SecondaryLoggerUser, logging
-from web_processing.enhanced_chrome_browser import EnhancedChrome, PreparePage, ButtonFinder
-import time
+
+from selenium.webdriver.common.by import ByType
+
+from web_processing.enhanced_chrome_browser import PreparePage, ButtonFinder, ButtonFinderIterator
+
 from web_processing.web_page_parser import WebPageProcessor
 
 _T = TypeVar("_T") # bound=Hashable
@@ -53,10 +40,50 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
             prepare_page: PreparePage | None = None,
             wait_after_prepare_page: int = 0.5,
             wait_scroll_to_view_button: int = 0.5,
-    ):
+    ) -> Iterator[_T]:
+        if prepare_page is None:
+            prepare_page = self.default_page_preparation
+
         with self.start_browser_on(w_url) as browser:
             self.logger.debug("Start browsing elements in %s", w_url)
             pages = browser.iter_through_pages_using_buttons(
+                button_finder=button_finder,
+                prepare_page=prepare_page,
+                wait_after_prepare_page=wait_after_prepare_page,
+                wait_scroll_to_view_button=wait_scroll_to_view_button,
+            )
+
+            total = 0
+            for i, full_html in enumerate(pages):
+                block = self._call_block_extractor(full_html, browser.current_url)
+                elements = self._call_block_convertor(block, browser.current_url)
+
+                counter = 0
+                for en in self._yield_element(elements):
+                    yield en
+                    counter += 1
+                    self.wait_before_calling(browser.current_url)
+
+                self.logger.debug("%s elements found on page %s (%s)", counter, i, browser.current_url)
+                total += counter
+
+            self.logger.debug("%s elements extracted from %s.", total, w_url)
+
+    def extract_block_across_multiple_pages_using_button_iterator(
+            self,
+            w_url: str,
+
+            button_finder: ButtonFinderIterator,
+            prepare_page: PreparePage | None = None,
+            wait_after_prepare_page: int = 0.5,
+            wait_scroll_to_view_button: int = 0.5,
+    ) -> Iterator[_T]:
+        if prepare_page is None:
+            prepare_page = self.default_page_preparation
+
+        with self.start_browser_on(w_url) as browser:
+            self.logger.debug("Start browsing elements in %s", w_url)
+            pages = browser.iter_through_pages_using_button_iterator(
                 button_finder=button_finder,
                 prepare_page=prepare_page,
                 wait_after_prepare_page=wait_after_prepare_page,
@@ -94,6 +121,8 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
         page_already_reached = False
         no_element_in_last_page = False
         total = 0
+        if prepare_page is None:
+            prepare_page = self.default_page_preparation
 
         # Offers can be split between multiple pages.
         # An invalid page number load the first page.
@@ -167,6 +196,8 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
             failed_sleep: int = 5,
     ) -> Iterator[_T]:
         self.logger.debug("Parsing %s.", w_url)
+        if prepare_page is None:
+            prepare_page = self.default_page_preparation
 
         if block_collector is None:
             block_collector = set()
