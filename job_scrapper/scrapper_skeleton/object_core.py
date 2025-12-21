@@ -233,6 +233,7 @@ class ScrapperObjectCore(CoreLogger):
         jobs: Sequence["ScrapperObjectCore"],
         file_path: str | None = None,
         sep: str = "\t",
+        mod: str = "w",
     ):
         """
         Export a list of job inside a jobfile by .
@@ -249,13 +250,14 @@ class ScrapperObjectCore(CoreLogger):
         :param str file_path: A file in which all will be written
         :param ScrapperObjectCore jobs: A list of ScrapperObjectCore
         :param str sep: Column delimiter. Do not use "|"
+        :param str mod: How to open file ('w' / 'a')
         """
         if file_path is None:
             file_path = os.path.join(cls.get_workdir(), "JobFiles.job")
 
         cls.logger.debug("Exporting %s jobs to %s", len(jobs), file_path)
 
-        with open(file_path, "w", encoding="utf-8") as f:
+        with open(file_path, mod, encoding="utf-8") as f:
             for lines in cls._list_to_flat_file(jobs, sep=sep):
                 f.write(lines)
 
