@@ -77,43 +77,6 @@ class CHUMtpScrapper(srk.JobScrapperSkeleton):
             }
             yield cls(**kwargs)
 
-    @classmethod
-    def try_to_find_field(cls, title: 'CHUMtpScrapper | str'):
-        """In those offers, the field is not always obvious to parse.
-        This method tries to find it by parsing the title."""
-
-        if isinstance(title, str):
-            field = title
-        else:
-            field = title.title
-
-        field = field.lower()
-        if " - " in field:
-            # Remove prefixes : "50238 - "; "IBODE -"
-            field = " ".join(field.split(" - ")[1:])
-
-        # Remove all link word
-        link_words = [
-            " en",     " de",     " à",      " pour",   " avec",    " sans",
-            " sur",    " sous",   " dans",   " par",    " entre",   " chez",
-            " vers",   " contre", " après",  " avant",  " depuis",  " pendant",
-            " selon",  " malgré", " parmi",  " envers", " hors",    " sauf",
-            " jusque", " via",    " et",     " ou",     " mais",    " donc",
-            " or",     " ni",     " car",    " au",
-        ]
-        pattern = "|".join(re.escape(word) for word in link_words)
-        field = re.sub(pattern, "", field)
-
-        # The first two words generally gives
-        # a good idea of the field
-        field = " ".join(field.split(" ")[:2])
-
-        # If the first world contains a dash
-        # the first world is generally enough
-        field = "-".join(field.split("-")[:2])
-
-        return field
-
 if __name__ == "__main__":
     main_class = CHUMtpScrapper
 
