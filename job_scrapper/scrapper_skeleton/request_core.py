@@ -21,11 +21,14 @@ from bs4 import BeautifulSoup
 
 class ScrapperRequestCore(ScrapperSQLightCore):
 
-
-    class URLInspectionTimeStamp(Enum):
+    class URLInspectionTimeStamp(str, Enum):
         DOWNLOAD = "Download"
         KEYWORD = "Keyword Research"
         HTML = "HTML Research"
+        TEXT = "Textual Research"
+
+        def __str__(self):
+            return self.value
 
     SaveTypes = ExportBrowserPage.SaveTypes
 
@@ -144,9 +147,17 @@ class ScrapperRequestCore(ScrapperSQLightCore):
                     text_file=text_file,
                     new_name="snapshot",
                 )
-                self.add_time_stamps(str(self.URLInspectionTimeStamp.DOWNLOAD), self.now())
+                self.add_time_stamps(self.URLInspectionTimeStamp.DOWNLOAD, self.now())
                 rel_path = os.path.relpath(self.get_self_dir(), start=self.get_workdir())
-                self.add_metadata("Folder", rel_path)
+                self.add_metadata(
+                    f"{self.URLInspectionTimeStamp.DOWNLOAD}_Folder",
+                    rel_path
+                )
+                self.add_metadata(
+                    f"{self.URLInspectionTimeStamp.DOWNLOAD}_Type",
+                    str(page_exporter.SaveTypes)
+                )
+
 
             if keywords_to_search is not None:
                 self.search_keywords_in_offer(
@@ -227,23 +238,27 @@ class ScrapperRequestCore(ScrapperSQLightCore):
             self,
             downloaded_html_page: str,
     ):
-        pass
+        self.add_time_stamps(str(self.URLInspectionTimeStamp.HTML), self.now())
+        ...
 
     def search_in_text_offer(
             self,
             downloaded_text_page: str,
     ):
-        pass
+        self.add_time_stamps(str(self.URLInspectionTimeStamp.TEXT), self.now())
+        ...
 
 
     @classmethod
     def extract_offers_from_website(
             cls,
             ensure_url_uniqueness: bool = True,
-    ) -> Iterator["Self"]:
+    ) -> Iterator["Self | None"]: # None to signifie that an offer has been ignored
         """
         Interrogate the website url returned in <cls.get_website_url()>
         to extract job offers.
+        --> None : An offer has been ignored
+        --> Self : An offer has been generated
         """
         cls.logger.info("Fetching offers from %s", cls.get_offer_listing_url())
         known_urls = set()
@@ -253,6 +268,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
             if ensure_url_uniqueness:
                 if offers.url in known_urls:
                     cls.logger.warning("Ignore offers #%s because of url collision ('%s').", i+1, offers.url)
+                    yield None
                     continue
 
                 known_urls.add(offers.url)

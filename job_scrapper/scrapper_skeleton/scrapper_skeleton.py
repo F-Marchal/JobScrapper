@@ -6,13 +6,11 @@ import json
 import os.path
 from contextlib import contextmanager
 from typing import Self, Iterator
-
-from astroid import Raise
-
 from web_processing.block_extractor import WebBlockExtractor
 
+import re
 from .request_core import ScrapperRequestCore, KeywordManager, ExportBrowserPage, BeautifulSoup
-
+from sql.tables.keywords.keyword_version import KeywordVersion
 
 
 class JobScrapperSkeleton(ScrapperRequestCore):
@@ -23,18 +21,29 @@ class JobScrapperSkeleton(ScrapperRequestCore):
             keywords_to_search: KeywordManager | None = None,
             page_exporter: ExportBrowserPage | None = None,
             tsv_export: bool = True,
+            sql_export: bool = True,
 
             search_offer_text: bool = True,
             search_offer_html: bool = True,
             retry_offer_fetch: int = 2,
             failed_sleep: int = 5,
+
+            batch_export: int = 20,
+            database_name: str | None = None,
+            workdir: str | None = None,
     ):
+        if not database_name:
+            database_name = cls.DEFAULT_DATABASE
+
+        if not workdir:
+            workdir = cls.get_workdir()
+
         # Initialize geolocalisator with a contact.
         cls.logger.info("Initialisation of geopy rate limiter... (%s)", contact)
         cls.get_geolocator(contact)
 
         # Keyword management
-        with cls.get_maindb_session() as session:
+        with cls.get_sql_session(workdir=workdir, database_name=database_name) as session:
             if keywords_to_search is None:
                 cls.logger.info("Using default keywords to search configuration : Loading database...")
                 keywords_to_search = KeywordManager(logger=cls.logger)
@@ -44,7 +53,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                 # Ensure that all keywords version exist in database.
                 keywords_to_search.commit(session)
 
-        with cls.get_maindb_session() as session:
+        with cls.get_sql_session(workdir=workdir, database_name=database_name) as session:
             keyword_ver = keywords_to_search.versions(session)
 
         cls.logger.info(
@@ -57,9 +66,14 @@ class JobScrapperSkeleton(ScrapperRequestCore):
             os.mkdir(tsv_folder)
         tsv_file = cls.get_unique_path(os.path.join(tsv_folder, f"{cls.strftime(cls.now())}.tsv"))
 
+        # TODO: Batch export
+        offer_batch = []
         for i, offers in enumerate(cls.extract_offers_from_website()):
-            cls.logger.info("Processing offer %s : %s", i + 1, offers)
+            if offers is None:
+                # An offer should be ignored see extract_offers_from_website logging.
+                continue
 
+            cls.logger.info("Processing offer %s : %s", i + 1, offers)
             cls.logger.debug("Proceeding to offer inspection of %s (%s)", offers, i + 1)
             offers.offer_inspection(
                 keywords_to_search=keywords_to_search,
@@ -69,23 +83,122 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                 retry=retry_offer_fetch,
                 failed_sleep=failed_sleep,
             )
+            offer_batch.append(offers)
 
-            cls.logger.debug("Proceeding to sql exportation of %s (%s)", offers, i + 1)
-            with cls.get_maindb_session() as session:
-                offers.sql_export(
-                    session=session,
-                    keywords_ver=keyword_ver,
-                )
+            if len(offer_batch) >= batch_export:
+                if sql_export:
+                    cls._run_export_sql(
+                        offer_batch=offer_batch,
+                        database_name=database_name,
+                        workdir=workdir,
+                        i=i,
+                        keywords_ver=keyword_ver,
+                    )
+                if tsv_export:
+                    cls._run_export_tsv(
+                        offer_batch=offer_batch,
+                        i=i,
+                        tsv_file=tsv_file,
+                    )
+                offer_batch.clear()
 
-            if tsv_export:
-                if i == 0:
-                    tsv_line = offers.flat(with_header=True)
-                else:
-                    tsv_line = offers.flat(with_header=False)
+    def need_reinspection(
+            self,
+            delay: int,
+            database_name: str | None = None,
+            workdir: str | None = None,
 
-                with open(tsv_file, "a", encoding="UTF-8") as file:
-                    file.write(tsv_line)
-                    file.write("\n")
+            keywords_to_search: KeywordManager | None = None,
+            page_exporter: ExportBrowserPage | None = None,
+            tsv_export: bool = True,
+            sql_export: bool = True,
+    ):
+        pass
+
+
+
+
+
+    @classmethod
+    def _run_export_tsv(
+            cls,
+            offer_batch: list[Self],
+            i: int,
+            tsv_file: str,
+    ):
+
+        offer_to_text = '\n'.join([f"{i - len(offer_batch) + oi} {o})" for oi, o in enumerate(offer_batch)])
+        cls.logger.debug("Proceeding to sql exportation of %s offers :\n"
+                         "%s",
+                         len(offer_batch),
+                         f"{offer_to_text}"
+        )
+        cls.export_to_flat_file(jobs=offer_batch, file_path=tsv_file, mod="a")
+
+    @classmethod
+    def _run_export_sql(
+            cls,
+            offer_batch: list[Self],
+            database_name: str,
+            workdir: str,
+            i: int,
+            keywords_ver: dict[str, KeywordVersion] | None = None
+
+
+    ):
+        offer_to_text = '\n'.join([f"{(i + 1) - len(offer_batch) + (oi + 1)} {o})" for oi, o in enumerate(offer_batch)])
+        cls.logger.debug("Proceeding to sql exportation of %s offers :\n"
+                         "%s",
+                         len(offer_batch),
+                         f"{offer_to_text}"
+        )
+        cls.sql_batch_export(
+            *offer_batch,
+            database_name=database_name,
+            workdir=workdir,
+            keywords_ver=keywords_ver,
+        )
+
+    # TOOLS
+    @classmethod
+    def try_to_find_field(cls, title: 'JobScrapperSkeleton | str'):
+        """In those offers, the field is not always obvious to parse.
+        This method tries to find it by parsing the title."""
+
+        if isinstance(title, str):
+            field = title
+        else:
+            field = title.title
+
+        field = field.lower()
+        if " - " in field:
+            # Remove prefixes : "50238 - "; "IBODE -"
+            field = " ".join(field.split(" - ")[1:])
+
+        # Remove all link word
+        link_words = [
+            " en",     " de",     " à",      " pour",   " avec",    " sans",
+            " sur",    " sous",   " dans",   " par",    " entre",   " chez",
+            " vers",   " contre", " après",  " avant",  " depuis",  " pendant",
+            " selon",  " malgré", " parmi",  " envers", " hors",    " sauf",
+            " jusque", " via",    " et",     " ou",     " mais",    " donc",
+            " or",     " ni",     " car",    " au",
+        ]
+        pattern = "|".join(re.escape(word) for word in link_words)
+        field = re.sub(pattern, "", field)
+
+        # The first two words generally gives
+        # a good idea of the field
+        field = " ".join(field.split(" ")[:2])
+
+        # If the first world contains a dash
+        # the first world is generally enough
+        field = "-".join(field.split("-")[:2])
+
+        return field
+
+
+    # QUESTIONS
 
     @classmethod
     def get_offer_listing_url(cls) -> str:
