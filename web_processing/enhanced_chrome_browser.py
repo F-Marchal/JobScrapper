@@ -31,7 +31,7 @@ class ButtonFinderIterator(Protocol):
     """Function type that can be used to detect a button on a webpage.
 
     TODO: Expected behavior"""
-    def __call__(self, driver: "EnhancedChrome") -> Iterator[WebElement]: ...
+    def __call__(self, driver: "EnhancedChrome") -> Iterator[WebElement | None]: ...
 
 class PreparePage(Protocol):
     """Function type that can be used to prepare a page before parsing it."""
@@ -252,7 +252,10 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
     ) -> Iterator[BeautifulSoup]:
         """
         Iterator that contains a number of BeautifulSoup HTML code.
-        :param button_finder: An iterator function that find the button that load the
+        :param button_finder:
+
+            TODO: update
+            OLDD : An iterator function that find the button that load the
             next page. All pages are parsed from the first (before any button
             has been clicked) to the last (after last button has been clicked).
         :param prepare_page: A function that prepare page each web pages.
@@ -273,17 +276,14 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
                 wait_after_prepare_page=wait_after_prepare_page,
             )
 
+            if next_page_btn is None:
+                continue
+
             # Go to next page
             self.logger.debug("'Next' button found on page %s : %s ", i, next_page_btn)
             self.scroll_to_view(next_page_btn)
             time.sleep(wait_scroll_to_view_button)
             next_page_btn.click()
-
-        # Extract last page HTML
-        yield self._iter_through_pages_using_button__extract_html(
-            prepare_page=prepare_page,
-            wait_after_prepare_page=wait_after_prepare_page,
-        )
 
 
     def _iter_through_pages_using_button__extract_html(
