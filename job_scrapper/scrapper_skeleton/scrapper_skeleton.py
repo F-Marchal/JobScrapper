@@ -128,7 +128,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                          len(offer_batch),
                          f"{offer_to_text}"
         )
-        cls.export_to_flat_file(jobs=offer_batch, file_path=tsv_file, mod="a")
+        cls.batch_export_to_flat_file(jobs=offer_batch, file_path=tsv_file, mod="a")
 
     @classmethod
     def _run_export_sql(
