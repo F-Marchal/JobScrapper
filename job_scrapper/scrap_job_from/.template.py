@@ -1,12 +1,9 @@
-import sys
-
 from bs4 import BeautifulSoup
 from typing import Iterator, Self
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-from sql.tables.helpers.keyword_manager import KeywordManager
 from web_processing.block_extractor import WebBlockExtractor
-from web_processing.enhanced_chrome_browser import ButtonFinder
+from web_processing.enhanced_chrome_browser import ButtonFinder, EnhancedChrome
 
 class TemplateScrapper(srk.JobScrapperSkeleton):
     """
@@ -43,6 +40,11 @@ class TemplateScrapper(srk.JobScrapperSkeleton):
                   )```
                   You might need to create an additional method to use as button_finder.
                   This method should match a `ButtonFinder`. See ButtonFinder Docs.
+
+        If you need to see the webdriver for debug purposes you can set [Name]Scrapper.hide_web_driver to False
+        If you want to ignore all offer processing during testing, you can add :
+        def offer_inspection(self, *args, **kwargs):
+            pass
         """
         raise NotImplementedError
 
