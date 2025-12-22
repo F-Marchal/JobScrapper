@@ -7,11 +7,14 @@ from web_processing.enhanced_chrome_browser import EnhancedChrome
 from tools.turn_file_to_text import FileToText
 
 class ExportBrowserPage(SecondaryLoggerUser):
-    class SaveTypes(Enum):
+    class SaveTypes(str, Enum):
         DISABLED = "Disabled"
         TEXT = "Text"
         HTML = "HTML or file"
         MHTML = "MHTML or file"
+
+        def __str__(self):
+            return self.value
 
     def __init__(
             self,
