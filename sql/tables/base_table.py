@@ -46,7 +46,12 @@ class BaseTable(Base):
     @classmethod
     def _get_engine(cls, database_path: str):
         os.makedirs(os.path.dirname(database_path), exist_ok=True)
-        engine = create_engine(f"sqlite:///{database_path}", echo=False)
+        engine = create_engine(
+            f"sqlite:///{database_path}",
+            echo=False,
+            future=True,
+            pool_pre_ping=True,
+        )
 
         @event.listens_for(engine, "connect")
         def enable_foreign_keys(dbapi_connection, connection_record):
