@@ -1,17 +1,12 @@
 """
 Skeleton for JobScrapperClass
 """
-
-import json
 import os.path
-from contextlib import contextmanager
 from typing import Self, Iterator
-from web_processing.block_extractor import WebBlockExtractor
 
 import re
 from .request_core import ScrapperRequestCore, KeywordManager, ExportBrowserPage, BeautifulSoup
-from sql.tables.keywords.keyword_version import KeywordVersion
-
+from sql.tables.keywords.keyword_version import KeywordVersion, Session
 
 class JobScrapperSkeleton(ScrapperRequestCore):
     @classmethod
@@ -65,9 +60,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         if not os.path.exists(tsv_folder):
             os.mkdir(tsv_folder)
         tsv_file = cls.get_unique_path(os.path.join(tsv_folder, f"{cls.strftime(cls.now())}.tsv"))
-
-        # TODO: Batch export
         offer_batch = []
+        i = 0
         for i, offers in enumerate(cls.extract_offers_from_website()):
             if offers is None:
                 # An offer should be ignored see extract_offers_from_website logging.
@@ -102,21 +96,22 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                     )
                 offer_batch.clear()
 
-    def need_reinspection(
-            self,
-            delay: int,
-            database_name: str | None = None,
-            workdir: str | None = None,
-
-            keywords_to_search: KeywordManager | None = None,
-            page_exporter: ExportBrowserPage | None = None,
-            tsv_export: bool = True,
-            sql_export: bool = True,
-    ):
-        pass
-
-
-
+        if offer_batch:
+            if sql_export:
+                cls._run_export_sql(
+                    offer_batch=offer_batch,
+                    database_name=database_name,
+                    workdir=workdir,
+                    i=i,
+                    keywords_ver=keyword_ver,
+                )
+            if tsv_export:
+                cls._run_export_tsv(
+                    offer_batch=offer_batch,
+                    i=i,
+                    tsv_file=tsv_file,
+                )
+            offer_batch.clear()
 
 
     @classmethod
@@ -127,7 +122,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
             tsv_file: str,
     ):
 
-        offer_to_text = '\n'.join([f"{i - len(offer_batch) + oi} {o})" for oi, o in enumerate(offer_batch)])
+        offer_to_text = '\n'.join([f"{(i + 1) - len(offer_batch) + (oi + 1)} {o})" for oi, o in enumerate(offer_batch)])
         cls.logger.debug("Proceeding to sql exportation of %s offers :\n"
                          "%s",
                          len(offer_batch),
