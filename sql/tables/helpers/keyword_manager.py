@@ -19,7 +19,7 @@ class KeywordManager(SecondaryLoggerUser):
     def regexes(self, keyword: str) -> set[str]:
         return self._keywords[keyword].copy()
 
-    def versions(self, session: Session):
+    def versions(self, session: Session) -> dict[str, KeywordVersion]:
         return {
             keyword: self.get_keyword_version(session=session, keyword=keyword) for keyword in self._keywords.keys()
         }
