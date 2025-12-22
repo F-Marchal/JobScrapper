@@ -31,6 +31,8 @@ class ScrapperRequestCore(ScrapperSQLightCore):
             return self.value
 
     SaveTypes = ExportBrowserPage.SaveTypes
+    metadata_download_folder = f"{URLInspectionTimeStamp.DOWNLOAD}_Folder"
+    metadata_download_type = f"{URLInspectionTimeStamp.DOWNLOAD}_Type"
 
     ################################################################
     #                     Foreign tool class                       #
@@ -150,14 +152,13 @@ class ScrapperRequestCore(ScrapperSQLightCore):
                 self.add_time_stamps(self.URLInspectionTimeStamp.DOWNLOAD, self.now())
                 rel_path = os.path.relpath(self.get_self_dir(), start=self.get_workdir())
                 self.add_metadata(
-                    f"{self.URLInspectionTimeStamp.DOWNLOAD}_Folder",
+                    self.metadata_download_folder,
                     rel_path
                 )
                 self.add_metadata(
-                    f"{self.URLInspectionTimeStamp.DOWNLOAD}_Type",
-                    str(page_exporter.SaveTypes)
+                    self.metadata_download_type,
+                    page_exporter.save_type
                 )
-
 
             if keywords_to_search is not None:
                 self.search_keywords_in_offer(
