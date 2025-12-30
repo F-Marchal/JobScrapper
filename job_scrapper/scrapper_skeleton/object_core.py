@@ -342,7 +342,7 @@ class ScrapperObjectCore(CoreLogger):
     # --- --- --- --- Utils --- --- ---
     # --- --- --- --- Attributes managements --- --- --- ----
     @classmethod
-    def clean_string(cls, string: str | None, keep_suffix: bool=False) -> str | None:
+    def clean_string(cls, string: str | None, keep_suffix: bool=False) -> str:
         """
         Clean a string to make it safe to use as filename.
         - Transform \s cars to spaces
