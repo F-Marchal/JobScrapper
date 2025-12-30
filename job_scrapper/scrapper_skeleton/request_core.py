@@ -209,13 +209,14 @@ class ScrapperRequestCore(ScrapperSQLightCore):
             downloaded_text_page: str,
             keywords_to_search: KeywordManager,
     ):
+        """Will erase all keyword count made previously for keywords in keywords_to_search"""
         self.add_time_stamps(str(self.URLInspectionTimeStamp.KEYWORD), self.now())
         keyword_pattern = keywords_to_search.keyword_patterns
 
         # I choose to use a dictionary instead of calling
         # retrieve / set keyword count for each loop
         result_dict = {
-            keyword: self.retrieve_keyword_count(keyword) if self.keyword_exist(keyword) else 0 for keyword in keyword_pattern
+            keyword: 0 for keyword in keyword_pattern
         }
 
         # Read offer content
