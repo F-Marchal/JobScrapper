@@ -6,6 +6,9 @@ from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore, Keyword
 from tests.job_scrapper.js_base_test import JobScrapperBaseTestClass
 NOW = ScrapperSQLightCore.now()
 
+#TODO: test __init__: load_job_entry, load_keywords ...
+#TODO: load_job_entry_from_db, load_keywords_from_db, ...
+
 class TestScrapperSQLightCore(JobScrapperBaseTestClass):
     """Test ScrapperSQLightCore main functionalities."""
     icl = ScrapperSQLightCore
@@ -210,7 +213,14 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
         )
 
         with ScrapperSQLightCore.get_sql_session() as session:
-            reloaded_ssc = ScrapperSQLightCore.sql_import_jobs(session)
+            reloaded_ssc = sorted(
+                ScrapperSQLightCore.sql_import_jobs(session),
+                key=lambda j: {
+                    "https://SSC1-A.fr": 1,
+                    "https://SSC2-A.fr": 2,
+                    "": 3
+                }[j.url]
+            )
 
         assert len(reloaded_ssc) == 3
         # pylint: disable=w0632
