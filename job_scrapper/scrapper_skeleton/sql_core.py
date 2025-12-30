@@ -46,6 +46,12 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     }
     first_sighting_time_stamp_name = "First sighting"
 
+    DEFAULT_LOAD_JOB_ENTRY: bool = True
+    DEFAULT_LOAD_KEYWORDS: bool = True
+    DEFAULT_LOAD_DISTANCES: bool = True
+    DEFAULT_LOAD_METADATA: bool = True
+    DEFAULT_LOAD_TIME_STAMPS: bool = True
+
     @property
     def localisation(self) -> str:
         """Returns the location of this job if job localisation is unknown (None or ""),
@@ -104,38 +110,60 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         """Get a table contained inside <get_all_tables>."""
         return cls.get_all_tables()[table_name]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self,
+            *args,
+            workdir: str | None = None,
+            database_name: str | None = None,
+             load_job_entry: bool | None = None,
+             load_keywords: bool | None = None,
+             load_distances: bool | None = None,
+             load_metadata: bool | None = None,
+             load_time_stamps: bool | None = None,
+            **kwargs
+        ):
         """See ScrapperObjectCore __init__ method.
         This extension will seek first_sighting_time_stamp_name in
         the database and add it to self.time_stamps"""
         super().__init__(*args, **kwargs)
+        if load_job_entry is None:
+            load_job_entry = self.DEFAULT_LOAD_JOB_ENTRY
+        if load_keywords is None:
+            load_keywords = self.DEFAULT_LOAD_KEYWORDS
+        if load_distances is None:
+            load_distances = self.DEFAULT_LOAD_DISTANCES
+        if load_metadata is None:
+            load_metadata = self.DEFAULT_LOAD_METADATA
+        if load_time_stamps is None:
+            load_time_stamps = self.DEFAULT_LOAD_TIME_STAMPS
 
-        # Get older first sighting date
+        self._loaded_from = (workdir, database_name)
+        with self.get_sql_session(workdir=workdir, database_name=database_name) as session:
+            if load_job_entry:
+                self.load_job_entry_from_db(session)
+
+            if load_keywords:
+                self.load_keywords_from_db(session)
+
+            if load_distances:
+                self.load_distances_from_db(session)
+
+            if load_metadata:
+                self.load_metadata_from_db(session)
+
+            if load_time_stamps:
+                self.load_time_stamps_from_db(session)
+
+        # Ensure fstsn exist
         fstsn = self.first_sighting_time_stamp_name
-        with self.get_maindb_session() as session:
-            result = (
-                session.query(TimeStamps.time_stamp)
-                .filter(
-                    and_(
-                        ope.eq(TimeStamps.url, self.url),
-                        TimeStamps.label == fstsn,
-                    ),
-                    ope.eq(TimeStamps.label, fstsn),
-                )
-                .all()
-            )
-
-        if result:
-            first_sighting = result[-1][0].timetuple()
-
-        else:
-            # If this is the first time we see this offer,
-            # then first_sighting_time_stamp_name = self.init_time_stamp_name
+        if not self.time_stamps_exist(fstsn):
             first_sighting = self.retrieve_time_stamps(
                 self.init_time_stamp_name
             )
+            self.add_time_stamps(fstsn, first_sighting)
 
-        self.add_time_stamps(fstsn, first_sighting)
+    @property
+    def loaded_from(self) -> tuple[str | None, str  | None]:
+        return self._loaded_from
 
     @classmethod
     @contextmanager
@@ -434,44 +462,118 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         for job_entry in request.all():
             new_jobs = cls(
-                contract_type=job_entry.contract,
-                field=job_entry.field,
-                localisation=job_entry.localisation,
-                title=job_entry.title,
+                # contract_type=job_entry.contract,
+                # field=job_entry.field,
+                # localisation=job_entry.localisation,
+                # title=job_entry.title,
                 url=job_entry.url,
+                load_job_entry = True,
+                load_keywords = True,
+                load_distances = True,
+                load_metadata = True,
+                load_time_stamps = True,
             )
-
-            for time_stamp_entry in TimeStamps.get_for_job(
-                session, new_jobs.url
-            ):
-                new_jobs.add_time_stamps(
-                    time_stamp_entry.label,
-                    time_stamp_entry.time_stamp.timetuple(),
-                )
-
-            for keywords_entry in Keywords.get_for_job(session, new_jobs.url):
-                occurrence = keywords_entry.occurrence
-                if occurrence is None:
-                    occurrence = -1
-
-                new_jobs.add_keyword_count(keywords_entry.keyword, occurrence)
-
-            for distances_entry in Distances.get_job_associated_distances(
-                session, new_jobs.localisation
-            ):
-                distance = distances_entry.distance
-                if distance is None:
-                    distance = -1
-
-                new_jobs.add_distance_to(
-                    distances_entry.reference_localisation, distance
-                )
-
-            for metadata_entry in Metadata.get_for_job(session, new_jobs.url):
-                new_jobs.add_metadata(metadata_entry.key, metadata_entry.value)
+            # new_jobs.load_job_entry_from_db(session)
+            # new_jobs.load_time_stamps_from_db(session)
+            # new_jobs.load_metadata_from_db(session)
+            # new_jobs.load_keywords_from_db(session)
+            # new_jobs.load_distances_from_db(session)
 
             loaded_jobs.append(new_jobs)
         return loaded_jobs
+
+    def load_job_entry_from_db(self, session: Session, overwrite: bool = False):
+        entries = session.query(Jobs).where(Jobs.url == self.url).all()
+        if not entries:
+            return
+
+        self.load_job_entry(entries[0], overwrite=overwrite)
+
+    def load_job_entry(self, job_entry: Jobs, overwrite: bool = False, safe: bool = True):
+        if safe and job_entry.url != self.url:
+            raise KeyError(
+                "Can not load 'job_entry' ({job_entry}) since job_entry.url != self.url and safe=True. \n"
+                "('{job_entry.url}' != '{self.url}')."
+            )
+
+        if self.title in ("", ) or overwrite:
+            self.title = job_entry.title
+
+        if self.localisation in ("", Jobs.DEFAULT_LOCALISATION) or overwrite:
+            self.localisation = job_entry.localisation
+
+        if self.contract_type in ("", ) or overwrite:
+            self.contract_type = job_entry.contract
+
+        if self.field in ("", ) or overwrite:
+            self.field = job_entry.field
+
+
+    def load_time_stamps_from_db(
+            self,
+            session: Session,
+            overwrite: bool = False,
+    ):
+        for time_stamp_entry in TimeStamps.get_for_job(
+            session, self.url
+        ):
+            self.load_time_stamp_entry(time_stamp_entry, overwrite)
+
+    def load_time_stamp_entry(self, time_stamp_entry: TimeStamps, overwrite: bool = False,):
+        if not overwrite and self.time_stamps_exist(time_stamp_entry.label):
+            return
+
+        if self.init_time_stamp_name == time_stamp_entry.label:
+            # This entry should not be overwritten.
+            return
+
+        self.add_time_stamps(
+            time_stamp_entry.label,
+            time_stamp_entry.time_stamp.timetuple(),
+        )
+
+    def load_keywords_from_db(self, session: Session, overwrite: bool = False):
+        for keywords_entry in Keywords.get_for_job(session, self.url):
+            self.load_keyword_entry(keywords_entry, overwrite)
+
+    def load_keyword_entry(self, keywords_entry: Keywords, overwrite: bool = False):
+        if not overwrite and self.keyword_exist(keywords_entry.keyword):
+            return
+
+        occurrence = keywords_entry.occurrence
+        if occurrence is None:
+            occurrence = -1
+
+        self.add_keyword_count(keywords_entry.keyword, occurrence)
+
+    def load_distances_from_db(self, session: Session, overwrite: bool = False):
+        for distances_entry in Distances.get_job_associated_distances(
+            session, self.localisation
+        ):
+            self.load_distance_entry(distances_entry, overwrite)
+
+    def load_distance_entry(self, distances_entry: Distances, overwrite: bool = False):
+        if not overwrite and self.distance_to_exist(distances_entry.reference_localisation):
+            return
+
+        distance = distances_entry.distance
+        if distance is None:
+            distance = -1
+        self.add_distance_to(
+            distances_entry.reference_localisation, distance
+        )
+
+    def load_metadata_from_db(self, session: Session, overwrite: bool = False):
+        for metadata_entry in Metadata.get_for_job(session, self.url):
+            self.load_metadata_entry(metadata_entry, overwrite)
+
+    def load_metadata_entry(self, metadata_entry: Metadata, overwrite: bool = False):
+        if not overwrite and self.metadata_exist(metadata_entry.key):
+            return
+        self.add_metadata(metadata_entry.key, metadata_entry.value)
+
+
+
 
     # --- --- Imports --- ---
     # --- --- Utils --- ---
