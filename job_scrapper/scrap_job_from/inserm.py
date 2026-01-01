@@ -2,7 +2,7 @@ import re
 
 from bs4 import BeautifulSoup
 
-import job_scrapper.scrapper_skeleton.pdf_jobs as pj
+import job_scrapper.scrapper_skeleton.legacy_pdf_jobs as pj
 from job_scrapper.scrapper_skeleton.legacy_request_core import ScrapperRequestCore
 
 
