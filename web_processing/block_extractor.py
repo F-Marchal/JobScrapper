@@ -60,9 +60,10 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
 
                 counter = 0
                 for en in self._yield_element(elements):
+                    # Rate limitation is supposed to be managed
+                    # by `pages` (browser.iter_through_pages_using_buttons)
                     yield en
                     counter += 1
-                    self.wait_before_calling(browser.current_url)
 
                 self.logger.debug("%s elements found on page %s (%s)", counter, i, browser.current_url)
                 total += counter
@@ -97,9 +98,11 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
 
                 counter = 0
                 for en in self._yield_element(elements):
+                    # Rate limitation is supposed to be enforced
+                    # by `pages` (browser.iter_through_pages_using_button_iterator)
                     yield en
                     counter += 1
-                    self.wait_before_calling(browser.current_url)
+
 
                 self.logger.debug("%s elements found on page %s (%s)", counter, i, browser.current_url)
                 total += counter
@@ -134,7 +137,7 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
 
             # ======== Load and process website page ========
             url = w_url.format(page=page_index)
-            new_elements_gen = self.extract_block_on_one_page(
+            new_elements_gen = self.extract_block_on_one_page( # Enforce rate limitation
                 block_collector=known_block,
                 add_block_to_collection=True,
                 w_url=url,
@@ -203,7 +206,7 @@ class WebBlockExtractor(WebPageProcessor, Generic[_T]):
             block_collector = set()
             add_block_to_collection = False
 
-        full_html = self.extract_html_from(
+        full_html = self.extract_html_from( # Enforce rate limitation
             url=w_url,
             prepare_page=prepare_page,
             pre_preparation_wait_time=pre_preparation_wait_time,

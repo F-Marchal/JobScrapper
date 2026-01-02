@@ -131,6 +131,7 @@ class WebPageProcessor(SecondaryLoggerUser):
             options=self.chrome_options,
             logger=self.logger,
             add_default_experimental_options=self._add_default_experimental_options,
+            rate_limiter=self.wait_before_calling
         )
         self._start_browser_on(browser, url, retry, failed_sleep)
 

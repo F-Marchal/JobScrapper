@@ -37,6 +37,8 @@ class PreparePage(Protocol):
     """Function type that can be used to prepare a page before parsing it."""
     def __call__(self, driver: "EnhancedChrome") -> None: ...
 
+class WebRateLimiter(Protocol):
+    def __call__(self, url: "str") -> None: ...
 
 class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
     """
@@ -45,6 +47,7 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
     """
     def __init__(
             self,
+            rate_limiter: WebRateLimiter,
             options: Optional[Options] = None,
             service: Optional[Service] = None,
             keep_alive: bool = True,
@@ -61,6 +64,8 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
         :param add_default_experimental_options: If True, Some experimental options will be added to
             `options`. Without these options, some methods might break.
         """
+        self._rate_limiter = rate_limiter
+
         if options is None:
             options = Options()
 
@@ -83,6 +88,13 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
 
         super().__init__(options=options, service=service, keep_alive=keep_alive)
         SecondaryLoggerUser.__init__(self, logger)
+
+    @property
+    def rate_limiter(self) -> WebRateLimiter:
+        return self._rate_limiter
+
+    def wait_to_respect_rate_limitation(self):
+        self.rate_limiter(self.current_url)
 
     def quit(self) -> None:
         super().quit()
@@ -235,6 +247,7 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
                 self.logger.debug("'next' button found on page %s : %s ", i, next_page_btn)
                 self.scroll_to_view(next_page_btn)
                 time.sleep(wait_scroll_to_view_button)
+                self.wait_to_respect_rate_limitation()
                 next_page_btn.click()
 
             else:
@@ -283,6 +296,7 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
             self.logger.debug("'Next' button found on page %s : %s ", i, next_page_btn)
             self.scroll_to_view(next_page_btn)
             time.sleep(wait_scroll_to_view_button)
+            self.wait_to_respect_rate_limitation()
             next_page_btn.click()
 
 
@@ -292,6 +306,7 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
             wait_after_prepare_page: int = 0.5,
     ) -> BeautifulSoup:
         if prepare_page:
+            self.wait_to_respect_rate_limitation()
             prepare_page(self)
         time.sleep(wait_after_prepare_page)
 
