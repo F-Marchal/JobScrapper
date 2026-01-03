@@ -163,17 +163,19 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
             selector: ByType,
             element_id: str,
             timeout: int = 15,
+            **kwargs
     ):
         """Wait until a web element can be clicked.
         :param selector: How to identify web element.
         :param element_id: web element identifier
         :param timeout: How long until we considered that the button can not be found.
+        :param kwargs: Other options for WebDriverWait.
         """
         self.logger.debug(
             "Waiting %s seconds in order to find '%s' (%s). url=%s",
             timeout, element_id, selector, self.current_url
         )
-        obj = WebDriverWait(self, timeout).until(
+        obj = WebDriverWait(self, timeout, **kwargs).until(
             cond.element_to_be_clickable((selector, element_id))
         )
         return obj
