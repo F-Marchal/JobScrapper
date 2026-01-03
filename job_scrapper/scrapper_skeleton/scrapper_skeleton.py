@@ -373,6 +373,65 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         return keywords_to_search, page_exporter, search_offer_text, search_offer_html
 
     # TOOLS
+    @staticmethod
+    def _try_to_find_field__remove_link_word(field: str) -> str:
+        link_words = [
+            "en", "de", "des", "d", "à", "pour", "avec", "sans",
+            "sur", "sous", "dans", "par", "entre", "chez",
+            "vers", "contre", "après", "avant", "depuis", "pendant",
+            "selon", "malgré", "parmi", "envers", "hors", "sauf",
+            "jusque", "via", "et", "ou", "mais", "donc",
+            "or", "ni", "car", "au", "un", "une", "le", "la", "les"
+        ]
+
+        pattern = r"\b(?:%s)\b\s?" % "|".join(link_words)
+
+        return re.sub(pattern, "", field, flags=re.IGNORECASE)
+
+    # TOOLS
+    @classmethod
+    def _try_to_find_field__employment_type_word(cls, field: str) -> str:
+        employment_type_word = [
+            r"ingénieur(e)?\s?",
+            r"technicien(ne)?\s?",
+            r"assistant(e)?\s?",
+            r"chercheur(se)?\s?",
+            r"doctorant(e)?\s?",
+            r"post[- ]?doctorant(e)?\s?",
+            r"postdoc\s?",
+            r"stagiaire\s?",
+            r"stage\s?",
+            "cdd\s?",
+            "cdi\s?",
+            "m1\s?",
+            "m2\s?",
+            "l1\s?",
+            "l2\s?",
+            "l3\s?",
+            r"alternant(e)?\s?",
+            r"alternance\s?",
+            r"apprenti(e)?\s?",
+            r"chargé(e)? de recherche\s?",
+            r"chef(fe)? de projet\s?",
+            r"responsable\s?",
+            r"manager\s?",
+            r"superviseur(e)?\s?",
+            r"coordinateur(trice)?\s?",
+            r"analyste\s?",
+            r"consultant(e)?\s?",
+            r"développeur(se)?\s?",
+            r"enseignant(e)?\s?",
+            r"professeur(e)?\s?",
+            r"technologue\s?",
+            r"opérateur(trice)?\s?",
+            r"agent(e)?\s?",
+        ]
+        pattern = "|".join(employment_type_word)
+        cls.logger.critical("%s         %s", field, pattern)
+        f =  re.sub(pattern, "", field, flags=re.IGNORECASE)
+        cls.logger.critical("%s", f)
+        return f
+
     @classmethod
     def try_to_find_field(cls, title: 'JobScrapperSkeleton | str'):
         """In those offers, the field is not always obvious to parse.
@@ -383,22 +442,32 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         else:
             field = title.title
 
+
         field = field.lower()
         if " - " in field:
             # Remove prefixes : "50238 - "; "IBODE -"
             field = " ".join(field.split(" - ")[1:])
 
+        # Remove H/F Mention.
+        field = re.sub(
+            r"\b[hf]\s?[/\-]\s?[hf]\b",
+            "",
+            field,
+            flags=re.IGNORECASE
+        )
+
+        field = re.sub(
+             r"\b(?:hf|fh)\b",
+            "",
+            field,
+            flags=re.IGNORECASE
+        )
+
+        # Remove employment like words
+        field = cls._try_to_find_field__employment_type_word(field)
+
         # Remove all link word
-        link_words = [
-            " en",     " de",     " à",      " pour",   " avec",    " sans",
-            " sur",    " sous",   " dans",   " par",    " entre",   " chez",
-            " vers",   " contre", " après",  " avant",  " depuis",  " pendant",
-            " selon",  " malgré", " parmi",  " envers", " hors",    " sauf",
-            " jusque", " via",    " et",     " ou",     " mais",    " donc",
-            " or",     " ni",     " car",    " au",
-        ]
-        pattern = "|".join(re.escape(word) for word in link_words)
-        field = re.sub(pattern, "", field)
+        field = cls._try_to_find_field__remove_link_word(field)
 
         # The first two words generally gives
         # a good idea of the field
@@ -408,6 +477,10 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         # the first world is generally enough
         field = "-".join(field.split("-")[:2])
 
+        if len(field.replace(" ", "")) < 5:
+            # This string is really short, we might have
+            # no information inside it.
+            return None
         return field
 
     def timestamp_is_too_old(
