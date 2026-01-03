@@ -77,6 +77,9 @@ class CHUMtpScrapper(srk.JobScrapperSkeleton):
             }
             yield cls(**kwargs)
 
+    def get_expected_geopy_country_code(self) -> list[str | None]:
+        return ["FR"]
+
 if __name__ == "__main__":
     main_class = CHUMtpScrapper
 

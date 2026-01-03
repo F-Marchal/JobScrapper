@@ -106,6 +106,20 @@ class TemplateScrapper(srk.JobScrapperSkeleton):
         """
         raise NotImplementedError
 
+    def get_expected_geopy_country_code(self) -> list[str | None]:
+        """Returns a list of country code that can help geopy / Nominatim
+        to figure the right coordinate of self.localisation.
+        You can use ISO 3166-1 alpha-2 country codes
+        (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2#Officially_assigned_code_elements)
+
+        Geopy will only search inside country code that are listed here. You can use
+        `None` in the returned list to search without geographic restrictions.
+
+        return ["FR", None] --> Search in France then all around the world
+        return ["FR", "UM"] --> Search in France then United States
+        return ["FR", "UM", None] --> Search in France then United States then  all around the world
+        """
+        raise NotImplementedError
 if __name__ == "__main__":
     import sys
 

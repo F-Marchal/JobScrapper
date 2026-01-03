@@ -93,6 +93,9 @@ class CiradScrapper(srk.JobScrapperSkeleton):
 
             yield cls(**kwargs)
 
+    def get_expected_geopy_country_code(self) -> list[str | None]:
+        return ["FR", None]
+
 if __name__ == "__main__":
     main_class = CiradScrapper
     if len(sys.argv) < 2:
