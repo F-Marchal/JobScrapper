@@ -20,6 +20,7 @@ click-option-group = "^0.5.7"
 cloup = "^3.0.8"
 sqlalchemy = "^2.0.44"
 pdfplumber = "^0.11.8"
+unidecode = "^1.4.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
