@@ -12,6 +12,7 @@ from tools.secondary_logger_user import SecondaryLoggerUser, logging
 from web_processing.enhanced_chrome_browser import EnhancedChrome, PreparePage
 import time
 from contextlib import contextmanager
+from urllib3.exceptions import ReadTimeoutError
 
 class WebPageProcessor(SecondaryLoggerUser):
     """
@@ -156,7 +157,7 @@ class WebPageProcessor(SecondaryLoggerUser):
             self.wait_before_calling(url)
             browser.get(url)
 
-        except WebDriverException as exception:
+        except WebDriverException and ReadTimeoutError as exception:
             # Warn user
             self.logger.warning(
                 "An error occurred when '%s' try to opens '%s'. :"
