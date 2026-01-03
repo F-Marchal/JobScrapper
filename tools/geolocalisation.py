@@ -1,3 +1,4 @@
+from keyword import kwlist
 from logging import Logger
 
 from geopy.distance import geodesic  # type: ignore[import-untyped]
@@ -9,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from sql.tables.places.distances import Distances
 from sql.tables.places.places import Places
-
+import re
+from unidecode import unidecode
 
 class Geolocalisation:
     """Simple too class that wrap some geopy methods and adapt
@@ -58,6 +60,7 @@ class Geolocalisation:
         place: str,
         lazy: bool = True,
         add_in_database: bool = True,
+        restrict_country_codes: list[str | None] | None = None,
     ) -> tuple[float | None, float | None]:
         """
         Geolocate a place and returns longitude / latitude.
@@ -68,13 +71,28 @@ class Geolocalisation:
         :param bool lazy: If the place exists in database, geopy is not called.
         :param bool add_in_database:  If True, when geopy is called, the
             result is stored in database
+        :param str restrict_country_codes: An optional list of country code.
+            If geopy can not find a place using the first country code,
+            the next one is used and so on. If not filled, no country code is used.
+            Use 'None' in the list make a request without any country code.
         """
         existing_entry = self.get_localisation_from_database(session, place)
 
         if existing_entry and lazy:
             return existing_entry.lat, existing_entry.long
 
-        lat, long = self.request(place)
+        if restrict_country_codes is None:
+            restrict_country_codes = [None]
+
+        lat, long = None, None
+        i = 0
+        while i < len(restrict_country_codes) and (lat, long) == (None, None):
+            code = restrict_country_codes[i]
+            if code:
+                lat, long = self.request(place, country_codes=code)
+            else:
+                lat, long = self.request(place)
+            i += 1
 
         if add_in_database:
             session.add(
@@ -83,26 +101,32 @@ class Geolocalisation:
 
         return lat, long
 
-    def _request(self, place: str) -> Location | None:
+    def _request(self, place: str, *args, **kwargs) -> Location | None:
         """Run the RateLimiter and returns the result"""
-        return self._rate_limiter(place)
+        return self._rate_limiter(place, *args, **kwargs)
 
-    def request(self, place: str) -> tuple[float | None, float | None]:
+    def request(self, place: str, *args, **kwargs) -> tuple[float | None, float | None]:
         """
         Request the coordinate of a place.
         :param place: The name of a place
         :return:
         """
+        norm_place = self.clean_place_name(place)
         try:
             # Try to run call geopy and to return the result.
             if self.logger:
                 self.logger.info(
-                    "Searching coordinates of '%s' using '%s' ('%s').",
+                    "Searching coordinates of '%s' (normalised as '%s') using '%s' ('%s') with"
+                    "\nargs=%s"
+                    "\nkwargs=%s",
                     place,
+                    norm_place,
                     self._geolocator,
                     self._contact,
+                    args,
+                    kwargs
                 )
-            localisation: Location | None = self._request(place)
+            localisation: Location | None = self._request(norm_place, *args, **kwargs)
             if localisation is None:
                 return None, None
             return float(localisation.latitude), float(localisation.longitude)
@@ -266,5 +290,60 @@ class Geolocalisation:
         )
 
         return existing
+
+    ABBREVIATIONS = {
+        r"\bst\b": "saint",
+        r"\bste\b": "sainte"
+    }
+
+    @classmethod
+    def expand_abbreviations(cls, text: str) -> str:
+        for pattern, repl in cls.ABBREVIATIONS.items():
+            text = re.sub(pattern, repl, text)
+        return text
+
+    @classmethod
+    def remove_cedex(cls, text): # AI Generated
+        return re.sub(r"\bcedex\b(\s*\d+)?", "", text).strip()
+
+    @classmethod
+    def format_arrondissement(cls, text: str) -> str:  # AI Generated
+        text = text.strip()
+        # Only Paris / Lyon / have arrondissement
+        match = re.match(r"^(paris|lyon|marseille)\s*(\d{1,2})$", text, re.IGNORECASE)
+
+        if match:
+            city = match.group(1).capitalize()
+            num = int(match.group(2))  # Remove starting 0
+            return f"{city} {num}e arrondissement, France"
+        return text
+
+    @staticmethod
+    def normalize_place_name(text: str) -> str:  # AI Generated
+        text = text.lower().strip()
+
+        # Remove accents
+        text = unidecode(text)
+
+        # Remove parenthesis en everything within
+        text = re.sub(r"\([^)]*\)", " ", text)
+
+
+        # Remove ", ' . / : ; ! ? ..."
+        text = re.sub(r"[^\w\s-]", " ", text)
+
+        # Standardise spacingg
+        text = re.sub(r"\s+", " ", text)
+
+        return text
+
+    @classmethod
+    def clean_place_name(cls, text: str) -> str:  # AI Generated
+        text = cls.normalize_place_name(text)
+        text = cls.expand_abbreviations(text)
+        text = cls.remove_cedex(text)
+        text = cls.format_arrondissement(text)
+        return text
+
 
     #  --- --- Tools --- ---

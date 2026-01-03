@@ -3,7 +3,7 @@ import pytest
 from tools.geolocalisation import Geolocalisation, Places
 
 from .base_test_geolocalisation import BaseGeoTest
-
+import pytest
 
 class TestGeolocalisation(BaseGeoTest):
     """Test Geolocalisation functions that does not require access to internet."""
@@ -123,3 +123,47 @@ class TestGeolocalisation(BaseGeoTest):
             )
 
         assert 300 < result < 330
+
+
+
+    @pytest.mark.parametrize( # AI Generated
+        "input_text, expected",
+        [
+            ("St Etienne", "saint Etienne"),
+            ("st martin d'heres", "saint martin d'heres"),
+            ("Ste Marie", "sainte Marie"),
+            ("ste Anne", "sainte Anne"),
+            ("Saint Denis", "Saint Denis"),  # déjà complet → inchangé
+            ("St", "saint"),  # seul
+        ]
+    )
+    def test_expand_abbreviations(self, input_text, expected):
+        assert Geolocalisation.expand_abbreviations(input_text.lower()) == expected.lower()
+
+
+    @pytest.mark.parametrize( # AI Generated
+        "input_text, expected",
+        [
+            ("Paris Cedex 16", "Paris"),
+            ("Roscoff Cedex", "Roscoff"),
+            ("Marseille Cedex 13", "Marseille"),
+            ("Vandoeuvre Les Nancy Cedex", "Vandoeuvre Les Nancy"),
+            ("Nice", "Nice"),
+        ]
+    )
+    def test_remove_cedex(self, input_text, expected):
+        assert Geolocalisation.remove_cedex(input_text.lower()) == expected.lower()
+
+    @pytest.mark.parametrize( # AI Generated
+        "input_text, expected",
+        [
+            ("Lyon 7", "Lyon 7e arrondissement, France"),
+            ("Lyon 07", "Lyon 7e arrondissement, France"),
+            ("Paris 16", "Paris 16e arrondissement, France"),
+            ("Marseille 13", "Marseille 13e arrondissement, France"),
+            ("Nice", "Nice"),
+            ("Lille 1", "Lille 1"),
+        ]
+    )
+    def test_format_arrondissement(self, input_text, expected):
+        assert Geolocalisation.format_arrondissement(input_text) == expected
