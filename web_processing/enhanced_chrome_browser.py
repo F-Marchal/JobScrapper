@@ -333,6 +333,10 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
         download_dir = cls.workdir if not download_dir else download_dir
         parsed_url = urlparse(url)
         filename = os.path.basename(parsed_url.path)
+        if not filename:
+            # This can happen when url end with a "/".
+            # In this case we use 'directory' name
+            filename = os.path.basename(os.path.dirname(parsed_url.path))
         filename = unquote(filename)  # Avoid encoding errors
         return get_unique_path(os.path.join(download_dir, filename), ext)
 
