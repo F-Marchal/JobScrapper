@@ -37,8 +37,8 @@ class ScrapperRequestCore(ScrapperSQLightCore):
     ################################################################
     #                     Foreign tool class                       #
     ################################################################
-    _web_processor: WebBlockExtractor = None
-    _geolocator: Geolocalisation = None
+    _web_processor: WebBlockExtractor | None = None
+    _geolocator: Geolocalisation | None = None
     hide_web_driver = True
 
     @classmethod
@@ -134,7 +134,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
     ):
         web_processor = self.get_web_processor()
 
-        with web_processor.start_browser_on(
+        with web_processor.start_browser_on( # Automatically enforce rate limitation
                 self.url,
                 retry=retry,
                 failed_sleep=failed_sleep
