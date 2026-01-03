@@ -9,6 +9,8 @@ from .request_core import ScrapperRequestCore, KeywordManager, ExportBrowserPage
 from sql.tables.keywords.keyword_version import KeywordVersion, Session
 import time
 from datetime import datetime, timedelta
+from selenium.common.exceptions import WebDriverException
+from urllib.error import URLError, HTTPError
 
 class JobScrapperSkeleton(ScrapperRequestCore):
     @classmethod
@@ -66,13 +68,19 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         tsv_file = cls.get_unique_path(os.path.join(tsv_folder, f"{cls.strftime(cls.now())}.tsv"))
         offer_batch = []
         i = 0
+        ignored = 0
+        inspection_failed = 0
+        inspected = 0
+        total = 0
+
         for i, offer in enumerate(cls.extract_offers_from_website()):
             if offer is None:
                 # An offer should be ignored see extract_offers_from_website logging.
                 offer_batch.append(None)
+                ignored += 1
                 continue
 
-            cls.logger.debug("Processing offer %s : %s", i + 1, offer)
+            cls.logger.debug("Processing offer %s : %s (%s)", i + 1, offer, offer.url)
 
             if (
                     keywords_to_search is None
@@ -85,21 +93,31 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                 pass
 
             else:
-                cls.run_offer_inspection(
-                    offer=offer,
-                    offer_id=i,
+                try:
+                    cls.run_offer_inspection(
+                        offer=offer,
+                        offer_id=i,
 
-                    global_page_exporter=page_exporter,
-                    global_search_offer_html=search_offer_html,
-                    global_keywords_to_search=keywords_to_search,
-                    global_search_offer_text=search_offer_text,
+                        global_page_exporter=page_exporter,
+                        global_search_offer_html=search_offer_html,
+                        global_keywords_to_search=keywords_to_search,
+                        global_search_offer_text=search_offer_text,
 
-                    re_inspect_after = re_inspect_after,
-                    retry_offer_fetch = retry_offer_fetch,
-                    failed_sleep = failed_sleep,
+                        re_inspect_after = re_inspect_after,
+                        retry_offer_fetch = retry_offer_fetch,
+                        failed_sleep = failed_sleep,
 
-                )
+                    )
+                    inspected += 1
 
+                except HTTPError and URLError and WebDriverException as e:
+                    cls.logger.error(
+                        "Unable to inspect offer %s : %s (%s)",
+                        i + 1, offer, offer.url
+                    )
+                    inspection_failed += 1
+
+            total += 1
             offer_batch.append(offer)
 
             if len(offer_batch) >= batch_export:
@@ -115,6 +133,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                 )
                 offer_batch.clear()
 
+
         # Ensure that all items in offer_batch
         # Have been exported
         cls.run_exportation(
@@ -126,6 +145,17 @@ class JobScrapperSkeleton(ScrapperRequestCore):
             keyword_ver=keyword_ver,
             database_name=database_name,
             workdir=workdir
+        )
+
+        cls.logger.info(
+            "%s.run have succeed with %s offers found !\n"
+            "- %s offer(s) inspected.\n"
+            "- %s offer(s) have failed their(s) inspection.\n" 
+            "- %s listing entry ignored due to redundancy in said listing.",
+            cls.get_standardised_class_name(), total,
+            inspected,
+            inspection_failed,
+            ignored,
         )
 
     @classmethod
@@ -177,7 +207,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
             failed_sleep: int = 5,
             re_inspect_after: int = 30,
     ) -> bool:
-            # Apply timestamp constraint ()
+            # Apply timestamp constraint
             (
                 offer_keywords_to_search,
                 offer_page_exporter,
@@ -203,15 +233,18 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                     and offer_search_offer_html is False
             ):
                 cls.logger.info(
-                    "Ignoring processing of '%s' ('%s') since  all the inspections that needed to be "
+                    "Ignoring processing of offer number %s ('%s' - '%s') since  all the inspections that needed to be "
                     "performed were already completed less than %s days ago.",
-                    offer, offer_id + 1, re_inspect_after
+                    offer_id + 1, offer, offer.url, re_inspect_after
                 )
 
                 return False
 
 
-            cls.logger.info("Proceeding to offer inspection of %s (%s)", offer, offer_id + 1)
+            cls.logger.info(
+                "Proceeding with the inspection of offer number %s ('%s' - '%s')",
+                offer_id + 1, offer, offer.url
+            )
             offer.offer_inspection(
                 keywords_to_search=offer_keywords_to_search,
                 page_exporter=offer_page_exporter,
@@ -231,14 +264,17 @@ class JobScrapperSkeleton(ScrapperRequestCore):
             i: int,
             tsv_file: str,
     ):
+        offer_to_text, offer_list = cls._run_export_clean(
+            offer_batch=offer_batch,
+            i=i
+        )
 
-        offer_to_text = '\n'.join([f"{(i + 1) - len(offer_batch) + (oi + 1)} {o})" for oi, o in enumerate(offer_batch) if o is not None])
         cls.logger.info("Proceeding to tsv exportation of %s offers :\n"
                          "%s",
-                         len(offer_batch),
+                         len(offer_list),
                          f"{offer_to_text}"
         )
-        cls.batch_export_to_flat_file(jobs=offer_batch, file_path=tsv_file, mod="a")
+        cls.batch_export_to_flat_file(jobs=offer_list, file_path=tsv_file, mod="a")
 
     @classmethod
     def _run_export_sql(
@@ -251,18 +287,42 @@ class JobScrapperSkeleton(ScrapperRequestCore):
 
 
     ):
-        offer_to_text = '\n'.join([f"{(i + 1) - len(offer_batch) + (oi + 1)} {o})" for oi, o in enumerate(offer_batch) if o is not None])
+        offer_to_text, offer_list = cls._run_export_clean(
+            offer_batch=offer_batch,
+            i=i
+        )
+
         cls.logger.info("Proceeding to sql exportation of %s offers :\n"
                          "%s",
-                         len(offer_batch),
+                         len(offer_list),
                          f"{offer_to_text}"
         )
         cls.sql_batch_export(
-            *offer_batch,
+            *offer_list,
             database_name=database_name,
             workdir=workdir,
             keywords_ver=keywords_ver,
         )
+
+    @classmethod
+    def _run_export_clean(
+            cls,
+            offer_batch: list[Self | None],
+            i: int
+    ) -> tuple[str, list[Self]]:
+        offer_to_text = ""
+        offer_list = []
+
+        for oi, offer in enumerate(offer_batch):
+            if offer is None:
+                continue
+
+            index = (i + 1) - len(offer_batch) + (oi + 1)
+            offer_to_text += f"{index} ({offer} - {offer.url})\n"
+            offer_list.append(offer)
+
+        return offer_to_text, offer_list
+
 
     @classmethod
     def _apply_time_stamp_constraint(
@@ -418,3 +478,17 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         should correspond to the listing of offers."""
         raise NotImplementedError
 
+    def pget_expected_geopy_country_code(self) -> list[str | None]:
+        """Returns a list of country code that can help geopy / Nominatim
+        to figure the right coordinate of self.localisation.
+        You can use ISO 3166-1 alpha-2 country codes
+        (https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2#Officially_assigned_code_elements)
+
+        Geopy will only search inside country code that are listed here. You can use
+        `None` in the returned list to search without geographic restrictions.
+
+        return ["FR", None] --> Search in France then all around the world
+        return ["FR", "UM"] --> Search in France then United States
+        return ["FR", "UM", None] --> Search in France then United States then  all around the world
+        """
+        raise NotImplementedError
