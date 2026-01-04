@@ -152,7 +152,7 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
         try:
             self.close_pop_up(*args, **kwargs)
             return True
-        except TimeoutException as te:
+        except TimeoutException and WebDriverException as te:
             self.logger.debug("Exception catch by safe_close_pop_up : %s", te)
             return False
     # Pop-ups management
