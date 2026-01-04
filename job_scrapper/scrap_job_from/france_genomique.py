@@ -58,7 +58,7 @@ class FranceGenomiqueScrapper(srk.JobScrapperSkeleton):
             ]
 
             kwargs = {
-                "field": cls.try_to_find_field(title),
+                "field": None,
                 "contract_type": contract_type,
                 "url": url,
                 "localisation": localisation,

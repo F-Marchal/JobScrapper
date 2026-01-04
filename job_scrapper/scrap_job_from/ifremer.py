@@ -127,7 +127,7 @@ class IfremerScrapper(srk.JobScrapperSkeleton):
             )
 
             kwargs = {
-                "field": cls.try_to_find_field(title),
+                "field": None,
                 "contract_type": contract,
                 "url": url,
                 "localisation": localisation,

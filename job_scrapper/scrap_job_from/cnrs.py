@@ -138,7 +138,7 @@ class CNRScrapper(srk.JobScrapperSkeleton):
             url = cls.get_website_base_url() + str(tr.find("a")["href"])
 
             # Generate job
-            yield cls(field=cls.try_to_find_field(kwargs["title"]), url=url, **kwargs)
+            yield cls(url=url, **kwargs)
 
 if __name__ == "__main__":
     import sys

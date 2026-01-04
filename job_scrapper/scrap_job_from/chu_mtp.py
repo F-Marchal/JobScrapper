@@ -67,7 +67,7 @@ class CHUMtpScrapper(srk.JobScrapperSkeleton):
             # pylint: disable=R0801
             # I do not see how to merge this part with other classes
             kwargs = {
-                "field": cls.try_to_find_field(title),
+                "field": None,
                 "contract_type": contract_type,
                 "url": url,
                 "localisation": localisation,
