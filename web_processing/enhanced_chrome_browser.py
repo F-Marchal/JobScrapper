@@ -172,7 +172,7 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
         :param kwargs: Other options for WebDriverWait.
         """
         self.logger.debug(
-            "Waiting %s seconds in order to find '%s' (%s). url=%s",
+            "Waiting up to %s seconds in order to find '%s' (%s). url=%s",
             timeout, element_id, selector, self.current_url
         )
         obj = WebDriverWait(self, timeout, **kwargs).until(
