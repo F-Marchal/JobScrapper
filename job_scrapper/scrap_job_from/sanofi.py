@@ -5,31 +5,75 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
-
+from selenium.common.exceptions import StaleElementReferenceException
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
+from bs4 import BeautifulSoup
+from typing import Iterator, Self
+
+import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
+from web_processing.block_extractor import WebBlockExtractor
+from web_processing.enhanced_chrome_browser import ButtonFinder, EnhancedChrome
 
 class SanofiScrapper(srk.JobScrapperSkeleton):
     """
-    Use JobScrapperSkeleton to extract jobs offers from Sanofi's website (Limited to France)
+    Use this file as a template to create your scrapper.
     """
-
-    website_url = "https://jobs.sanofi.com/fr/recherche-d%27offres/France/2649/2/3017382/46/2/50/2"
-    job_across_multiple_pages = True
-    job_offer_fetch_require_manual_actions = True
+    ##########################################################
+    #  mandatory customisation of website dependant methods  #
+    ##########################################################
 
     @classmethod
-    def extract_block_of_interest(cls, soup) -> BeautifulSoup:
+    def get_offer_listing_url(cls) -> str:
+       return "https://jobs.sanofi.com/fr/recherche-d%27offres/France/2649/2/3017382/46/2/50/2"
+
+    @classmethod
+    def iter_trough_offer_listing(cls, url: str) -> Iterator["Self"]:
+        return cls.get_web_processor().extract_block_across_multiple_pages_using_buttons(
+              url,
+              button_finder=cls.next_page_command,
+              prepare_page=cls.prepare_page,
+              wait_scroll_to_view_button=3,
+        )
+
+    @classmethod
+    def next_page_command(cls, browser: EnhancedChrome) -> WebElement | None:
+        try:
+            browser.wait_until_clickable(
+                By.CSS_SELECTOR,
+                "a.next.disabled",
+                ignored_exceptions=(StaleElementReferenceException,)
+            )
+            return None
+
+        except TimeoutException:
+            next_button = browser.wait_until_clickable(
+               By.CSS_SELECTOR,
+            "a.next",
+                ignored_exceptions=(StaleElementReferenceException,)
+            )
+
+        return next_button
+
+    @classmethod
+    def prepare_page(cls, browser: EnhancedChrome) -> None:
+        browser.safe_close_pop_up(
+            selector=By.CSS_SELECTOR,
+            button_id="button.onetrust-close-btn-handler.banner-close-button.ot-close-link",
+        )
+        super().prepare_page(browser)
+
+    def get_expected_download_time(self) -> int:
+        return  -1
+
+    @classmethod
+    def find_offer_listing_on_page(cls, soup: BeautifulSoup) -> BeautifulSoup:
         return soup.find(name="div", id="search-results-list")
 
     @classmethod
-    def complete_job_page_parsing(
-        cls,
-        offers: list["srk.ScrapperRequestCore"],
-        soup,
-    ):
+    def generate_offer_from_listing(cls, soup: BeautifulSoup) -> Iterator[Self]:
         for cells in soup.find_all("li"):
-            url = cls.get_base_url() + str(cells.find("a")["href"])
+            url = cls.get_website_base_url() + str(cells.find("a")["href"])
             ref = str(cells.find("a")["data-job-id"])
             title = str(cells.find("h2").get_text(strip=True))
             localisation = str(
@@ -49,78 +93,50 @@ class SanofiScrapper(srk.JobScrapperSkeleton):
                 "title": title,
                 "reference": ref,
             }
-            offers.append(cls(**kwargs))
+            yield cls(**kwargs)
 
-    @classmethod
-    def _rough_page_parsing_actions(cls, browser) -> None:
-        cls._close_pop_up(
-            browser=browser,
-            by=By.CSS_SELECTOR,
-            button_identifier="button.onetrust-close-btn-handler.banner-close-button.ot-close-link",
-            msg="Cookies pop",
-        )
-        super()._rough_page_parsing_actions(browser)
+    def search_in_html_offer(
+            self,
+            downloaded_html_page: str,
+    ):
+        super().search_in_html_offer(downloaded_html_page)
+        with open(downloaded_html_page, "r", encoding="utf-8") as file:
+            html_content = file.read()
 
-    @classmethod
-    def _next_page_command(cls, browser: WebDriver) -> tuple[WebElement, bool]:
-        try:
+        # Extract contract type
+        soup = BeautifulSoup(html_content, "html.parser")
+        contract_tag = soup.find('span', class_='job-type job-info')
+        if contract_tag:
+            self.contract_type = contract_tag.get_text(strip=True)
 
-            next_button = cls._wait_until_clickable(
-                browser, (By.CSS_SELECTOR, "a.next.disabled")
-            )
-            is_disabled = True
-
-        except TimeoutException:
-            next_button = cls._wait_until_clickable(
-                browser, (By.CSS_SELECTOR, "a.next")
-            )
-
-            is_disabled = False
-
-        browser.execute_script(
-            "arguments[0].scrollIntoView({block: 'center'});", next_button
-        )
-
-        time.sleep(2)
-
-        return next_button, is_disabled
-
-    @classmethod
-    def _job_offer_fetch_require_manual_actions_command(
-        cls,
-    ) -> list[BeautifulSoup]:
-        return cls._parse_offer_page_using_buttons(cls._next_page_command)
-
-
-class SanofiMontpellierScrapper(SanofiScrapper):
-    """
-    Use JobScrapperSkeleton to extract jobs offers located in Montpellier from Sanofi's website
-    """
-
-    website_url = "https://jobs.sanofi.com/fr/recherche-d%27offres/Montpellier%2C%20Occitanie/2649/4/3017382-11071623-3013500-2992165-6454034-2992166/43x61093/3x87635/50/2"
-
-
-class SanofiClermontFDScrapper(SanofiScrapper):
-    """
-    Use JobScrapperSkeleton to extract jobs offers located in Clermont-Ferrand from Sanofi's website
-    """
-
-    website_url = "https://jobs.sanofi.com/fr/recherche-d%27offres/Clermont-Ferrand%2C%20Auvergne-Rh%C3%B4ne-Alpes/2649/4/3017382-11071625-2984986-3024634-6440000-3024635/45x77969/3x08682/50/2"
-
-
-class SanofiLyonScrapper(SanofiScrapper):
-    """
-    Use JobScrapperSkeleton to extract jobs offers located in Lyon from Sanofi's website
-    """
-
-    website_url = "https://jobs.sanofi.com/fr/recherche-d%27offres/Lyon%2C%20Auvergne-Rh%C3%B4ne-Alpes/2649/4/3017382-11071625-2987410-2996943-6454573-2996944/45x74846/4x84671/50/2"
-
+    def get_expected_geopy_country_code(self) -> list[str | None]:
+        return ["FR", None]
 
 if __name__ == "__main__":
-    result = SanofiScrapper.interrogate_website()
-    SanofiScrapper.analyse_jobs(
-        *result,
-        keywords={"Informatique": ["Informatique", "Informatic"]},
-        localisations=["Montpellier, France", "Lyon, France"],
+    import sys
+
+    main_class = SanofiScrapper
+    if len(sys.argv) < 2:
+        raise IndexError(
+            "This script expect one argument : Contact information.\n\n"
+            "Please run this program (python 3 <file> <contact>) using your\n"
+            "email as contact. This is mandatory to comply with Geopy terms\n"
+            "of services. Your <contact> information will be transmitted to\n"
+            "geopy and might be written inside (local) log file / terminal. "
+            ""
+        )
+    # Keywords
+    keywords_to_search = main_class.get_keyword_manager()
+    keywords_to_search.add_regex("Informatics", "Informatique")
+    keywords_to_search.add_regex("Informatics", "Informatics")
+    keywords_to_search.add_regex("Localisations", "Paris, France")
+    keywords_to_search.add_regex("Localisations", "Lyon, France")
+    keywords_to_search.add_regex("Letters", "a")
+
+    #
+    main_class.run(
+        contact=f"{sys.argv[1]}-{main_class.get_standardised_class_name()}",
+        keywords_to_search=keywords_to_search,
+        page_exporter=main_class.get_page_exporter(),
     )
-    SanofiScrapper.quick_display_list_of_offers(result)
+
