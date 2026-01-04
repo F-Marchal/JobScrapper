@@ -17,7 +17,7 @@ class TemplateScrapper(srk.JobScrapperSkeleton):
         """Returns a url that lead to an online listing of offers.
         You can use {page} in the url if the offers are split
         trough multiple pages and page number is in the url.
-            https://websire.com/{page}
+            https://website.com/{page}
         """
         raise NotImplementedError
 
@@ -120,6 +120,7 @@ class TemplateScrapper(srk.JobScrapperSkeleton):
         return ["FR", "UM", None] --> Search in France then United States then  all around the world
         """
         raise NotImplementedError
+
 if __name__ == "__main__":
     import sys
 
