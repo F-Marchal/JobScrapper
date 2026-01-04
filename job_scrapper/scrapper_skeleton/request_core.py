@@ -195,7 +195,8 @@ class ScrapperRequestCore(ScrapperSQLightCore):
         # Wait for file download
         if self.url_point_to_file():
             raw_file: str = browser.wait_for_file_download_completion(
-                timeout=self.get_expected_download_time()
+                timeout=self.get_expected_download_time(),
+                url=self.url,
             )
 
         else:

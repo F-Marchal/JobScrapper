@@ -342,19 +342,25 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
 
     def get_download_file_path(
             self,
-            download_dir: str = None,
-            ext: str = None
+            download_dir: str | None = None,
+            ext: str | None = None,
+            url: str | None = None,
     ):
         """
         Give the probable file path for a file download
         :param str download_dir: Where the download should take place
         :param str ext: File extension
+        :param url: The targeted url. Default is  self.current_url, but since sometime,
+             self.current_url returns `data:` you can set it here.
         :return:
         """
         if download_dir is None:
             download_dir = self.workdir
 
-        return self.get_download_file_path_for(self.current_url, download_dir=download_dir, ext=ext)
+        if url is None:
+            url = self.current_url
+
+        return self.get_download_file_path_for(url, download_dir=download_dir, ext=ext)
 
     def take_snapshot(self) -> dict[str, str]:
         """Returns current url as mhtml dict"""
@@ -393,6 +399,7 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
             workdir: str | None=None,
             timeout: int = 360,
             sleep_interval: int = 1,
+            url: str | None = None,
     ) -> str:
         """
         Wait a certain time until a file has been downloaded. This file is supposed
@@ -402,12 +409,16 @@ class EnhancedChrome(webdriver.Chrome, SecondaryLoggerUser):
         :param timeout: How long before we abandon the download (Will raise FileExistsError if download
             completion is still in progress / failed).
         :param sleep_interval: How frequent the program check if the file exist.
+        :param url: The targeted url. Default is  self.current_url, but since sometime,
+             self.current_url returns `data:` you can set it here.
         :return:
         """
         # Warnings :  only one time, file displacement
-        url = self.current_url
+        if url is None:
+            url = self.current_url
         ext = os.path.splitext(url)[1]
-        filepath = self.get_download_file_path(workdir, ext=ext)
+
+        filepath = self.get_download_file_path(download_dir=workdir, url=url, ext=ext)
 
         self.logger.debug(
             "Downloading file : %s\ntimeout=%s\tExpected path : %s",
