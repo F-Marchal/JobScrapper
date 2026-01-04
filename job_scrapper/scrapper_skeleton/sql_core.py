@@ -52,6 +52,12 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     DEFAULT_LOAD_METADATA: bool = True
     DEFAULT_LOAD_TIME_STAMPS: bool = True
 
+    DEFAULT_OVERWRITE_JOB_ENTRY: bool | set[str] = False,
+    DEFAULT_OVERWRITE_KEYWORDS: bool | set[str] = False,
+    DEFAULT_OVERWRITE_DISTANCES: bool | set[str] = False,
+    DEFAULT_OVERWRITE_METADATA: bool | set[str] = False,
+    DEFAULT_OVERWRITE_TIME_STAMPS: bool | set[str] = False,
+
     @property
     def localisation(self) -> str:
         """Returns the location of this job if job localisation is unknown (None or ""),
@@ -114,11 +120,19 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             *args,
             workdir: str | None = None,
             database_name: str | None = None,
+
              load_job_entry: bool | None = None,
              load_keywords: bool | None = None,
              load_distances: bool | None = None,
              load_metadata: bool | None = None,
              load_time_stamps: bool | None = None,
+
+             overwrite_job_entry: bool | set[str] | None = None,
+             overwrite_keywords: bool | set[str] | None = None,
+             overwrite_distances: bool | set[str] | None = None,
+             overwrite_metadata: bool | set[str] | None = None,
+             overwrite_time_stamps: bool | set[str] | None = None,
+
             **kwargs
         ):
         """See ScrapperObjectCore __init__ method.
@@ -136,22 +150,33 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         if load_time_stamps is None:
             load_time_stamps = self.DEFAULT_LOAD_TIME_STAMPS
 
+        if overwrite_job_entry is None:
+            overwrite_job_entry = self.DEFAULT_OVERWRITE_JOB_ENTRY
+        if overwrite_keywords is None:
+            overwrite_keywords = self.DEFAULT_OVERWRITE_KEYWORDS
+        if overwrite_distances is None:
+            overwrite_distances = self.DEFAULT_OVERWRITE_DISTANCES
+        if overwrite_metadata is None:
+            overwrite_metadata = self.DEFAULT_OVERWRITE_METADATA
+        if overwrite_time_stamps is None:
+            overwrite_time_stamps = self.DEFAULT_OVERWRITE_TIME_STAMPS
+
         self._loaded_from = (workdir, database_name)
         with self.get_sql_session(workdir=workdir, database_name=database_name) as session:
             if load_job_entry:
-                self.load_job_entry_from_db(session)
+                self.load_job_entry_from_db(session, overwrite=overwrite_job_entry)
 
             if load_keywords:
-                self.load_keywords_from_db(session)
+                self.load_keywords_from_db(session, overwrite=overwrite_keywords)
 
             if load_distances:
-                self.load_distances_from_db(session)
+                self.load_distances_from_db(session, overwrite=overwrite_distances)
 
             if load_metadata:
-                self.load_metadata_from_db(session)
+                self.load_metadata_from_db(session, overwrite=overwrite_metadata)
 
             if load_time_stamps:
-                self.load_time_stamps_from_db(session)
+                self.load_time_stamps_from_db(session, overwrite=overwrite_time_stamps)
 
         # Ensure fstsn exist
         fstsn = self.first_sighting_time_stamp_name
@@ -482,45 +507,50 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             loaded_jobs.append(new_jobs)
         return loaded_jobs
 
-    def load_job_entry_from_db(self, session: Session, overwrite: bool = False):
+    def load_job_entry_from_db(self, session: Session, overwrite: set[str] | bool = False):
         entries = session.query(Jobs).where(Jobs.url == self.url).all()
         if not entries:
             return
 
         self.load_job_entry(entries[0], overwrite=overwrite)
 
-    def load_job_entry(self, job_entry: Jobs, overwrite: bool = False, safe: bool = True):
+    def load_job_entry(
+            self,
+            job_entry: Jobs,
+            overwrite: set[str] | bool = False,
+            safe: bool = True
+    ):
         if safe and job_entry.url != self.url:
             raise KeyError(
                 "Can not load 'job_entry' ({job_entry}) since job_entry.url != self.url and safe=True. \n"
                 "('{job_entry.url}' != '{self.url}')."
             )
 
-        if self.title in ("", ) or overwrite:
+        if (overwrite is True or "title" in overwrite) or self.title in ("",):
             self.title = job_entry.title
 
-        if self.localisation in ("", Jobs.DEFAULT_LOCALISATION) or overwrite:
+        if (overwrite is True or "localisation" in overwrite) or self.localisation in ("", Jobs.DEFAULT_LOCALISATION):
             self.localisation = job_entry.localisation
 
-        if self.contract_type in ("", ) or overwrite:
+        if (overwrite is True or "contract_type" in overwrite) or self.contract_type in ("",):
             self.contract_type = job_entry.contract
 
-        if self.field in ("", ) or overwrite:
+        if (overwrite is True or "field" in overwrite) or self.field in ("",):
             self.field = job_entry.field
-
 
     def load_time_stamps_from_db(
             self,
             session: Session,
-            overwrite: bool = False,
+            overwrite: set[str] | bool = False,
     ):
         for time_stamp_entry in TimeStamps.get_for_job(
             session, self.url
         ):
             self.load_time_stamp_entry(time_stamp_entry, overwrite)
 
-    def load_time_stamp_entry(self, time_stamp_entry: TimeStamps, overwrite: bool = False,):
-        if not overwrite and self.time_stamps_exist(time_stamp_entry.label):
+    def load_time_stamp_entry(self, time_stamp_entry: TimeStamps, overwrite: set[str] | bool = False,):
+        # If self.time_stamps_exist then we might overwrite it. Can we ?
+        if (overwrite is False or time_stamp_entry.label not in overwrite) and self.time_stamps_exist(time_stamp_entry.label):
             return
 
         if self.init_time_stamp_name == time_stamp_entry.label:
@@ -532,12 +562,12 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             time_stamp_entry.time_stamp.timetuple(),
         )
 
-    def load_keywords_from_db(self, session: Session, overwrite: bool = False):
+    def load_keywords_from_db(self, session: Session, overwrite: set[str] | bool = False,):
         for keywords_entry in Keywords.get_for_job(session, self.url):
             self.load_keyword_entry(keywords_entry, overwrite)
 
-    def load_keyword_entry(self, keywords_entry: Keywords, overwrite: bool = False):
-        if not overwrite and self.keyword_exist(keywords_entry.keyword):
+    def load_keyword_entry(self, keywords_entry: Keywords, overwrite: set[str] | bool = False,):
+        if (overwrite is False or keywords_entry.keyword not in overwrite)  and self.keyword_exist(keywords_entry.keyword):
             return
 
         occurrence = keywords_entry.occurrence
@@ -546,29 +576,30 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         self.add_keyword_count(keywords_entry.keyword, occurrence)
 
-    def load_distances_from_db(self, session: Session, overwrite: bool = False):
+    def load_distances_from_db(self, session: Session, overwrite: set[str] | bool = False,):
         for distances_entry in Distances.get_job_associated_distances(
             session, self.localisation
         ):
             self.load_distance_entry(distances_entry, overwrite)
 
-    def load_distance_entry(self, distances_entry: Distances, overwrite: bool = False):
-        if not overwrite and self.distance_to_exist(distances_entry.reference_localisation):
+    def load_distance_entry(self, distances_entry: Distances, overwrite: set[str] | bool = False,):
+        label = distances_entry.reference_localisation
+        if (overwrite is False or not label in overwrite) and self.distance_to_exist(label):
             return
 
         distance = distances_entry.distance
         if distance is None:
             distance = -1
         self.add_distance_to(
-            distances_entry.reference_localisation, distance
+            label, distance
         )
 
-    def load_metadata_from_db(self, session: Session, overwrite: bool = False):
+    def load_metadata_from_db(self, session: Session, overwrite: set[str] | bool = False,):
         for metadata_entry in Metadata.get_for_job(session, self.url):
             self.load_metadata_entry(metadata_entry, overwrite)
 
-    def load_metadata_entry(self, metadata_entry: Metadata, overwrite: bool = False):
-        if not overwrite and self.metadata_exist(metadata_entry.key):
+    def load_metadata_entry(self, metadata_entry: Metadata, overwrite: set[str] | bool = False,):
+        if (overwrite is False or metadata_entry.key not in overwrite) and self.metadata_exist(metadata_entry.key):
             return
         self.add_metadata(metadata_entry.key, metadata_entry.value)
 
