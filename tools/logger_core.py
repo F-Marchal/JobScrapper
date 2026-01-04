@@ -76,7 +76,7 @@ class CoreLogger:
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(logging.DEBUG)
     formatter = _ColorFormatter(
-        "[%(levelname)s] [%(filename)s: line %(lineno)d] [%(name)s.%(funcName)s]"
+        "[%(levelname)s] [%(filename)s: func: %(funcName)s (line %(lineno)d)]"
         "\n%(message)s\n"
     )
     stream_handler.setFormatter(formatter)
