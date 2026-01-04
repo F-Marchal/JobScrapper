@@ -119,6 +119,9 @@ class ScrapperRequestCore(ScrapperSQLightCore):
 
     @classmethod
     def prepare_page(cls, browser: EnhancedChrome):
+        """Command run every time a page is opened in
+        a browser. Use this function to ensure all text is in display
+        or to close pop-ups"""
         browser.scroll_to_bottom()
 
     ################################################################
@@ -200,6 +203,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
             )
 
         else:
+            self.prepare_page(browser)
             raw_file: str = browser.save_raw_html()
         text_file = raw_file + ".txt"
         FileToText.convert_to_text_file(raw_file, text_file)
