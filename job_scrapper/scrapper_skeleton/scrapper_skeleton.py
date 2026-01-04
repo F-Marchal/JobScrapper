@@ -376,12 +376,18 @@ class JobScrapperSkeleton(ScrapperRequestCore):
     @staticmethod
     def _try_to_find_field__remove_link_word(field: str) -> str:
         link_words = [
-            "en", "de", "des", "d", "à", "pour", "avec", "sans",
+            "en", "de", "du", "des", "à", "pour", "avec", "sans",
             "sur", "sous", "dans", "par", "entre", "chez",
             "vers", "contre", "après", "avant", "depuis", "pendant",
             "selon", "malgré", "parmi", "envers", "hors", "sauf",
             "jusque", "via", "et", "ou", "mais", "donc",
-            "or", "ni", "car", "au", "un", "une", "le", "la", "les"
+            "or", "ni", "car", "au", "un", "une", "le", "la", "les",
+            "tout", "tant", "aussi", "parce que", "bien que", "quoique",
+            "lorsque", "quand", "pendant que", "comme", "puisque", "surtout", "même",
+            "alors que", "si", "autant", "dès que", "avant que", "après que", "jusqu'à",
+            "non seulement", "cependant", "néanmoins", "pourtant", "enfin", "en fait",
+            "il", "elle", "ils", "elles", "on", "nous", "vous", "te", "me", "le", "la", "les",
+            "d", "l",
         ]
 
         pattern = r"\b(?:%s)\b\s?" % "|".join(link_words)
@@ -391,45 +397,48 @@ class JobScrapperSkeleton(ScrapperRequestCore):
     # TOOLS
     @classmethod
     def _try_to_find_field__employment_type_word(cls, field: str) -> str:
-        employment_type_word = [
-            r"ingénieur(e)?\s?",
-            r"technicien(ne)?\s?",
-            r"assistant(e)?\s?",
-            r"chercheur(se)?\s?",
-            r"doctorant(e)?\s?",
-            r"post[- ]?doctorant(e)?\s?",
+        employment_type_word = [ # AI Generated
+            r"ingénieur([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
+            r"technicien([neNE]|\s*[-·/]\s*[neNE])?\s?",
+            r"assistant([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
+            r"chercheur([seSE]|\s*[-·/]\s*[seSE])?\s?",
+            r"doctorant([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
+            r"post[- ]?doctorant([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
             r"postdoc\s?",
             r"stagiaire\s?",
             r"stage\s?",
-            "cdd\s?",
-            "cdi\s?",
-            "m1\s?",
-            "m2\s?",
-            "l1\s?",
-            "l2\s?",
-            "l3\s?",
-            r"alternant(e)?\s?",
+            r"cdd\s?",
+            r"cdi\s?",
+            r"m1\s?",
+            r"m2\s?",
+            r"master\s?",
+            r"licence\s?",
+            "1\s?", "2\s?", "3\s"
+            r"l1\s?",
+            r"l2\s?",
+            r"l3\s?",
+            r"bac\s?",
+            r"alternant([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
             r"alternance\s?",
-            r"apprenti(e)?\s?",
-            r"chargé(e)? de recherche\s?",
-            r"chef(fe)? de projet\s?",
+            r"apprenti([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
+            r"chargé([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s? de recherche\s?",
+            r"chef([feFE]|\s*[-·/]\s*[feFE])?\s? de projet\s?",
             r"responsable\s?",
             r"manager\s?",
-            r"superviseur(e)?\s?",
-            r"coordinateur(trice)?\s?",
+            r"superviseur([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
+            r"coordinateur(trice|·trice|[-/ ]trice)?\s?",
             r"analyste\s?",
-            r"consultant(e)?\s?",
-            r"développeur(se)?\s?",
-            r"enseignant(e)?\s?",
-            r"professeur(e)?\s?",
+            r"consultant([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
+            r"développeur([seSE]|\s*[-·/]\s*[seSE])?\s?",
+            r"enseignant([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
+            r"professeur([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
             r"technologue\s?",
-            r"opérateur(trice)?\s?",
-            r"agent(e)?\s?",
+            r"opérateur(trice|·trice|[-/ ]trice)?\s?",
+            r"agent([eEéÉ]|\s*[-·/]\s*[eEéÉ])?\s?",
         ]
+
         pattern = "|".join(employment_type_word)
-        cls.logger.critical("%s         %s", field, pattern)
         f =  re.sub(pattern, "", field, flags=re.IGNORECASE)
-        cls.logger.critical("%s", f)
         return f
 
     @classmethod
@@ -447,6 +456,8 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         if " - " in field:
             # Remove prefixes : "50238 - "; "IBODE -"
             field = " ".join(field.split(" - ")[1:])
+
+        field = re.sub(r"['|`]", " ", field, flags=re.IGNORECASE)
 
         # Remove H/F Mention.
         field = re.sub(
@@ -469,6 +480,12 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         # Remove all link word
         field = cls._try_to_find_field__remove_link_word(field)
 
+        # Clean every world smaller than 3 cars
+        field = re.sub(r"\b\w{1,3}\b", "", field, flags=re.IGNORECASE)
+
+        # Clean spacing
+        field = re.sub(r"\s{2,}", " ", field).strip()
+
         # The first two words generally gives
         # a good idea of the field
         field = " ".join(field.split(" ")[:2])
@@ -477,7 +494,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         # the first world is generally enough
         field = "-".join(field.split("-")[:2])
 
-        if len(field.replace(" ", "")) < 5:
+        if len(field.replace(" ", "")) <= 5:
             # This string is really short, we might have
             # no information inside it.
             return None
