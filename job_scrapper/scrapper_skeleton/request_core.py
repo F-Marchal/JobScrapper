@@ -78,10 +78,10 @@ class ScrapperRequestCore(ScrapperSQLightCore):
         return cls._geolocator
 
     @classmethod
-    def get_page_exporter(cls, save_type: SaveTypes = SaveTypes.MHTML) -> ExportBrowserPage:
+    def get_page_exporter(cls, save_type: SaveTypes = SaveTypes.MHTML, compress: bool = False) -> ExportBrowserPage:
         return ExportBrowserPage(
             save_type=save_type,
-            compress=False,
+            compress=compress,
             logger=cls.logger
         )
 
@@ -240,6 +240,15 @@ class ScrapperRequestCore(ScrapperSQLightCore):
 
         # Apply result_dict
         for keyword, count in result_dict.items():
+            if len(keywords_to_search.regexes(keyword)) == 0:
+                # This keyword is known to have 0 regex
+                # attached. The result will always be 0.
+                # This situation should be considered
+                # as 'This keyword existed in the past
+                # but has been discarded'. If the keyword
+                # is still in the database it is for
+                # traceability reasons.
+                continue
             self.add_keyword_count(keyword, count)
 
     def search_in_html_offer(
@@ -393,6 +402,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
                         - button_id: str,
 
         """
+
         raise NotImplementedError
 
     @classmethod

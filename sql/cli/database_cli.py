@@ -69,13 +69,13 @@ def enumerate_columns(table):
     type=click.Choice(
         list(JobScrapperSkeleton.get_all_tables()), case_sensitive=True
     ),
-    help="The name of the targeted column. Use enumerate-tables to discover all tables"
+    help="The name of the targeted column. Use `enumerate-tables` to discover all tables "
     "available",
 )
 @cloup.argument(
     "column_name",
     type=str,
-    help="The name of the targeted column. Use enumerate-columns [table] to discover"
+    help="The name of the targeted column. Use `enumerate-columns [table]` to discover "
     "all columns attached to a table.",
 )
 @cloup.pass_context
