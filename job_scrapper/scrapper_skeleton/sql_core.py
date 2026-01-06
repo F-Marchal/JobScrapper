@@ -16,8 +16,10 @@ from sql.tables import (
     Jobs,
     Keywords,
     KeywordVersion,
+    KeywordRegex,
     Metadata,
-    TimeStamps, Places,
+    TimeStamps,
+    Places,
 )
 from sql.tables.helpers.job_request import JobRequest
 from sql.tables.helpers.keyword_manager import KeywordManager
@@ -41,8 +43,14 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         Jobs.__tablename__: Jobs,
         Metadata.__tablename__: Metadata,
         TimeStamps.__tablename__: TimeStamps,
-        Distances.__tablename__: Distances,
+
         Keywords.__tablename__: Keywords,
+        KeywordRegex.__tablename__: KeywordRegex,
+        KeywordVersion.__tablename__: KeywordVersion,
+
+        Distances.__tablename__: Distances,
+        Places.__tablename__: Places,
+
     }
     first_sighting_time_stamp_name = "First sighting"
 
