@@ -147,8 +147,9 @@ class Geolocalisation:
         return None, None
 
     # pylint: disable=R0913,R0917
+    @classmethod
     def compute_distance(
-        self,
+        cls,
         session: Session,
         reference_localisation: str,
         second_localisation: str,
@@ -170,17 +171,17 @@ class Geolocalisation:
             does not exist in Distance, the entry is added to the database
         """
         # Try to find an equivalent in
-        existing_distance = self.get_distances_from_database(
+        existing_distance = cls.get_distances_from_database(
             session, reference_localisation, second_localisation
         )
 
         if existing_distance and lazy:
             return float(getattr(existing_distance, "distance"))
 
-        ref_entry = self.get_localisation_from_database(
+        ref_entry = cls.get_localisation_from_database(
             session, reference_localisation
         )
-        sec_entry = self.get_localisation_from_database(
+        sec_entry = cls.get_localisation_from_database(
             session, second_localisation
         )
 
@@ -188,7 +189,7 @@ class Geolocalisation:
             return None
         if not isinstance(sec_entry, Places):
             return None
-        if not self._compute_distance_valid_couple(ref_entry, sec_entry):
+        if not cls._compute_distance_valid_couple(ref_entry, sec_entry):
             return None
 
         geo = geodesic(ref_entry.coord, sec_entry.coord)
@@ -197,17 +198,18 @@ class Geolocalisation:
             session.add(
                 Distances(
                     reference_localisation=reference_localisation,
-                    second_localisation=second_localisation,
+                    job_localisation=second_localisation,
                     distance=geo.km,
                 )
             )
 
         if isinstance(geo, Places):
             return geodesic(ref_entry.coord, sec_entry.coord).km
-        return None
+        return geo.km
 
+    @classmethod
     def _compute_distance_valid_couple(
-        self, ref_entry: Places, sec_entry: Places
+        cls, ref_entry: Places, sec_entry: Places, logger: Logger | None = None,
     ) -> bool:
         """
         Test if ref_entry and sec_entry can be used to compute
@@ -215,31 +217,31 @@ class Geolocalisation:
         """
 
         if not ref_entry:
-            if self.logger:
-                self.logger.warning(
+            if logger:
+                logger.warning(
                     "Can not Process coordinates of '%s' : Unknown place.",
                     ref_entry,
                 )
             return False
 
         if not sec_entry:
-            if self.logger:
-                self.logger.warning(
+            if logger:
+                logger.warning(
                     "Can not Process coordinates of '%s' : Unknown place.",
                     sec_entry,
                 )
             return False
 
         if not ref_entry.is_computable():
-            if self.logger:
-                self.logger.warning(
+            if logger:
+                logger.warning(
                     "Can not Process coordinates of '%s'. Unknown coordinate.",
                     ref_entry.localisation,
                 )
             return False
         if not sec_entry.is_computable():
-            if self.logger:
-                self.logger.warning(
+            if logger:
+                logger.warning(
                     "Can not Process coordinates of '%s'. Unknown coordinate.",
                     ref_entry.localisation,
                 )
