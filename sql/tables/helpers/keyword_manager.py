@@ -69,7 +69,7 @@ class KeywordManager(SecondaryLoggerUser):
             re.compile(regex)
         except re.error as e:
             if strict:
-                raise ValueError(f"Invalid regex for '{keyword}' : {regex}.\nError: {e}")
+                raise re.error(f"Invalid regex for '{keyword}' : '{regex}'.\nError: {e}")
             else:
                 self.logger.warning(
                     "Ignoring regex for '%s' : %s.\n"
