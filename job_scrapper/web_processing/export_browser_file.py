@@ -2,9 +2,9 @@ import os
 import shutil
 import zipfile
 from enum import Enum
-from tools.secondary_logger_user import SecondaryLoggerUser, logging
-from web_processing.enhanced_chrome_browser import EnhancedChrome
-from tools.turn_file_to_text import FileToText
+from job_scrapper.tools.secondary_logger_user import SecondaryLoggerUser, logging
+from job_scrapper.web_processing.enhanced_chrome_browser import EnhancedChrome
+from job_scrapper.tools.turn_file_to_text import FileToText
 
 class ExportBrowserPage(SecondaryLoggerUser):
     class SaveTypes(str, Enum):

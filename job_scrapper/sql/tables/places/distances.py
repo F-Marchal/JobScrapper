@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Float, String
 from sqlalchemy.orm import Session
 
-from sql.tables.base_table import BaseTable
+from job_scrapper.sql.tables.base_table import BaseTable
 
 
 class Distances(BaseTable):

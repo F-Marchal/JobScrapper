@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
 
-from tools.secondary_logger_user import SecondaryLoggerUser
+from job_scrapper.tools.secondary_logger_user import SecondaryLoggerUser
 from logging import Logger
-from sql.tables.keywords.keyword_regex import KeywordRegex
-from sql.tables.keywords.keyword_version import KeywordVersion
+from job_scrapper.sql.tables.keywords.keyword_regex import KeywordRegex
+from job_scrapper.sql.tables.keywords.keyword_version import KeywordVersion
 from sqlalchemy import and_
 import re
 

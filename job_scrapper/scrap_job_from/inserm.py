@@ -1,17 +1,10 @@
 import re
 
 from bs4 import BeautifulSoup
-
-import job_scrapper.scrapper_skeleton.legacy_pdf_jobs as pj
-from job_scrapper.scrapper_skeleton.legacy_request_core import ScrapperRequestCore
-
-from bs4 import BeautifulSoup
 from typing import Iterator, Self
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-from web_processing.block_extractor import WebBlockExtractor
-from web_processing.enhanced_chrome_browser import EnhancedChrome
-from selenium.webdriver.common.by import By
+
 
 class InsermScrapper(srk.JobScrapperSkeleton):
     """

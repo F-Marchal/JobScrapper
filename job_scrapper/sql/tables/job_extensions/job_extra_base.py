@@ -1,8 +1,8 @@
 from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.orm import Query, Session
 
-from sql.tables.base_table import BaseTable
-from sql.tables.jobs import Jobs
+from job_scrapper.sql.tables.base_table import BaseTable
+from job_scrapper.sql.tables.jobs import Jobs
 
 class JobExtraBase(BaseTable):
     """Abstract class use to extend data attached to Jobs. Each table that inherit JobExtraBase uses Job.Url

@@ -6,7 +6,7 @@ from typing import Self, Iterator
 
 import re
 from .request_core import ScrapperRequestCore, KeywordManager, ExportBrowserPage, BeautifulSoup
-from sql.tables.keywords.keyword_version import KeywordVersion, Session
+from job_scrapper.sql.tables.keywords.keyword_version import KeywordVersion
 import time
 from datetime import datetime, timedelta
 from selenium.common.exceptions import WebDriverException

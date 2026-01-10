@@ -1,4 +1,4 @@
-from tools.logger_core import CoreLogger, logging
+from job_scrapper.tools.logger_core import CoreLogger, logging
 
 class SecondaryLoggerUser:
     def __init__(self, logger: logging.Logger | None = None):

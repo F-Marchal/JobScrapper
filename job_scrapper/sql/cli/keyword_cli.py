@@ -3,8 +3,8 @@ import re
 from job_scrapper.scrapper_skeleton.scrapper_skeleton import JobScrapperSkeleton
 import cloup
 
-from sql.tables.helpers.keyword_manager import KeywordManager, KeywordRegex
-from sql.tables import KeywordVersion
+from job_scrapper.sql.tables.helpers.keyword_manager import KeywordManager, KeywordRegex
+from job_scrapper.sql import KeywordVersion
 
 @cloup.group()
 @click.pass_context

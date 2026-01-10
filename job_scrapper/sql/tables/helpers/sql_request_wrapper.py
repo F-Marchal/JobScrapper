@@ -7,9 +7,9 @@ from sqlalchemy import Column, ColumnElement, Result, case, func
 from sqlalchemy.orm import Query, Session
 from sqlalchemy.sql import operators as ope
 
-from sql.filters.filter_generator import FilterGenerator, FilterPart, LogicalWrapper, ComparisonWrapper
-from sql.tables import BaseTable
-from tools.secondary_logger_user import SecondaryLoggerUser
+from job_scrapper.sql.filters.filter_generator import FilterGenerator, FilterPart, LogicalWrapper, ComparisonWrapper
+from job_scrapper.sql import BaseTable
+from job_scrapper.tools.secondary_logger_user import SecondaryLoggerUser
 
 class SQLRequestWrapper(SecondaryLoggerUser):
     """Class that helps with the generation of sql queries.

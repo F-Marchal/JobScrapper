@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Integer, ForeignKeyConstraint
 from sqlalchemy.orm import relationship, validates
-from sql.tables.base_table import BaseTable
+from job_scrapper.sql.tables.base_table import BaseTable
 import re
 
 class KeywordRegex(BaseTable):

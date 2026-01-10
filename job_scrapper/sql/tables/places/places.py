@@ -26,8 +26,8 @@ a case (require multiple joins).
 from sqlalchemy import Column, Float, String, func, ColumnElement, case, Label
 from sqlalchemy.orm import relationship, Session, validates
 
-from sql.tables.base_table import BaseTable
-from sql.tables.jobs import Jobs
+from job_scrapper.sql.tables.base_table import BaseTable
+from job_scrapper.sql.tables.jobs import Jobs
 
 EARTH_RADIUS = 6371.0
 

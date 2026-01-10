@@ -7,16 +7,16 @@ from geopy.distance import geodesic  # type: ignore[import-untyped]
 from geopy.exc import GeocoderServiceError  # type: ignore[import-untyped]
 from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
 
-from web_processing.enhanced_chrome_browser import EnhancedChrome
+from job_scrapper.web_processing.enhanced_chrome_browser import EnhancedChrome
 from enum import Enum
 
 from urllib.parse import urlparse
 
 from .sql_core import ScrapperSQLightCore, KeywordManager
-from web_processing.block_extractor import WebBlockExtractor
-from tools.turn_file_to_text import FileToText
-from web_processing.export_browser_file import ExportBrowserPage
-from tools.geolocalisation import Geolocalisation, Session, Places
+from job_scrapper.web_processing import WebBlockExtractor
+from job_scrapper.tools.turn_file_to_text import FileToText
+from job_scrapper.web_processing import ExportBrowserPage
+from job_scrapper.tools import Geolocalisation, Session, Places
 from bs4 import BeautifulSoup
 
 class ScrapperRequestCore(ScrapperSQLightCore):

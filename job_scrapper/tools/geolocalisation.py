@@ -1,4 +1,3 @@
-from keyword import kwlist
 from logging import Logger
 
 from geopy.distance import geodesic  # type: ignore[import-untyped]
@@ -8,8 +7,8 @@ from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
 from geopy.location import Location  # type: ignore[import-untyped]
 from sqlalchemy.orm import Session
 
-from sql.tables.places.distances import Distances
-from sql.tables.places.places import Places
+from job_scrapper.sql.tables.places.distances import Distances
+from job_scrapper.sql.tables.places.places import Places
 import re
 from unidecode import unidecode
 

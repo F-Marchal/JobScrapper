@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKeyConstraint
 from sqlalchemy.orm import Query, Session, relationship
 
-from sql.tables.job_extensions.job_extra_base import JobExtraBase, Jobs
+from job_scrapper.sql.tables.job_extensions.job_extra_base import JobExtraBase, Jobs
 
 
 class Keywords(JobExtraBase):

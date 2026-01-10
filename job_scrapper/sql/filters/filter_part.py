@@ -3,12 +3,12 @@ from typing import Any, Callable
 
 from sqlalchemy.sql.elements import ColumnElement
 
-from sql.wrappers.wrapper_comparison import (
+from job_scrapper.sql.wrappers.wrapper_comparison import (
     STRING_TO_COMPARISON_WRAPPERS,
     ComparisonWrapper,
     to_datetime_ymd_or_ymd_hms
 )
-from sql.wrappers.wrapper_logical import (
+from job_scrapper.sql.wrappers.wrapper_logical import (
     STRING_TO_LOGICAL_WRAPPERS,
     LogicalWrapper,
 )

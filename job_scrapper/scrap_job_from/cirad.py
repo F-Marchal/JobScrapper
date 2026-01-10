@@ -4,8 +4,6 @@ from bs4 import BeautifulSoup
 from typing import Iterator, Self
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-from sql.tables.helpers.keyword_manager import KeywordManager
-from web_processing.block_extractor import WebBlockExtractor
 
 
 class CiradScrapper(srk.JobScrapperSkeleton):

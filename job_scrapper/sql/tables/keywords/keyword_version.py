@@ -1,9 +1,8 @@
 
 from sqlalchemy import Column, String, Integer
 from sqlalchemy.orm import relationship, Session, Query
-from typing import Sequence
 
-from sql.tables.base_table import BaseTable
+from job_scrapper.sql.tables.base_table import BaseTable
 
 class KeywordVersion(BaseTable):
     __abstract__ = False

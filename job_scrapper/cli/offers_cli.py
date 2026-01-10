@@ -1,8 +1,6 @@
-import os.path
-
 import cloup
 from job_scrapper import JobScrapperSkeleton
-from sql.wrappers.wrapper_comparison import to_datetime_ymd_or_ymd_hms
+from job_scrapper.sql import to_datetime_ymd_or_ymd_hms
 import json
 
 JOBS = JobScrapperSkeleton.get_table("jobs")

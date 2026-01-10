@@ -4,8 +4,8 @@ from typing import Callable
 from sqlalchemy.orm import Query, Session
 from sqlalchemy.sql import operators as ope
 
-from sql.filters.filter_generator import FilterGenerator
-from sql.tables import Distances, Jobs, Keywords, Metadata, TimeStamps, Places
+from job_scrapper.sql.filters.filter_generator import FilterGenerator
+from job_scrapper.sql import Distances, Jobs, Keywords, Metadata, TimeStamps, Places
 
 from .sql_request_wrapper import SQLRequestWrapper
 

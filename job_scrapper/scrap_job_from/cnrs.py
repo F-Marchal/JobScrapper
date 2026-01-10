@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from selenium.webdriver.remote.webelement import WebElement
 
 from selenium.webdriver.support.ui import Select
-from web_processing.enhanced_chrome_browser import EnhancedChrome
+from job_scrapper.web_processing import EnhancedChrome
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException

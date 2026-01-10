@@ -8,8 +8,8 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.chrome.options import Options
 
-from tools.secondary_logger_user import SecondaryLoggerUser, logging
-from web_processing.enhanced_chrome_browser import EnhancedChrome, PreparePage
+from job_scrapper.tools.secondary_logger_user import SecondaryLoggerUser, logging
+from job_scrapper.web_processing.enhanced_chrome_browser import EnhancedChrome, PreparePage
 import time
 from contextlib import contextmanager
 from urllib3.exceptions import ReadTimeoutError

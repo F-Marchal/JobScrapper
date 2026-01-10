@@ -1,9 +1,9 @@
 import click
 import cloup
-from tools.logger_core import CoreLogger
+from job_scrapper.tools.logger_core import CoreLogger
 import time
 import os
-from tools.get_unique_path import get_unique_path
+from job_scrapper.tools.get_unique_path import get_unique_path
 
 @cloup.group()
 @cloup.option(

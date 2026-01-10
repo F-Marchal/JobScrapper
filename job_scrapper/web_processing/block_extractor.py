@@ -1,6 +1,5 @@
 
-from typing import Iterator, Protocol, TypeVar, Generic, Literal
-
+from typing import Iterator, Protocol, TypeVar, Generic
 
 import bs4
 from bs4 import BeautifulSoup
@@ -10,9 +9,9 @@ from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
 
 from selenium.webdriver.common.by import ByType
 
-from web_processing.enhanced_chrome_browser import PreparePage, ButtonFinder, ButtonFinderIterator
+from job_scrapper.web_processing.enhanced_chrome_browser import PreparePage, ButtonFinder, ButtonFinderIterator
 
-from web_processing.web_page_parser import WebPageProcessor
+from job_scrapper.web_processing.web_page_parser import WebPageProcessor
 
 _T = TypeVar("_T") # bound=Hashable
 class HTMLBlockExtractor(Protocol):

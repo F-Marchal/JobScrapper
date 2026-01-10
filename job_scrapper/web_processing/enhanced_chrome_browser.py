@@ -4,7 +4,7 @@ import time
 
 from typing import Iterator, Protocol, Optional
 from urllib.parse import unquote, urlparse
-from tools.get_unique_path import get_unique_path
+from job_scrapper.tools.get_unique_path import get_unique_path
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -17,7 +17,7 @@ from selenium.webdriver.common.by import ByType
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as cond
 from selenium.webdriver.support.ui import WebDriverWait
-from tools.secondary_logger_user import SecondaryLoggerUser, logging
+from job_scrapper.tools.secondary_logger_user import SecondaryLoggerUser, logging
 from selenium.webdriver.chrome.service import Service
 
 
