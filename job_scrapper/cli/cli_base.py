@@ -34,12 +34,14 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
     You can use this tool to scrap a number of website in order to extract potential job offers.
     See other commands.
     """
+    if ctx.obj is None:
+        ctx.obj = {}
+
+    ctx.obj["logger"] = CoreLogger
+
     # --- Verbose ---
-    CoreLogger.set_logging_level(verbosity)
-    ctx.obj = {
-        "verbosity": verbosity,
-        "logger": CoreLogger,
-    }
+    ctx.obj["logger"].set_logging_level(verbosity)
+    ctx.obj["verbosity"] = verbosity
 
     # --- Workdir ---
     if not os.path.exists(workdir):
@@ -48,6 +50,7 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
     ctx.obj["workdir"] = workdir
 
     # --- Logging file ---
+    ctx.obj["log_file"] = None
     if not no_log_file:
         log_dir = os.path.join(workdir, "Logs")
         if not os.path.exists(log_dir):
@@ -60,6 +63,11 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
         )
 
         CoreLogger.start_file_logging(complete_log_file, level="DEBUG")
+        ctx.obj["log_file"] = complete_log_file
+        # ctx.obj["logger"].logger.info(
+        #     "All logs are written in '%s'",
+        #     complete_log_file
+        # )
 
     # --- Log---
     CoreLogger.logger.debug("CLI : %s", locals())
