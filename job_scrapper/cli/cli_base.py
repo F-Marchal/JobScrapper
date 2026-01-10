@@ -36,7 +36,10 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
     """
     # --- Verbose ---
     CoreLogger.set_logging_level(verbosity)
-    ctx.obj = {"verbosity": verbosity}
+    ctx.obj = {
+        "verbosity": verbosity,
+        "logger": CoreLogger,
+    }
 
     # --- Workdir ---
     if not os.path.exists(workdir):

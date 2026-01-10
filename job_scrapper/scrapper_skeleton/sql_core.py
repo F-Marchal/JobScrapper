@@ -1,13 +1,11 @@
 import datetime
 import os
-from contextlib import contextmanager
-from typing import Any, ContextManager, Generator, Protocol, Type, Self
+from contextlib import contextmanager, nullcontext
+from typing import Any, ContextManager, Generator, Protocol, Type, Self, Iterator
 
-from sqlalchemy import and_
 
 # pylint: disable=E0611
 from sqlalchemy.orm import Query, Session
-from sqlalchemy.sql import operators as ope
 
 from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore
 from sql.tables import (
@@ -126,8 +124,11 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     def __init__(self,
             *args,
-            workdir: str | None = None,
-            database_name: str | None = None,
+             workdir: str | None = None,
+             database_name: str | None = None,
+             force_session: Session | None = None,
+
+             use_db_init_time_stamp: bool = False,
 
              load_job_entry: bool | None = None,
              load_keywords: bool | None = None,
@@ -170,7 +171,12 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             overwrite_time_stamps = self.DEFAULT_OVERWRITE_TIME_STAMPS
 
         self._loaded_from = (workdir, database_name)
-        with self.get_sql_session(workdir=workdir, database_name=database_name) as session:
+        session_ctx = (
+            self.get_sql_session(workdir=workdir, database_name=database_name)
+            if force_session is None
+            else nullcontext(force_session)
+        )
+        with session_ctx as session:
             if load_job_entry:
                 self.load_job_entry_from_db(session, overwrite=overwrite_job_entry)
 
@@ -184,7 +190,11 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 self.load_metadata_from_db(session, overwrite=overwrite_metadata)
 
             if load_time_stamps:
-                self.load_time_stamps_from_db(session, overwrite=overwrite_time_stamps)
+                self.load_time_stamps_from_db(
+                    session,
+                    overwrite=overwrite_time_stamps,
+                    use_db_init_time_stamp=use_db_init_time_stamp
+                )
 
         # Ensure fstsn exist
         fstsn = self.first_sighting_time_stamp_name
@@ -483,37 +493,38 @@ class ScrapperSQLightCore(ScrapperObjectCore):
     def sql_import_jobs(
         cls,
         session: Session,
-        request: Query | None = None,
-    ) -> list[Self]:
+        request: Query[Jobs] | None = None,
+        use_db_init_time_stamp: bool = True,
+    ) -> Iterator[Self]:
         """
         Generate a list of ScrapperSQLightCore (or current subclass) from a query.
         If this query is None Jobs.get_all(session) is used.
         """
         if not request:
             request = Jobs.get_all(session)
-        loaded_jobs = []
 
-        for job_entry in request.all():
-            new_jobs = cls(
-                # contract_type=job_entry.contract,
-                # field=job_entry.field,
-                # localisation=job_entry.localisation,
-                # title=job_entry.title,
+        for job_entry in request:
+            cls.logger.debug(f"Loading {job_entry.url}...")
+            job_object = cls(
                 url=job_entry.url,
-                load_job_entry = True,
-                load_keywords = True,
-                load_distances = True,
-                load_metadata = True,
-                load_time_stamps = True,
-            )
-            # new_jobs.load_job_entry_from_db(session)
-            # new_jobs.load_time_stamps_from_db(session)
-            # new_jobs.load_metadata_from_db(session)
-            # new_jobs.load_keywords_from_db(session)
-            # new_jobs.load_distances_from_db(session)
+                session=session,
 
-            loaded_jobs.append(new_jobs)
-        return loaded_jobs
+                load_job_entry=True,
+                load_keywords=True,
+                load_distances=True,
+                load_metadata=True,
+                load_time_stamps=True,
+
+                overwrite_job_entry=True,
+                overwrite_keywords=True,
+                overwrite_distances=True,
+                overwrite_metadata=True,
+                overwrite_time_stamps=True,
+
+                use_db_init_time_stamp=use_db_init_time_stamp,
+            )
+            yield job_object
+
 
     def load_job_entry_from_db(self, session: Session, overwrite: set[str] | bool = False):
         entries = session.query(Jobs).where(Jobs.url == self.url).all()
@@ -550,18 +561,24 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             self,
             session: Session,
             overwrite: set[str] | bool = False,
+            use_db_init_time_stamp: bool = False,
     ):
         for time_stamp_entry in TimeStamps.get_for_job(
             session, self.url
         ):
-            self.load_time_stamp_entry(time_stamp_entry, overwrite)
+            self.load_time_stamp_entry(time_stamp_entry, overwrite, use_db_init_time_stamp=use_db_init_time_stamp)
 
-    def load_time_stamp_entry(self, time_stamp_entry: TimeStamps, overwrite: set[str] | bool = False,):
+    def load_time_stamp_entry(
+            self,
+            time_stamp_entry: TimeStamps,
+            overwrite: set[str] | bool = False,
+            use_db_init_time_stamp: bool = False,
+    ):
         # If self.time_stamps_exist then we might overwrite it. Can we ?
         if (overwrite is False or time_stamp_entry.label not in overwrite) and self.time_stamps_exist(time_stamp_entry.label):
             return
 
-        if self.init_time_stamp_name == time_stamp_entry.label:
+        if self.init_time_stamp_name == time_stamp_entry.label and not use_db_init_time_stamp:
             # This entry should not be overwritten.
             return
 
@@ -611,10 +628,13 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             return
         self.add_metadata(metadata_entry.key, metadata_entry.value)
 
+    # --- --- Remove from db --- ---
+    def self_delete_from_db(self, session: Session):
+        # This expects that Jobs have delete cascade on
+        # TimeStamps, keywords, metadata ...
+        session.delete(self.to_job_entry())
 
-
-
-    # --- --- Imports --- ---
+    # --- --- Remove from db --- ---
     # --- --- Utils --- ---
     @classmethod
     def column_name_normaliser(cls, string: str) -> str:

@@ -13,7 +13,8 @@ def manage_keywords(ctx):
     In the context of this program, a 'keyword' is a sequence
     of text that you want to search inside each offer.
     Each keyword can be attached to multiple regexes.
-    Each keyword + set of regex is attached to a version."""
+    Each keyword + set of regex is attached to a version
+    for debugging purposes."""
     # Always target mainDB
     km = JobScrapperSkeleton.get_keyword_manager()
     print()

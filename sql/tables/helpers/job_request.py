@@ -41,9 +41,9 @@ class JobRequest(SQLRequestWrapper):
         distances_from: list[str] | None = None,
         keywords: list[str] | None = None,
         metadata: list[str] | None = None,
-        time_stamp: list[str] | None = None,
+        time_stamps: list[str] | None = None,
         order_by: list[str] | None = None,
-    ) -> Query:
+    ) -> Query | None:
         """
         Returns A query object that apply all filters defines in the parameters of this method.
 
@@ -55,7 +55,7 @@ class JobRequest(SQLRequestWrapper):
         :param distances_from: Filter / display distances from a place contained in Distances.reference_localisation
         :param keywords: Filter / display occurrences of Keywords.keyword contained inside an offer
         :param metadata: Filter / display metadata values attached to a Metadata.key attached to job offers.
-        :param time_stamp: Filter / display TimeStamps values attached to a Metadata.key attached to job offers.
+        :param time_stamps: Filter / display TimeStamps values attached to a Metadata.key attached to job offers.
         :param order_by: A list of column name (form Tables or generated during the request) that should order
             the result.
         """
@@ -82,7 +82,7 @@ class JobRequest(SQLRequestWrapper):
         job_filter = self.build_jobs_filter_generator(columns)
         distance_filter = self.build_distance_filter_generator(session, distances_from)
         keywords_filter = self.build_keywords_filter_generator(keywords)
-        time_filter = self.build_time_stamp_filter_generator(time_stamp)
+        time_filter = self.build_time_stamp_filter_generator(time_stamps)
         metadata_filter = self.build_metadata_filter_generator(metadata)
 
         all_cols: list[ColumnElement] = [
@@ -94,6 +94,11 @@ class JobRequest(SQLRequestWrapper):
         ]
 
         order_by_cols = self.build_request_order_by(all_cols, order_by)
+
+        if not order_by_cols:
+            # Avoid sqlalchemy.exc.InvalidRequestError:
+            # Query contains no columns with which to SELECT from.
+            return None
 
         query = (
             session.query(*order_by_cols)

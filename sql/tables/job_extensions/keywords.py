@@ -13,7 +13,7 @@ class Keywords(JobExtraBase):
 
     # url = Column(String, ForeignKey(f"{Jobs.__tablename__}.url", ondelete="CASCADE"), primary_key=True)
     keyword = Column(String, primary_key=True, nullable=False)
-    version = Column(Integer, primary_key=True, nullable=False)
+    version = Column(Integer, primary_key=False, nullable=False)
     occurrence = Column(Integer, nullable=True)
 
     __table_args__ = (

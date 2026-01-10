@@ -371,11 +371,10 @@ class FilterPart:
         try:
             return cond_wrap.cast(val, self.cast_constrain)
         except ValueError as e:
-            msg = "Can not cast '%s' from '%s'. The column (%s) will be shown but no condition will be applied." \
-                  "\n%s\nAll Constraints are : %s".format(
+            msg = "Can not cast '%s' from '%s'." \
+                  "\n%s\nAll Constraints are : %s" % (
                 val,
                 self.unformatted_string,
-                self.str_column,
                 str(e),
                 self.cast_constrain if self.cast_constrain else [],
             )

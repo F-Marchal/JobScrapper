@@ -10,8 +10,8 @@ class ExportBrowserPage(SecondaryLoggerUser):
     class SaveTypes(str, Enum):
         DISABLED = "Disabled"
         TEXT = "Text"
-        HTML = "HTML or file"
-        MHTML = "MHTML or file"
+        HTML = "HTML"
+        MHTML = "MHTML"
 
         def __str__(self):
             return self.value

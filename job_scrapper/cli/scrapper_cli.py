@@ -1,6 +1,6 @@
 import click
 import cloup
-from cli.ask_contact import CONTACT_OPTION, ask_contact
+from job_scrapper.cli.ask_contact import CONTACT_OPTION, ask_contact
 from job_scrapper import SCRAPER_REGISTRY, JobScrapperSkeleton
 
 @cloup.command()
@@ -69,9 +69,6 @@ from job_scrapper import SCRAPER_REGISTRY, JobScrapperSkeleton
     is_flag=True,
     help="Should downloaded file (-d) be compressed into a zip archive ?",
 )
-
-
-
 def scrap(
         ctx,
         scrappers: list[str],
@@ -87,6 +84,7 @@ def scrap(
     """
     Extract job offer from one (or more) website. Extractions are
     run sequentially.
+    Here, for clarity raisons, what will happen :
     1) Extract a list of keyword to search inside offer from
     the database in workdir (`-w`) ;
     2) Connect to selected websites and parse listing to extract
@@ -97,8 +95,8 @@ def scrap(
     the offer. If `-d`, the file is saved in the workdir (`-w`);
     4) Geopy is used to find the geographic coordinates
     of the location associated with a job posting. This step
-    might be step if  the location associated with a job posting
-    is stored in the database ;
+    might be skipped if the location associated with a job posting
+    is already stored in the database;
     5) Job offer is exported to the database ;
     """
     # Ensure we have contact information

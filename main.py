@@ -1,9 +1,9 @@
-from cli.cli_centraliser import cli
+import click
+
 
 def main():
-    """Start Application's Command Line Interface"""
-    cli()
-
+    click.echo("main() was called")
+    raise ValueError("BOOM")
 
 if __name__ == "__main__":
-    cli()
+    main()
