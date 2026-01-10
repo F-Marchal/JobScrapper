@@ -4,7 +4,7 @@ from job_scrapper.scrapper_skeleton.scrapper_skeleton import JobScrapperSkeleton
 import cloup
 
 from job_scrapper.sql.tables.helpers.keyword_manager import KeywordManager, KeywordRegex
-from job_scrapper.sql import KeywordVersion
+from job_scrapper.sql.tables import KeywordVersion
 
 @cloup.group()
 @click.pass_context

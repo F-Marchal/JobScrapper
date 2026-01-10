@@ -1,7 +1,7 @@
 import click
 import cloup
 from job_scrapper.scrapper_skeleton.scrapper_skeleton import JobScrapperSkeleton
-from job_scrapper.sql import Places, Distances
+from job_scrapper.sql.tables import Places, Distances
 from sqlalchemy import or_
 from job_scrapper.cli.ask_contact import CONTACT_OPTION, ask_contact
 from job_scrapper.tools.geolocalisation import Geolocalisation

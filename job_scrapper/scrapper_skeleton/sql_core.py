@@ -8,7 +8,7 @@ from typing import Any, ContextManager, Generator, Protocol, Type, Self, Iterato
 from sqlalchemy.orm import Query, Session
 
 from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore
-from job_scrapper.sql import (
+from job_scrapper.sql.tables import (
     BaseTable,
     Distances,
     Jobs,
@@ -20,7 +20,7 @@ from job_scrapper.sql import (
     Places,
 )
 from job_scrapper.sql.tables.helpers.job_request import JobRequest
-from job_scrapper.sql.tables.helpers import KeywordManager
+from job_scrapper.sql.tables.helpers.keyword_manager import KeywordManager
 
 class SqlSessionFactory(Protocol):
     """Typing class mostly used for ScrapperSQLightCore.get_available_databases"""

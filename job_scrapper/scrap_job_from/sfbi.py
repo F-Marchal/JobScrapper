@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from typing import Iterator, Self
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-from job_scrapper.web_processing import EnhancedChrome
+from job_scrapper.web_processing.enhanced_chrome_browser import EnhancedChrome
 
 class SFBIScrapper(srk.JobScrapperSkeleton):
     """

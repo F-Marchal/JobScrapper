@@ -8,7 +8,7 @@ from sqlalchemy.orm import Query, Session
 from sqlalchemy.sql import operators as ope
 
 from job_scrapper.sql.filters.filter_generator import FilterGenerator, FilterPart, LogicalWrapper, ComparisonWrapper
-from job_scrapper.sql import BaseTable
+from job_scrapper.sql.tables import BaseTable
 from job_scrapper.tools.secondary_logger_user import SecondaryLoggerUser
 
 class SQLRequestWrapper(SecondaryLoggerUser):

@@ -13,10 +13,10 @@ from enum import Enum
 from urllib.parse import urlparse
 
 from .sql_core import ScrapperSQLightCore, KeywordManager
-from job_scrapper.web_processing import WebBlockExtractor
+from job_scrapper.web_processing.block_extractor import WebBlockExtractor
 from job_scrapper.tools.turn_file_to_text import FileToText
-from job_scrapper.web_processing import ExportBrowserPage
-from job_scrapper.tools import Geolocalisation, Session, Places
+from job_scrapper.web_processing.export_browser_file import ExportBrowserPage
+from job_scrapper.tools.geolocalisation import Geolocalisation, Session, Places
 from bs4 import BeautifulSoup
 
 class ScrapperRequestCore(ScrapperSQLightCore):

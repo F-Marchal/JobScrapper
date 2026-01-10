@@ -5,7 +5,7 @@ from sqlalchemy.orm import Query, Session
 from sqlalchemy.sql import operators as ope
 
 from job_scrapper.sql.filters.filter_generator import FilterGenerator
-from job_scrapper.sql import Distances, Jobs, Keywords, Metadata, TimeStamps, Places
+from job_scrapper.sql.tables import Distances, Jobs, Keywords, Metadata, TimeStamps, Places
 
 from .sql_request_wrapper import SQLRequestWrapper
 
