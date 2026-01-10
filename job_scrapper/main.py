@@ -1,5 +1,5 @@
+#!/usr/bin/python3
 from job_scrapper.cli.cli_centraliser import cli
-from job_scrapper.tools.logger_core import CoreLogger
 import io
 import click
 import traceback
