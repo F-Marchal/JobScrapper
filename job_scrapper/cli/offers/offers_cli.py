@@ -10,123 +10,6 @@ TIMESTAMP = JobScrapperSkeleton.get_table("timestamps")
 DISTANCES = JobScrapperSkeleton.get_table("distances")
 JOB_REQUESTER = JobScrapperSkeleton.get_job_requester()
 
-def format_date(
-        timestamp: str,
-        op: str,
-):
-    return f"{timestamp}::{op}::[Your date]"
-
-def format_date_for_request(
-        ctx,
-        param,
-        value,
-        ts: str,
-        op: str,
-):
-    if value is None:
-        return None
-    to_datetime_ymd_or_ymd_hms(
-        value,
-    ) # raise error when invalid value
-
-    return f"{ts}::{op}::{value}"
-
-def make_list_configuration(
-        configuration_file: str | None = None,
-        columns=None,
-        distances_from=None,
-        keywords=None,
-        metadata=None,
-        time_stamps=None,
-        order_by=None,
-        exist_since_after=None,
-        exist_since_before=None,
-        lastly_seen_after=None,
-        lastly_seen_before=None,
-) -> dict:
-    if configuration_file:
-        try:
-            with open(configuration_file, "r") as f:
-                config = json.load(
-                    f,
-                )
-        except Exception as e:
-            JobScrapperSkeleton.logger.error(
-                "Unable to load configuration file ('%s').\n%s",
-                configuration_file,
-                e
-            )
-            raise
-    else:
-        config = {}
-
-
-    new_values = {
-        "columns": columns,
-        "distances_from": distances_from,
-        "keywords": keywords,
-        "time_stamps": time_stamps,
-        "metadata": metadata,
-        "order_by": order_by,
-        "exist_since_after": exist_since_after,
-        "exist_since_before": exist_since_before,
-        "lastly_seen_after": lastly_seen_after,
-        "lastly_seen_before": lastly_seen_before,
-    }
-
-    for k, value in new_values.items():
-        if not value:
-            continue
-
-        if k not in config or not config[k]:
-            config[k] = value
-            continue
-
-        if isinstance(config[k], list) and isinstance(value, (list, tuple, set)):
-            config[k] = list(set(config[k]).union(value))
-
-    JobScrapperSkeleton.logger.debug("Configuration : %s", config)
-    return config
-
-def flat_configuration(
-        time_stamps = None,
-        exist_since_after = None,
-        exist_since_before = None,
-        lastly_seen_after = None,
-        lastly_seen_before = None,
-        **kwargs
-):
-    kwargs["time_stamps"] = merge_timestamps(
-        time_stamps=time_stamps,
-        exist_since_after=exist_since_after,
-        exist_since_before=exist_since_before,
-        lastly_seen_after=lastly_seen_after,
-        lastly_seen_before=lastly_seen_before,
-    )
-    return kwargs
-
-def export_configuration_file(config: dict, configuration_file: str):
-    try:
-        with open(configuration_file, "w") as f:
-            json.dump(
-                config,
-                f,
-                indent=2,
-                ensure_ascii=False,
-            )
-    except Exception as e:
-        JobScrapperSkeleton.logger.error(
-            "Unable to export configuration file ('%s').\n%s",
-            configuration_file,
-            e
-        )
-        raise
-
-@cloup.group()
-def offers():
-    pass
-
-
 COLUMN_OPT = cloup.option(
     "-c",
     "--columns",
@@ -261,6 +144,127 @@ EXPORT_CONFIGURATION_OPT = cloup.option(
     ),
     help="Export configuration inside a file.",
 )
+
+@cloup.group()
+def offers():
+    pass
+
+
+def format_date(
+        timestamp: str,
+        op: str,
+):
+    return f"{timestamp}::{op}::[Your date]"
+
+def format_date_for_request(
+        ctx,
+        param,
+        value,
+        ts: str,
+        op: str,
+):
+    if value is None:
+        return None
+    to_datetime_ymd_or_ymd_hms(
+        value,
+    ) # raise error when invalid value
+
+    return f"{ts}::{op}::{value}"
+
+def make_list_configuration(
+        configuration_file: str | None = None,
+        columns=None,
+        distances_from=None,
+        keywords=None,
+        metadata=None,
+        time_stamps=None,
+        order_by=None,
+        exist_since_after=None,
+        exist_since_before=None,
+        lastly_seen_after=None,
+        lastly_seen_before=None,
+) -> dict:
+    if configuration_file:
+        try:
+            with open(configuration_file, "r") as f:
+                config = json.load(
+                    f,
+                )
+        except Exception as e:
+            JobScrapperSkeleton.logger.error(
+                "Unable to load configuration file ('%s').\n%s",
+                configuration_file,
+                e
+            )
+            raise
+    else:
+        config = {}
+
+
+    new_values = {
+        "columns": columns,
+        "distances_from": distances_from,
+        "keywords": keywords,
+        "time_stamps": time_stamps,
+        "metadata": metadata,
+        "order_by": order_by,
+        "exist_since_after": exist_since_after,
+        "exist_since_before": exist_since_before,
+        "lastly_seen_after": lastly_seen_after,
+        "lastly_seen_before": lastly_seen_before,
+    }
+
+    for k, value in new_values.items():
+        if not value:
+            continue
+
+        if k not in config or not config[k]:
+            config[k] = value
+            continue
+
+        if isinstance(config[k], list) and isinstance(value, (list, tuple, set)):
+            config[k] = list(set(config[k]).union(value))
+
+    JobScrapperSkeleton.logger.debug("Configuration : %s", config)
+    return config
+
+def flat_configuration(
+        time_stamps = None,
+        exist_since_after = None,
+        exist_since_before = None,
+        lastly_seen_after = None,
+        lastly_seen_before = None,
+        **kwargs
+):
+    kwargs["time_stamps"] = merge_timestamps(
+        time_stamps=time_stamps,
+        exist_since_after=exist_since_after,
+        exist_since_before=exist_since_before,
+        lastly_seen_after=lastly_seen_after,
+        lastly_seen_before=lastly_seen_before,
+    )
+    return kwargs
+
+def export_configuration_file(config: dict, configuration_file: str):
+    try:
+        with open(configuration_file, "w") as f:
+            json.dump(
+                config,
+                f,
+                indent=2,
+                ensure_ascii=False,
+            )
+    except Exception as e:
+        JobScrapperSkeleton.logger.error(
+            "Unable to export configuration file ('%s').\n%s",
+            configuration_file,
+            e
+        )
+        raise
+
+
+
+
 def merge_timestamps(
         time_stamps=None,
         exist_since_after=None,

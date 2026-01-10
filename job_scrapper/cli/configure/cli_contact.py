@@ -14,6 +14,13 @@ CONTACT_OPTION = cloup.option(
     help=HELP,
 )
 
+@cloup.command()
+@cloup.pass_context
+def configure_contact(ctx):
+    """Runs the contact information configuration tool."""
+    print()
+    ask_contact(ctx.obj["workdir"], can_load=False)
+
 def ask_contact(workdir: str, can_load: bool =True):
     contact_file = os.path.abspath(os.path.join(workdir, "contact.txt"))
     if can_load and os.path.exists(contact_file):
@@ -52,12 +59,7 @@ def ask_contact(workdir: str, can_load: bool =True):
         print()
     return email
 
-@cloup.command()
-@cloup.pass_context
-def configure_contact(ctx):
-    """Runs the contact information configuration tool."""
-    print()
-    ask_contact(ctx.obj["workdir"], can_load=False)
+
 
 if __name__ == "__main__":
     print("\n\nRESULT : ", ask_contact("./"))

@@ -1,19 +1,13 @@
-from job_scrapper.cli.scrapper_cli import scrap
-# from sql.cli.enumerate_cli import enumerate
-from job_scrapper.cli.ask_contact import configure_contact
-from job_scrapper.cli.cli_base import cli
-from job_scrapper.sql.cli.keyword_cli import manage_keywords
-from job_scrapper.sql.cli.request_offer_job_cli import request, request_format_help
-from job_scrapper.sql.cli.localisation_cli import geolocalisation
-from job_scrapper.cli.cli_configure import configure
-from job_scrapper.cli.offers_cli import offers
+from job_scrapper.cli.standalones.scrapper_cli import scrap
 
-###################################
-#           configure             #
-###################################
-configure.add_command(geolocalisation, name="geolocalisation")
-configure.add_command(manage_keywords, name="keywords")
-configure.add_command(configure_contact, name="contact")
+from job_scrapper.cli.cli_base import cli
+
+from job_scrapper.cli.standalones.request_offer_job_cli import request, request_format_help
+
+from job_scrapper.cli.configure.cli_groupe_configure import configure
+from job_scrapper.cli.offers.offers_cli import offers
+
+
 
 ###################################
 #              offers             #

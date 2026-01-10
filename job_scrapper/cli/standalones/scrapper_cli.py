@@ -1,6 +1,6 @@
 import click
 import cloup
-from job_scrapper.cli.ask_contact import CONTACT_OPTION, ask_contact
+from job_scrapper.cli.configure.cli_contact import CONTACT_OPTION, ask_contact
 from job_scrapper import SCRAPER_REGISTRY, JobScrapperSkeleton
 
 @cloup.command()

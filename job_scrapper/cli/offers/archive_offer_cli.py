@@ -1,6 +1,5 @@
-import click
 import cloup
-from job_scrapper.cli.offers_cli import (
+from job_scrapper.cli.offers.offers_cli import (
     COLUMN_OPT,
     DISTANCE_OPT,
     KEYWORD_OPT,
@@ -13,7 +12,6 @@ from job_scrapper.cli.offers_cli import (
     LASTLY_SEEN_BEFORE_OPT,
     CONFIGURATION_FILE_OPT,
     make_list_configuration,
-    flat_configuration,
 )
 from job_scrapper import JobScrapperSkeleton
 
