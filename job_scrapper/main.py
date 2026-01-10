@@ -20,8 +20,6 @@ def main():
             ctx_obj["logger"].logger.debug(
                 output
             )
-
-        click.echo(output)
         raise SystemExit(e.exit_code)
 
     except Exception as e:
