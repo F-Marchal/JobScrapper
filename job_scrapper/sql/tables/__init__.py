@@ -8,3 +8,4 @@ from job_scrapper.sql.tables.keywords.keyword_regex import KeywordRegex
 
 from .base_table import BaseTable
 from .jobs import Jobs
+from .archived import ArchivedJobs

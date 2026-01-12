@@ -505,25 +505,34 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         for job_entry in request:
             cls.logger.debug(f"Loading {job_entry.url}...")
-            job_object = cls(
-                url=job_entry.url,
-                session=session,
 
-                load_job_entry=True,
-                load_keywords=True,
-                load_distances=True,
-                load_metadata=True,
-                load_time_stamps=True,
+            yield cls.load_from_db(url=job_entry.url, session=session, use_db_init_time_stamp=use_db_init_time_stamp)
 
-                overwrite_job_entry=True,
-                overwrite_keywords=True,
-                overwrite_distances=True,
-                overwrite_metadata=True,
-                overwrite_time_stamps=True,
+    @classmethod
+    def load_from_db(
+            cls,
+            url: str,
+            session: Session,
+            use_db_init_time_stamp: bool = True,
+    ):
+        return cls(
+            url=url,
+            force_session=session,
 
-                use_db_init_time_stamp=use_db_init_time_stamp,
-            )
-            yield job_object
+            load_job_entry=True,
+            load_keywords=True,
+            load_distances=True,
+            load_metadata=True,
+            load_time_stamps=True,
+
+            overwrite_job_entry=True,
+            overwrite_keywords=True,
+            overwrite_distances=True,
+            overwrite_metadata=True,
+            overwrite_time_stamps=True,
+
+            use_db_init_time_stamp=use_db_init_time_stamp,
+        )
 
 
     def load_job_entry_from_db(self, session: Session, overwrite: set[str] | bool = False):
@@ -575,7 +584,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             use_db_init_time_stamp: bool = False,
     ):
         # If self.time_stamps_exist then we might overwrite it. Can we ?
-        if (overwrite is False or time_stamp_entry.label not in overwrite) and self.time_stamps_exist(time_stamp_entry.label):
+        if (overwrite is False or (isinstance(overwrite, set) and time_stamp_entry.label not in overwrite)) and self.time_stamps_exist(time_stamp_entry.label):
             return
 
         if self.init_time_stamp_name == time_stamp_entry.label and not use_db_init_time_stamp:
@@ -592,7 +601,10 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             self.load_keyword_entry(keywords_entry, overwrite)
 
     def load_keyword_entry(self, keywords_entry: Keywords, overwrite: set[str] | bool = False,):
-        if (overwrite is False or keywords_entry.keyword not in overwrite)  and self.keyword_exist(keywords_entry.keyword):
+        if (
+                (overwrite is False or (isinstance(overwrite, set) and keywords_entry.keyword not in overwrite))
+                and self.keyword_exist(keywords_entry.keyword)
+        ):
             return
 
         occurrence = keywords_entry.occurrence
@@ -609,7 +621,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     def load_distance_entry(self, distances_entry: Distances, overwrite: set[str] | bool = False,):
         label = distances_entry.reference_localisation
-        if (overwrite is False or not label in overwrite) and self.distance_to_exist(label):
+        if (overwrite is False or (isinstance(overwrite, set) and not label in overwrite)) and self.distance_to_exist(label):
             return
 
         distance = distances_entry.distance
@@ -624,7 +636,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             self.load_metadata_entry(metadata_entry, overwrite)
 
     def load_metadata_entry(self, metadata_entry: Metadata, overwrite: set[str] | bool = False,):
-        if (overwrite is False or metadata_entry.key not in overwrite) and self.metadata_exist(metadata_entry.key):
+        if (overwrite is False or (isinstance(overwrite, set) and metadata_entry.key not in overwrite)) and self.metadata_exist(metadata_entry.key):
             return
         self.add_metadata(metadata_entry.key, metadata_entry.value)
 
@@ -633,6 +645,20 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         # This expects that Jobs have delete cascade on
         # TimeStamps, keywords, metadata ...
         session.delete(self.to_job_entry())
+
+
+    def archive(
+        self,
+        initial_session: Session,
+        target_session: Session,
+
+
+    ):
+       self.to_job_entry().archive(
+            initial_database=initial_session,
+            target_database=target_session,
+        )
+
 
     # --- --- Remove from db --- ---
     # --- --- Utils --- ---
