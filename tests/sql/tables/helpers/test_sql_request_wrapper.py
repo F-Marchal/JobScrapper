@@ -1,10 +1,10 @@
 import pytest
 from sqlalchemy import Column, Integer, String
 
-from sql.tables.base_table import BaseTable
-from sql.tables.helpers.sql_request_wrapper import SQLRequestWrapper
+from job_scrapper.sql.tables.base_table import BaseTable
+from job_scrapper.sql.tables.helpers import SQLRequestWrapper
 from tests.conftest import BaseTest
-from tools.logger_core import CoreLogger
+from job_scrapper.tools.logger_core import CoreLogger
 
 
 @pytest.mark.sqlalchemy_wrappers

@@ -1,5 +1,5 @@
 from tests.conftest import BaseTest
-from sql.tables.places.places import Places, Jobs
+from job_scrapper.sql.tables.places.places import Places, Jobs
 import pytest
 import sqlalchemy.exc as exc
 

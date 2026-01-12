@@ -7,8 +7,8 @@ import typing
 from inspect import getfile
 
 import pytest
-from tools.variable_tracker import VariableTracker
-from tools.logger_core import CoreLogger
+from job_scrapper.tools import VariableTracker
+from job_scrapper.tools.logger_core import CoreLogger
 
 def pytest_addoption(parser):
     """Add --keep-test-dir option to keep  test folder even when they succeed"""

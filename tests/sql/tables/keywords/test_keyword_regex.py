@@ -2,8 +2,8 @@ import os.path
 
 import pytest
 
-from sql.tables.keywords.keyword_version import KeywordVersion
-from sql.tables.keywords.keyword_regex import KeywordRegex
+from job_scrapper.sql.tables.keywords.keyword_version import KeywordVersion
+from job_scrapper.sql.tables.keywords.keyword_regex import KeywordRegex
 from tests.conftest import BaseTest
 from sqlalchemy.exc import IntegrityError
 

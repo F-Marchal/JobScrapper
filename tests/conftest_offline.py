@@ -1,6 +1,5 @@
 from tests.conftest import BaseTest
 import pytest
-from tools.geolocalisation import Geolocalisation
 import socket
 
 @pytest.mark.offline_simulation

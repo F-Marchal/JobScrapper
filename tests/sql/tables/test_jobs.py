@@ -1,7 +1,7 @@
 import pytest
 
-from sql.tables.jobs import Jobs
-from sql.tables.places.places import Places
+from job_scrapper.sql import Jobs
+from job_scrapper.sql.tables.places.places import Places
 from tests.conftest import BaseTest
 
 

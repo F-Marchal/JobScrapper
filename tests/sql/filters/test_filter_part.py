@@ -4,13 +4,13 @@ import pytest
 from sqlalchemy import case, func
 from sqlalchemy.sql import operators as ope
 
-from sql.filters.filter_part import (
+from job_scrapper.sql.filters.filter_part import (
     STRING_TO_COMPARISON_WRAPPERS,
     STRING_TO_LOGICAL_WRAPPERS,
     FilterPart,
 )
-from sql.tables.jobs import Jobs
-from sql.tables.places.distances import Distances
+from job_scrapper.sql import Jobs
+from job_scrapper.sql.tables.places.distances import Distances
 from tests.conftest import BaseTest
 
 

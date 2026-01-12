@@ -3,7 +3,7 @@ import datetime
 import pytest
 
 from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
-from sql.tables.helpers.job_request import JobRequest, Jobs, Places
+from job_scrapper.sql.tables.helpers.job_request import JobRequest, Jobs, Places
 from tests.conftest import BaseTest
 
 TSS = ScrapperSQLightCore.time_stamp_suffix

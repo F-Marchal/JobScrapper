@@ -1,5 +1,5 @@
 from tests.conftest_offline import OfflineTestClass
-from tools.geolocalisation import Geolocalisation, Places
+from job_scrapper.tools import Geolocalisation, Places
 
 from .base_test_geolocalisation import BaseGeoTest
 

@@ -1,7 +1,7 @@
 import os
 
 from tests.conftest_mandatory_identifier import MandatoryIdentifierTestClass
-from tools.geolocalisation import Distances, Geolocalisation, Places
+from job_scrapper.tools import Distances, Geolocalisation, Places
 
 
 class BaseGeoTest(MandatoryIdentifierTestClass):

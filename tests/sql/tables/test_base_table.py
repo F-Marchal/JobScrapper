@@ -4,9 +4,9 @@ from datetime import datetime
 import pytest
 from sqlalchemy import Column, DateTime, Float, Integer, String
 
-from sql.tables import BaseTable
+from job_scrapper.sql import BaseTable
 from tests.conftest import BaseTest
-from tools.logger_core import CoreLogger
+from job_scrapper.tools.logger_core import CoreLogger
 
 NOW = datetime.now()
 
