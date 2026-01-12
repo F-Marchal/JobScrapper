@@ -3,10 +3,9 @@ from typing import Any, Type
 
 import pytest
 
-from sql.tables.job_extensions.job_extra_base import JobExtraBase
-from sql.tables.places.places import Places
-from sql.tables.jobs import Jobs
-from sql.tables.places.places import Places
+from job_scrapper.sql.tables.job_extensions.job_extra_base import JobExtraBase
+from job_scrapper.sql import Jobs
+from job_scrapper.sql.tables.places.places import Places
 from tests.conftest import BaseTest
 
 

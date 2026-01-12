@@ -1,19 +1,13 @@
-import time
-
-from bs4 import BeautifulSoup
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import StaleElementReferenceException
-import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 
 from bs4 import BeautifulSoup
 from typing import Iterator, Self
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-from web_processing.block_extractor import WebBlockExtractor
-from web_processing.enhanced_chrome_browser import ButtonFinder, EnhancedChrome
+from job_scrapper.web_processing.enhanced_chrome_browser import EnhancedChrome
 
 class SanofiScrapper(srk.JobScrapperSkeleton):
     """

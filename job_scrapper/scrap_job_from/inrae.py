@@ -1,15 +1,10 @@
 import re
 
 from bs4 import BeautifulSoup
-
-import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-
-from bs4 import BeautifulSoup
 from typing import Iterator, Self
 
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
-from web_processing.block_extractor import WebBlockExtractor
-from web_processing.enhanced_chrome_browser import ButtonFinder, EnhancedChrome
+
 
 class INRAEScrapper(srk.JobScrapperSkeleton):
     """

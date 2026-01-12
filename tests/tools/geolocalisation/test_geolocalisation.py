@@ -1,6 +1,4 @@
-import pytest
-
-from tools.geolocalisation import Geolocalisation, Places
+from job_scrapper.tools import Geolocalisation, Places
 
 from .base_test_geolocalisation import BaseGeoTest
 import pytest

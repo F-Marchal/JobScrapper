@@ -4,12 +4,12 @@ from bs4 import BeautifulSoup
 from selenium.webdriver.remote.webelement import WebElement
 
 from selenium.webdriver.support.ui import Select
-from web_processing.enhanced_chrome_browser import EnhancedChrome
+from job_scrapper.web_processing.enhanced_chrome_browser import EnhancedChrome
 import job_scrapper.scrapper_skeleton.scrapper_skeleton as srk
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
 
-class CNRScrapper(srk.JobScrapperSkeleton):
+class CNRSScrapper(srk.JobScrapperSkeleton):
     """
     Use JobScrapperSkeleton to extract jobs offers from CNR's website
     """
@@ -143,7 +143,7 @@ class CNRScrapper(srk.JobScrapperSkeleton):
 if __name__ == "__main__":
     import sys
 
-    main_class = CNRScrapper
+    main_class = CNRSScrapper
     if len(sys.argv) < 2:
         raise IndexError(
             "This script expect one argument : Contact information.\n\n"

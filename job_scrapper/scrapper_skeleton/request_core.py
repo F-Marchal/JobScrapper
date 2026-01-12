@@ -7,16 +7,16 @@ from geopy.distance import geodesic  # type: ignore[import-untyped]
 from geopy.exc import GeocoderServiceError  # type: ignore[import-untyped]
 from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
 
-from web_processing.enhanced_chrome_browser import EnhancedChrome
+from job_scrapper.web_processing.enhanced_chrome_browser import EnhancedChrome
 from enum import Enum
 
 from urllib.parse import urlparse
 
 from .sql_core import ScrapperSQLightCore, KeywordManager
-from web_processing.block_extractor import WebBlockExtractor
-from tools.turn_file_to_text import FileToText
-from web_processing.export_browser_file import ExportBrowserPage
-from tools.geolocalisation import Geolocalisation, Session, Places
+from job_scrapper.web_processing.block_extractor import WebBlockExtractor
+from job_scrapper.tools.turn_file_to_text import FileToText
+from job_scrapper.web_processing.export_browser_file import ExportBrowserPage
+from job_scrapper.tools.geolocalisation import Geolocalisation, Session, Places
 from bs4 import BeautifulSoup
 
 class ScrapperRequestCore(ScrapperSQLightCore):
@@ -78,10 +78,10 @@ class ScrapperRequestCore(ScrapperSQLightCore):
         return cls._geolocator
 
     @classmethod
-    def get_page_exporter(cls, save_type: SaveTypes = SaveTypes.MHTML) -> ExportBrowserPage:
+    def get_page_exporter(cls, save_type: SaveTypes = SaveTypes.MHTML, compress: bool = False) -> ExportBrowserPage:
         return ExportBrowserPage(
             save_type=save_type,
-            compress=False,
+            compress=compress,
             logger=cls.logger
         )
 
@@ -240,6 +240,15 @@ class ScrapperRequestCore(ScrapperSQLightCore):
 
         # Apply result_dict
         for keyword, count in result_dict.items():
+            if len(keywords_to_search.regexes(keyword)) == 0:
+                # This keyword is known to have 0 regex
+                # attached. The result will always be 0.
+                # This situation should be considered
+                # as 'This keyword existed in the past
+                # but has been discarded'. If the keyword
+                # is still in the database it is for
+                # traceability reasons.
+                continue
             self.add_keyword_count(keyword, count)
 
     def search_in_html_offer(
@@ -393,6 +402,7 @@ class ScrapperRequestCore(ScrapperSQLightCore):
                         - button_id: str,
 
         """
+
         raise NotImplementedError
 
     @classmethod

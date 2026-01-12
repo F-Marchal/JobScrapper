@@ -3,9 +3,9 @@ from sqlalchemy import and_
 from sqlalchemy.sql import operators as ope
 from sqlalchemy.sql.elements import ClauseElement
 
-from sql.filters.filter_generator import FilterGenerator
-from sql.filters.filter_part import FilterPart
-from sql.tables.jobs import Jobs
+from job_scrapper.sql.filters.filter_generator import FilterGenerator
+from job_scrapper.sql.filters.filter_part import FilterPart
+from job_scrapper.sql import Jobs
 from tests.conftest import BaseTest
 
 #####################################

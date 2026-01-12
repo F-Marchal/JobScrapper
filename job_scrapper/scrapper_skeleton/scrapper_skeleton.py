@@ -6,13 +6,30 @@ from typing import Self, Iterator
 
 import re
 from .request_core import ScrapperRequestCore, KeywordManager, ExportBrowserPage, BeautifulSoup
-from sql.tables.keywords.keyword_version import KeywordVersion, Session
+from job_scrapper.sql.tables.keywords.keyword_version import KeywordVersion
 import time
 from datetime import datetime, timedelta
 from selenium.common.exceptions import WebDriverException
 from urllib.error import URLError, HTTPError
+from typing import Type
 
 class JobScrapperSkeleton(ScrapperRequestCore):
+    SCRAPER_REGISTRY: dict[str, Type['JobScrapperSkeleton']] = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+
+        # Ignore JobScrapperSkeleton
+        if cls is JobScrapperSkeleton:
+            return
+
+        name = cls.get_standardised_class_name()
+
+        # if name in JobScrapperSkeleton.SCRAPER_REGISTRY:
+        #     raise ValueError(f"Duplicate scraper_name '{name}'")
+
+        JobScrapperSkeleton.SCRAPER_REGISTRY[name] = cls
+
     @classmethod
     def run(
             cls,
@@ -582,3 +599,4 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         return ["FR", "UM", None] --> Search in France then United States then  all around the world
         """
         raise NotImplementedError
+

@@ -1,6 +1,6 @@
 import pytest
 
-from sql.tables.job_extensions.metadata import Metadata
+from job_scrapper.sql.tables.job_extensions.metadata import Metadata
 
 from .abstract_job_extra_base import TestJobExtraBase
 

@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 
-from sql.tables.job_extensions.time_stamps import TimeStamps
+from job_scrapper.sql.tables.job_extensions.time_stamps import TimeStamps
 
 from .abstract_job_extra_base import TestJobExtraBase
 
