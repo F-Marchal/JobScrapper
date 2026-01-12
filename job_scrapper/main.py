@@ -30,9 +30,9 @@ def main():
         else:
             msg = ""
         ctx_obj["logger"].logger.critical(
-            "An unexpected error occurred during execution.%s See Above traceback for more details.\n'%s'",
+            "An unexpected error occurred during execution.%s See Above traceback for more details.\n%s : \t%s",
             msg,
-            e,
+            e.__class__.__name__, e,
 
         )
         raise SystemExit(1)

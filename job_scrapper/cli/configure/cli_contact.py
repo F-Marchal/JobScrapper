@@ -6,7 +6,6 @@ HELP = (
         "geopy and might be written inside (local) log file / terminal."
     )
 CONTACT_OPTION = cloup.option(
-    "-c",
     "--contact",
     # required=True,
     type=str,
