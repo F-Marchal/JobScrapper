@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 from geopy.location import Location  # type: ignore[import-untyped]
 
-from job_scrapper.tools import Places
+from job_scrapper.tools.geolocalisation import Places
 
 from .base_test_geolocalisation import BaseGeoTest
 

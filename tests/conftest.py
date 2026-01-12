@@ -7,7 +7,7 @@ import typing
 from inspect import getfile
 
 import pytest
-from job_scrapper.tools import VariableTracker
+from job_scrapper.tools.variable_tracker import VariableTracker
 from job_scrapper.tools.logger_core import CoreLogger
 
 def pytest_addoption(parser):
