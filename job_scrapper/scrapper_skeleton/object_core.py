@@ -5,7 +5,7 @@ from typing import Sequence
 from job_scrapper.tools.logger_core import CoreLogger
 import unicodedata
 import re
-from job_scrapper.tools import get_unique_path
+from job_scrapper.tools.get_unique_path import get_unique_path
 
 # pylint: disable=R0902
 # This is the amount of  instance attributes that I need
