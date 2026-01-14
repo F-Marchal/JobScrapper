@@ -1,3 +1,4 @@
+import re
 from logging import Logger
 
 from geopy.distance import geodesic  # type: ignore[import-untyped]
@@ -6,15 +7,21 @@ from geopy.extra.rate_limiter import RateLimiter  # type: ignore[import-untyped]
 from geopy.geocoders import Nominatim  # type: ignore[import-untyped]
 from geopy.location import Location  # type: ignore[import-untyped]
 from sqlalchemy.orm import Session
+from unidecode import unidecode
 
 from job_scrapper.sql.tables.places.distances import Distances
 from job_scrapper.sql.tables.places.places import Places
-import re
-from unidecode import unidecode
 
-class Geolocalisation:
+from .secondary_logger_user import SecondaryLoggerUser
+
+
+class Geolocalisation(SecondaryLoggerUser):
     """Simple too class that wrap some geopy methods and adapt
-    them to JobScrapper."""
+    them to JobScrapper.
+
+    This class also uses Places / Distances entries in the
+    database in order to limit geppy / Nominatim calls.
+    """
 
     def __init__(
         self,
@@ -34,6 +41,7 @@ class Geolocalisation:
             "error_wait_seconds" : 30,
             "swallow_exceptions" : True,
         """
+        super().__init__(logger=logger)
         rl_kw = {
             "min_delay_seconds": 3,
             "max_retries": 3,
@@ -42,7 +50,6 @@ class Geolocalisation:
         }
         rl_kw.update(rate_limiter_kw)
 
-        self.logger: Logger | None = logger
         self._geolocator: Nominatim = Nominatim(
             user_agent=contact,
             timeout=timeout,
@@ -104,7 +111,9 @@ class Geolocalisation:
         """Run the RateLimiter and returns the result"""
         return self._rate_limiter(place, *args, **kwargs)
 
-    def request(self, place: str, *args, **kwargs) -> tuple[float | None, float | None]:
+    def request(
+        self, place: str, *args, **kwargs
+    ) -> tuple[float | None, float | None]:
         """
         Request the coordinate of a place.
         :param place: The name of a place
@@ -113,36 +122,36 @@ class Geolocalisation:
         norm_place = self.clean_place_name(place)
         try:
             # Try to run call geopy and to return the result.
-            if self.logger:
-                self.logger.info(
-                    "Searching coordinates of '%s' (normalised as '%s') using '%s' ('%s') with"
-                    "\nargs=%s"
-                    "\nkwargs=%s",
-                    place,
-                    norm_place,
-                    self._geolocator,
-                    self._contact,
-                    args,
-                    kwargs
-                )
-            localisation: Location | None = self._request(norm_place, *args, **kwargs)
+            self.logger.info(
+                "Searching coordinates of '%s' (normalised as '%s') using '%s' ('%s') with"
+                "\nargs=%s"
+                "\nkwargs=%s",
+                place,
+                norm_place,
+                self._geolocator,
+                self._contact,
+                args,
+                kwargs,
+            )
+            localisation: Location | None = self._request(
+                norm_place, *args, **kwargs
+            )
             if localisation is None:
                 return None, None
             return float(localisation.latitude), float(localisation.longitude)
 
         except GeopyError as err:
             # If it fails, logs the error
-            if self.logger:
-                self.logger.error(
-                    "An error occurred during geolocalisation of '%s'."
-                    "\nrate_limiter=%s"
-                    "\ngeolocator=%s"
-                    "\nError : %s",
-                    place,
-                    self._rate_limiter,
-                    self._geolocator,
-                    err,
-                )
+            self.logger.error(
+                "An error occurred during geolocalisation of '%s'."
+                "\nrate_limiter=%s"
+                "\ngeolocator=%s"
+                "\nError : %s",
+                place,
+                self._rate_limiter,
+                self._geolocator,
+                err,
+            )
         return None, None
 
     # pylint: disable=R0913,R0917
@@ -208,7 +217,10 @@ class Geolocalisation:
 
     @classmethod
     def _compute_distance_valid_couple(
-        cls, ref_entry: Places, sec_entry: Places, logger: Logger | None = None,
+        cls,
+        ref_entry: Places,
+        sec_entry: Places,
+        logger: Logger | None = None,
     ) -> bool:
         """
         Test if ref_entry and sec_entry can be used to compute
@@ -292,10 +304,7 @@ class Geolocalisation:
 
         return existing
 
-    ABBREVIATIONS = {
-        r"\bst\b": "saint",
-        r"\bste\b": "sainte"
-    }
+    ABBREVIATIONS = {r"\bst\b": "saint", r"\bste\b": "sainte"}
 
     @classmethod
     def expand_abbreviations(cls, text: str) -> str:
@@ -304,14 +313,16 @@ class Geolocalisation:
         return text
 
     @classmethod
-    def remove_cedex(cls, text): # AI Generated
+    def remove_cedex(cls, text):  # AI Generated
         return re.sub(r"\bcedex\b(\s*\d+)?", "", text).strip()
 
     @classmethod
     def format_arrondissement(cls, text: str) -> str:  # AI Generated
         text = text.strip()
         # Only Paris / Lyon / have arrondissement
-        match = re.match(r"^(paris|lyon|marseille)\s*(\d{1,2})$", text, re.IGNORECASE)
+        match = re.match(
+            r"^(paris|lyon|marseille)\s*(\d{1,2})$", text, re.IGNORECASE
+        )
 
         if match:
             city = match.group(1).capitalize()
@@ -329,7 +340,6 @@ class Geolocalisation:
         # Remove parenthesis en everything within
         text = re.sub(r"\([^)]*\)", " ", text)
 
-
         # Remove ", ' . / : ; ! ? ..."
         text = re.sub(r"[^\w\s-]", " ", text)
 
@@ -345,6 +355,5 @@ class Geolocalisation:
         text = cls.remove_cedex(text)
         text = cls.format_arrondissement(text)
         return text
-
 
     #  --- --- Tools --- ---
