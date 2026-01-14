@@ -10,7 +10,6 @@ from .scrap_job_from.inserm import InsermScrapper
 from .scrap_job_from.ird import IRDScrapper
 from .scrap_job_from.sanofi import SanofiScrapper
 from .scrap_job_from.sfbi import SFBIScrapper
-from .scrapper_skeleton.legacy_pdf_jobs import PdfJobBaseScrapper
 from .scrapper_skeleton.scrapper_skeleton import JobScrapperSkeleton
 
 SCRAPER_REGISTRY = {k.replace("Scrapper", ""): v for k, v in JobScrapperSkeleton.SCRAPER_REGISTRY.items()}
