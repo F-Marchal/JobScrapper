@@ -6,7 +6,7 @@ from typing import Any, Callable
 import pytest
 from sqlalchemy import Column, and_, select
 
-from job_scrapper.sql import (
+from job_scrapper.sql.wrappers.wrapper_comparison import (
     COMPARISON_WRAPPERS,
     STRING_TO_COMPARISON_WRAPPERS,
     ComparisonWrapper,

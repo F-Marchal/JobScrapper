@@ -3,7 +3,7 @@ import pytest
 from job_scrapper.sql.tables.job_extensions.keywords import Keywords
 from job_scrapper.sql.tables.keywords.keyword_version import KeywordVersion
 from .abstract_job_extra_base import TestJobExtraBase
-from job_scrapper.sql import Jobs
+from job_scrapper.sql.tables import Jobs
 from job_scrapper.sql.tables.places.places import Places
 
 @pytest.mark.js_tables

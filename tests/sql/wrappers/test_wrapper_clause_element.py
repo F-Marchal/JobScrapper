@@ -1,6 +1,6 @@
 from sqlalchemy import and_
 import pytest
-from job_scrapper.sql import (
+from job_scrapper.sql.wrappers.wrapper_comparison import (
     ClauseElementWrapper,
 )
 from tests.conftest import BaseTest

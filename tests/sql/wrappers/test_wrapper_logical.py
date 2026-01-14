@@ -2,7 +2,7 @@ from typing import Any, Callable
 
 import pytest
 
-from job_scrapper.sql import (
+from job_scrapper.sql.wrappers.wrapper_logical import (
     LOGICAL_WRAPPERS,
     STRING_TO_LOGICAL_WRAPPERS,
     LogicalWrapper,

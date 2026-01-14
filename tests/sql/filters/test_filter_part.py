@@ -9,7 +9,7 @@ from job_scrapper.sql.filters.filter_part import (
     STRING_TO_LOGICAL_WRAPPERS,
     FilterPart,
 )
-from job_scrapper.sql import Jobs
+from job_scrapper.sql.tables import Jobs
 from job_scrapper.sql.tables.places.distances import Distances
 from tests.conftest import BaseTest
 

@@ -1,7 +1,7 @@
 import os
 
 from tests.conftest import BaseTest
-from job_scrapper.sql.tables.helpers import KeywordManager, KeywordVersion, KeywordRegex
+from job_scrapper.sql.tables.helpers.keyword_manager import KeywordManager, KeywordVersion, KeywordRegex
 
 class TestKeywordManager(BaseTest):
     def test_get_keywords_in_database(self):

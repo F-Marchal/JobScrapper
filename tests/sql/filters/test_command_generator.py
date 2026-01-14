@@ -5,7 +5,7 @@ from sqlalchemy.sql.elements import ClauseElement
 
 from job_scrapper.sql.filters.filter_generator import FilterGenerator
 from job_scrapper.sql.filters.filter_part import FilterPart
-from job_scrapper.sql import Jobs
+from job_scrapper.sql.tables import Jobs
 from tests.conftest import BaseTest
 
 #####################################

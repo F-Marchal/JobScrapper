@@ -4,7 +4,7 @@ from typing import Any, Type
 import pytest
 
 from job_scrapper.sql.tables.job_extensions.job_extra_base import JobExtraBase
-from job_scrapper.sql import Jobs
+from job_scrapper.sql.tables import Jobs
 from job_scrapper.sql.tables.places.places import Places
 from tests.conftest import BaseTest
 

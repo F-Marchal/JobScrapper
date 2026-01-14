@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import Column, Integer, String
 
 from job_scrapper.sql.tables.base_table import BaseTable
-from job_scrapper.sql.tables.helpers import SQLRequestWrapper
+from job_scrapper.sql.tables.helpers.job_request import SQLRequestWrapper
 from tests.conftest import BaseTest
 from job_scrapper.tools.logger_core import CoreLogger
 
