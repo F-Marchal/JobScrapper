@@ -13,6 +13,9 @@ from selenium.common.exceptions import WebDriverException
 from urllib.error import URLError, HTTPError
 from typing import Type
 
+from ..sql.tables import ArchivedJobs
+
+
 class JobScrapperSkeleton(ScrapperRequestCore):
     SCRAPER_REGISTRY: dict[str, Type['JobScrapperSkeleton']] = {}
 
@@ -89,6 +92,7 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         inspection_failed = 0
         inspected = 0
         total = 0
+        in_archive = 0
 
         for i, offer in enumerate(cls.extract_offers_from_website()):
             if offer is None:
@@ -96,6 +100,27 @@ class JobScrapperSkeleton(ScrapperRequestCore):
                 offer_batch.append(None)
                 ignored += 1
                 continue
+
+            with cls.get_sql_session(workdir=workdir, database_name=database_name) as session:
+                archive = session.query(
+                    ArchivedJobs
+                ).where(
+                    ArchivedJobs.url == offer.url
+                ).first()
+
+                if archive is not None:
+                    cls.logger.info("Ignoring offer %s [%s (%s)]. This offer has been archived on %s",
+                                     i + 1, offer, offer.url, archive.when)
+                    total += 1
+                    in_archive += 1
+
+                    # Update archive entry.
+                    last_sight = offer.retrieve_time_stamps(name=offer.init_time_stamp_name)
+                    archive.last_sighting = datetime.strptime(
+                        offer.strftime(last_sight),
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                    continue
 
             cls.logger.debug("Processing offer %s : %s (%s)", i + 1, offer, offer.url)
 
@@ -168,10 +193,12 @@ class JobScrapperSkeleton(ScrapperRequestCore):
             "%s.run have succeed with %s offers found !\n"
             "- %s offer(s) inspected.\n"
             "- %s offer(s) have failed their(s) inspection.\n" 
+            "- %s offer(s) were contained inside the archive database.\n"
             "- %s listing entry ignored due to redundancy in said listing.",
             cls.get_standardised_class_name(), total,
             inspected,
             inspection_failed,
+            in_archive,
             ignored,
         )
 
