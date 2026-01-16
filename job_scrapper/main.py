@@ -22,6 +22,8 @@ def main():
             )
         raise SystemExit(e.exit_code)
 
+    except KeyboardInterrupt as e:
+        ctx_obj["logger"].logger.critical("Process interrupted by user : %s",  e.__class__.__name__)
     except Exception as e:
         # Display a less ugly error message
         ctx_obj["logger"].logger.critical(traceback.format_exc())
