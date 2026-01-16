@@ -51,7 +51,7 @@ URL_TIME_STAMPS = RequestValidator(
     name="URL_TIME_STAMPS",
     request_dict={
         "columns": ["url"],
-        "time_stamp": [
+        "time_stamps": [
             "Check time",
             f"Scraping time{TSS}",
         ],  # Test both with and without suffix

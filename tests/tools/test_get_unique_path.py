@@ -1,5 +1,5 @@
 from tests.conftest import BaseTest
-from job_scrapper.tools import get_unique_path
+from job_scrapper.tools.get_unique_path import get_unique_path
 import os
 
 class TestGetUniquePath(BaseTest):

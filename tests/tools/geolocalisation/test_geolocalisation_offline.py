@@ -13,7 +13,7 @@ class TestGeolocalisationOffline(BaseGeoTest, OfflineTestClass):
             contact=f"{self.user_agent}-Pytest-{type(self).__name__}",
             logger=self.icl.logger,
             timeout=15,
-            error_wait_seconds=2,
+            error_wait_seconds=16,
         )
         self.screen_var("geo", geo)
         return geo
