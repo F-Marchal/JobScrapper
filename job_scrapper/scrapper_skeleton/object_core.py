@@ -2,10 +2,10 @@ import os.path
 import time
 from typing import Sequence
 
-from tools.logger_core import CoreLogger
+from job_scrapper.tools.logger_core import CoreLogger
 import unicodedata
 import re
-from tools.get_unique_path import get_unique_path
+from job_scrapper.tools.get_unique_path import get_unique_path
 
 # pylint: disable=R0902
 # This is the amount of  instance attributes that I need
@@ -88,7 +88,7 @@ class ScrapperObjectCore(CoreLogger):
             self.strftime(
                 self._time_stamps[self.init_time_stamp_name]
             ),
-            self.get_class_name(),
+            self.get_standardised_class_name(),
             self.localisation,
             self.field,
             self.contract_type,
@@ -228,11 +228,12 @@ class ScrapperObjectCore(CoreLogger):
             yield line + "\n"
 
     @classmethod
-    def export_to_flat_file(
+    def batch_export_to_flat_file(
         cls,
         jobs: Sequence["ScrapperObjectCore"],
         file_path: str | None = None,
         sep: str = "\t",
+        mod: str = "w",
     ):
         """
         Export a list of job inside a jobfile by .
@@ -249,13 +250,14 @@ class ScrapperObjectCore(CoreLogger):
         :param str file_path: A file in which all will be written
         :param ScrapperObjectCore jobs: A list of ScrapperObjectCore
         :param str sep: Column delimiter. Do not use "|"
+        :param str mod: How to open file ('w' / 'a')
         """
         if file_path is None:
             file_path = os.path.join(cls.get_workdir(), "JobFiles.job")
 
         cls.logger.debug("Exporting %s jobs to %s", len(jobs), file_path)
 
-        with open(file_path, "w", encoding="utf-8") as f:
+        with open(file_path, mod, encoding="utf-8") as f:
             for lines in cls._list_to_flat_file(jobs, sep=sep):
                 f.write(lines)
 
@@ -311,7 +313,7 @@ class ScrapperObjectCore(CoreLogger):
                 print(job.flat(with_header=False))
 
     @classmethod
-    def get_class_name(cls) -> str:
+    def get_standardised_class_name(cls) -> str:
         """Returns cls.__name__"""
         return cls.__name__
 
@@ -340,7 +342,7 @@ class ScrapperObjectCore(CoreLogger):
     # --- --- --- --- Utils --- --- ---
     # --- --- --- --- Attributes managements --- --- --- ----
     @classmethod
-    def clean_string(cls, string: str | None, keep_suffix: bool=False) -> str | None:
+    def clean_string(cls, string: str | None, keep_suffix: bool=False) -> str:
         """
         Clean a string to make it safe to use as filename.
         - Transform \s cars to spaces

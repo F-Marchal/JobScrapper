@@ -7,8 +7,8 @@ import typing
 from inspect import getfile
 
 import pytest
-from tools.variable_tracker import VariableTracker
-from tools.logger_core import CoreLogger
+from job_scrapper.tools.variable_tracker import VariableTracker
+from job_scrapper.tools.logger_core import CoreLogger
 
 def pytest_addoption(parser):
     """Add --keep-test-dir option to keep  test folder even when they succeed"""
@@ -18,7 +18,11 @@ def pytest_addoption(parser):
         default=False,
         help="Keep test folder even when they succeed.",
     )
-
+    parser.addoption(
+        "--user-agent",
+        action="store",
+        help="User agent for geopy Nominatim"
+    )
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 # pylint: disable=W0613
@@ -86,7 +90,7 @@ class BaseTest:
 
         # ---- Generate logs ----
         self.tracker = VariableTracker(
-            os.path.join(self.test_folder, "tests.logs")
+            os.path.join(self.test_folder, "screening.log")
         )
 
         # ---- Yield access to test function ----
@@ -117,7 +121,7 @@ class BaseTest:
     # pylint: disable=W0201
     # I can not define this attributes in an __init__ !
     def redirect_logs_to_tempdir(self, _setup_tempdir):
-        self.test_logs =  f"{_setup_tempdir}/logs.log"
+        self.test_logs =  f"{_setup_tempdir}/logger.log"
         if not self.enable_icl:
             yield self.test_logs
             return
@@ -133,9 +137,13 @@ class BaseTest:
         self.tracker.screen(name, obj)
 
     def screen_multiple_vars(self, name: str, *obj: typing.Any):
-        """self.screen_var a number of <obj>. Each obj is named '<name>-<position in obj>'"""
+        """self.screen_var a number of <obj>. Each obj is named '<name>-<position in obj>'.
+        You can add '{count}' inside <name> as a format option : '{count}Sheep' --> '1Sheep', '2Sheep', '3Sheep'..."""
         for i, to_screen in enumerate(obj):
-            self.screen_var(f"{name}-{i}", to_screen)
+            if "{count}" in name:
+                self.screen_var(name.format(count=i), to_screen)
+            else:
+                self.screen_var(f"{name}-{i}", to_screen)
 
     def re_screen_var(self, name: str, obj=None) -> None:
         """LogFile.re_screen wrapper"""

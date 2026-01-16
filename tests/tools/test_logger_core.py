@@ -1,7 +1,7 @@
 import pytest
-from tests.conftest import BaseTest
 
-from tools.logger_core import (
+from tests.conftest import BaseTest
+from job_scrapper.tools.logger_core import (
     CoreLogger,
 )
 
@@ -9,6 +9,7 @@ from tools.logger_core import (
 @pytest.mark.logs
 class TestCoreLogger(BaseTest):
     """Test CoreLogger main functionalities."""
+
     enable_icl = False
 
     @pytest.fixture

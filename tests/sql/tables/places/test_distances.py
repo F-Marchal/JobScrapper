@@ -1,6 +1,6 @@
 import pytest
 
-from sql.tables.places.distances import Distances
+from job_scrapper.sql.tables.places.distances import Distances
 from tests.conftest import BaseTest
 
 

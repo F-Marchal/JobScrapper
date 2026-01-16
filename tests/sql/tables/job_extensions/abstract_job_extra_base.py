@@ -3,8 +3,9 @@ from typing import Any, Type
 
 import pytest
 
-from sql.tables.job_extensions.job_extra_base import JobExtraBase
-from sql.tables.jobs import Jobs
+from job_scrapper.sql.tables.job_extensions.job_extra_base import JobExtraBase
+from job_scrapper.sql.tables import Jobs
+from job_scrapper.sql.tables.places.places import Places
 from tests.conftest import BaseTest
 
 
@@ -18,13 +19,17 @@ class TestJobExtraBase(BaseTest):
     db_comp2: dict[str, Any] = {}
     db_comp3: dict[str, Any] = {}
 
+    def standard_db_path(self):
+        """Returns database path."""
+        return  f"{self.test_folder}/database.db"
+
     def test_get_job_associated_time_stamps(self):
         """Test that <get_job_associated_time_stamps> works as intended"""
         if self.__tested_class__ is None:
             self.log("No testsing class defined.")
             return
 
-        db1 = f"{self.test_folder}/database.db"
+        db1 = self.standard_db_path()
         with Jobs.get_session(db1) as session:
             session.add_all(self.make_small_database())
 
@@ -45,7 +50,7 @@ class TestJobExtraBase(BaseTest):
         db_path = f"{self.test_folder}/database.db"
         db = self.make_small_database()
 
-        ref_job = db[0]
+        ref_job = db[1]
         ref_url = ref_job.url
 
         # Add database
@@ -71,7 +76,7 @@ class TestJobExtraBase(BaseTest):
 
     def test_relationship(self):
         """Ensure reciprocity of relationship between Jobs and JobEtraBase"""
-        db1 = f"{self.test_folder}/database.db"
+        db1 = self.standard_db_path()
         if self.__tested_class__ is None:
             self.log("No testsing class defined.")
             return
@@ -122,6 +127,14 @@ class TestJobExtraBase(BaseTest):
         assert j1.url == ob2.url
         assert j2.url == ob3.url
 
+        # Ensure that jobs can be added to database
+        with Jobs.get_session(self.standard_db_path(), logger=self.icl.logger) as session:
+            session.add_all([j1, j2])
+
+        # ensure that ob can be added to database
+        with Jobs.get_session(self.standard_db_path(), logger=self.icl.logger) as session:
+            session.add_all([ob1, ob2, ob3])
+
     def test_missing__tested_class__(self):
         """Ensure that __tested_class__ is initialised in subclass"""
         assert (
@@ -155,8 +168,16 @@ class TestJobExtraBase(BaseTest):
             self.log("No tested class defined.")
             raise NotImplementedError()
 
-        j1 = Jobs(url="Alpha")
-        j2 = Jobs(url="Beta")
+        with Places.get_session(self.standard_db_path(), logger=self.icl.logger) as session:
+            p1 = Places(
+                localisation=Jobs.DEFAULT_LOCALISATION,
+                longitude=None,
+                latitude=None,
+            )
+            session.add(p1)
+
+        j1 = Jobs(url="Alpha", localisation=Jobs.DEFAULT_LOCALISATION)
+        j2 = Jobs(url="Beta", localisation=Jobs.DEFAULT_LOCALISATION)
 
         # pylint: disable=E1102:
         # If typing is respected, __tested_class__ is either None (NotImplementedError)

@@ -1,30 +1,28 @@
 import datetime
 import os
-from contextlib import contextmanager
-from typing import Any, ContextManager, Generator, Protocol, Type, TypeVar
+from contextlib import contextmanager, nullcontext
+from typing import Any, ContextManager, Generator, Protocol, Type, Self, Iterator
 
-from sqlalchemy import and_
 
 # pylint: disable=E0611
 from sqlalchemy.orm import Query, Session
-from sqlalchemy.sql import operators as ope
+from sqlalchemy.sql.operators import and_
 
 from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore
-from sql.tables import (
+from job_scrapper.sql.tables import (
     BaseTable,
     Distances,
     Jobs,
     Keywords,
+    KeywordVersion,
+    KeywordRegex,
     Metadata,
     TimeStamps,
+    Places,
+    ArchivedJobs,
 )
-from sql.tables.request_helpers.job_request import JobRequest
-
-
-ScrapperSQLightCoreOrSubclass = TypeVar(
-    "ScrapperSQLightCoreOrSubclass", bound="ScrapperSQLightCore"
-)
-
+from job_scrapper.sql.tables.helpers.job_request import JobRequest
+from job_scrapper.sql.tables.helpers.keyword_manager import KeywordManager
 
 class SqlSessionFactory(Protocol):
     """Typing class mostly used for ScrapperSQLightCore.get_available_databases"""
@@ -45,10 +43,45 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         Jobs.__tablename__: Jobs,
         Metadata.__tablename__: Metadata,
         TimeStamps.__tablename__: TimeStamps,
-        Distances.__tablename__: Distances,
+
         Keywords.__tablename__: Keywords,
+        KeywordRegex.__tablename__: KeywordRegex,
+        KeywordVersion.__tablename__: KeywordVersion,
+
+        Distances.__tablename__: Distances,
+        Places.__tablename__: Places,
+
+        ArchivedJobs.__tablename__: ArchivedJobs,
+
     }
     first_sighting_time_stamp_name = "First sighting"
+
+    DEFAULT_LOAD_JOB_ENTRY: bool = True
+    DEFAULT_LOAD_KEYWORDS: bool = True
+    DEFAULT_LOAD_DISTANCES: bool = True
+    DEFAULT_LOAD_METADATA: bool = True
+    DEFAULT_LOAD_TIME_STAMPS: bool = True
+
+    DEFAULT_OVERWRITE_JOB_ENTRY: bool | set[str] = False,
+    DEFAULT_OVERWRITE_KEYWORDS: bool | set[str] = False,
+    DEFAULT_OVERWRITE_DISTANCES: bool | set[str] = False,
+    DEFAULT_OVERWRITE_METADATA: bool | set[str] = False,
+    DEFAULT_OVERWRITE_TIME_STAMPS: bool | set[str] = False,
+
+    @property
+    def localisation(self) -> str:
+        """Returns the location of this job if job localisation is unknown (None or ""),
+        Jobs.DEFAULT_LOCALISATION is returned."""
+        localisation =  super(ScrapperSQLightCore, self).localisation
+        if not localisation:
+            return Jobs.DEFAULT_LOCALISATION
+        return localisation
+
+    @localisation.setter
+    def localisation(self, value: str | None):
+        # Localisation might be used as a column name since it might generate
+        # a Places entry.
+        self._localisation = self.place_column_name_normaliser(value)
 
     @classmethod
     def get_job_requester(cls) -> JobRequest:
@@ -61,12 +94,22 @@ class ScrapperSQLightCore(ScrapperObjectCore):
                 "keyword": cls.keyword_suffix,
                 "distance": cls.distance_suffix,
             },
+            place_name_normaliser=cls.place_column_name_normaliser,
             # All 'label' contained in time_stamp, metadata ...
             # are passed inside cls.clean_string
             column_label_value_normaliser=cls.column_label_value_normaliser,
             column_name_normaliser=cls.column_name_normaliser,
             logger=cls.logger,
         )
+
+    @classmethod
+    def get_keyword_manager(cls) -> KeywordManager:
+        """Generate a KeywordManager configured to be used
+        with a ScrapperSQLightCore"""
+        return KeywordManager(
+            logger=cls.logger,
+        )
+
 
     @classmethod
     def get_known_databases(cls) -> dict[str, dict[str, Any]]:
@@ -83,38 +126,91 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         """Get a table contained inside <get_all_tables>."""
         return cls.get_all_tables()[table_name]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self,
+            *args,
+             workdir: str | None = None,
+             database_name: str | None = None,
+             force_session: Session | None = None,
+
+             use_db_init_time_stamp: bool = False,
+
+             load_job_entry: bool | None = None,
+             load_keywords: bool | None = None,
+             load_distances: bool | None = None,
+             load_metadata: bool | None = None,
+             load_time_stamps: bool | None = None,
+
+             overwrite_job_entry: bool | set[str] | None = None,
+             overwrite_keywords: bool | set[str] | None = None,
+             overwrite_distances: bool | set[str] | None = None,
+             overwrite_metadata: bool | set[str] | None = None,
+             overwrite_time_stamps: bool | set[str] | None = None,
+
+            **kwargs
+        ):
         """See ScrapperObjectCore __init__ method.
         This extension will seek first_sighting_time_stamp_name in
         the database and add it to self.time_stamps"""
         super().__init__(*args, **kwargs)
+        if load_job_entry is None:
+            load_job_entry = self.DEFAULT_LOAD_JOB_ENTRY
+        if load_keywords is None:
+            load_keywords = self.DEFAULT_LOAD_KEYWORDS
+        if load_distances is None:
+            load_distances = self.DEFAULT_LOAD_DISTANCES
+        if load_metadata is None:
+            load_metadata = self.DEFAULT_LOAD_METADATA
+        if load_time_stamps is None:
+            load_time_stamps = self.DEFAULT_LOAD_TIME_STAMPS
 
-        # Get older first sighting date
-        fstsn = self.first_sighting_time_stamp_name
-        with self.get_maindb_session() as session:
-            result = (
-                session.query(TimeStamps.time_stamp)
-                .filter(
-                    and_(
-                        ope.eq(TimeStamps.url, self.url),
-                        TimeStamps.label == fstsn,
-                    ),
-                    ope.eq(TimeStamps.label, fstsn),
+        if overwrite_job_entry is None:
+            overwrite_job_entry = self.DEFAULT_OVERWRITE_JOB_ENTRY
+        if overwrite_keywords is None:
+            overwrite_keywords = self.DEFAULT_OVERWRITE_KEYWORDS
+        if overwrite_distances is None:
+            overwrite_distances = self.DEFAULT_OVERWRITE_DISTANCES
+        if overwrite_metadata is None:
+            overwrite_metadata = self.DEFAULT_OVERWRITE_METADATA
+        if overwrite_time_stamps is None:
+            overwrite_time_stamps = self.DEFAULT_OVERWRITE_TIME_STAMPS
+
+        self._loaded_from = (workdir, database_name)
+        session_ctx = (
+            self.get_sql_session(workdir=workdir, database_name=database_name)
+            if force_session is None
+            else nullcontext(force_session)
+        )
+        with session_ctx as session:
+            if load_job_entry:
+                self.load_job_entry_from_db(session, overwrite=overwrite_job_entry)
+
+            if load_keywords:
+                self.load_keywords_from_db(session, overwrite=overwrite_keywords)
+
+            if load_distances:
+                self.load_distances_from_db(session, overwrite=overwrite_distances)
+
+            if load_metadata:
+                self.load_metadata_from_db(session, overwrite=overwrite_metadata)
+
+            if load_time_stamps:
+                self.load_time_stamps_from_db(
+                    session,
+                    overwrite=overwrite_time_stamps,
+                    use_db_init_time_stamp=use_db_init_time_stamp
                 )
-                .all()
-            )
 
-        if result:
-            first_sighting = result[-1][0].timetuple()
-
-        else:
-            # If this is the first time we see this offer,
-            # then first_sighting_time_stamp_name = self.init_time_stamp_name
+        # Ensure fstsn exist
+        fstsn = self.first_sighting_time_stamp_name
+        if not self.time_stamps_exist(fstsn):
             first_sighting = self.retrieve_time_stamps(
                 self.init_time_stamp_name
             )
+            self.add_time_stamps(fstsn, first_sighting)
 
-        self.add_time_stamps(fstsn, first_sighting)
+    @property
+    def loaded_from(self) -> tuple[str | None, str  | None]:
+        return self._loaded_from
 
     @classmethod
     @contextmanager
@@ -146,6 +242,7 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             "maindb": cls.get_maindb_session,
             "archive": cls.get_archive_session,
         }
+    DEFAULT_DATABASE = "maindb"
 
     @classmethod
     @contextmanager
@@ -159,9 +256,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         database_session_command: SqlSessionFactory | None = None
 
         if database_name is None:
-            database_session_command = cls.get_maindb_session
+            database_name = cls.DEFAULT_DATABASE
 
-        elif database_name in available_databases:
+        if database_name in available_databases:
             database_session_command = available_databases[database_name]
 
         else:
@@ -210,21 +307,47 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
     # --- --- Names and paths --- ---
     # --- --- Exports --- ---
-    def sql_export(self, session: Session):
+    def sql_export(
+            self,
+            session: Session,
+            keywords_ver: dict[str, KeywordVersion] | None = None
+    ):
         """
         Export a maximum all field inside the selected database.
         Use self.get_[database]_session to obtain a session
+
+        :param session: A session opened on a database
+        :param keywords_ver: A dictionary {keyword=KeywordVersion}
+            to ensure that Keywords entries generated by <to_keywords_entries>
+            uses the correct KeywordVersion
         """
         self.logger.debug("Exporting '%s' using '%s'", self, session)
+        if keywords_ver is None:
+            keywords_ver = {}
 
+
+        # Main entries
+        place_entry = self.to_place_entry(session)
         job_entry = self.to_job_entry()
         metadata_entries = self.to_metadata_entries()
-        keyword_entries = self.to_keywords_entries()
         time_stamp_entries = self.to_time_stamps_entries()
         distance_entries = self.to_distances_entries()
+        key_ver_entries = self.to_keywords_entries(**keywords_ver)
+        if key_ver_entries:
+            keyword_ver_entries, keyword_entries = zip(*key_ver_entries)
+        else:
+            keyword_ver_entries = []
+            keyword_entries = []
+
+        # Ensure Place entry existence (mandatory to export job_entry)
+
+
+        #
         all_entries = [
+            place_entry,
             job_entry,
             *metadata_entries,
+            *keyword_ver_entries,
             *keyword_entries,
             *time_stamp_entries,
             *distance_entries,
@@ -238,15 +361,33 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             len(all_entries),
         )
 
+    def to_place_entry(
+            self,
+            session: Session,
+    ) -> Places:
+        """Turn self.localisation to a Place entry.
+        If the localisation is known, the place object
+        is extracted from the database. Else, a new one is
+        generated with `longitude=None` and `latitude=None`."""
+        existing_entry = Places.get_job_place(
+            session,
+            self.localisation
+        )
+
+        if existing_entry is not None:
+            return existing_entry
+
+        return Places.get_default_entry(self.localisation) # if self.localisation else None
+
     def to_job_entry(self) -> Jobs:
         """Generate a Jobs entry that represent self"""
         return Jobs(
             url=self.url,
             title=self.title if self.title else None,
-            localisation=self.localisation if self.localisation else None,
+            localisation=self.localisation, # if self.localisation else None
             contract=self.contract_type if self.localisation else None,
             field=self.field if self.localisation else None,
-            origin=self.get_class_name(),
+            origin=self.get_standardised_class_name(),
         )
 
     def to_metadata_entries(self) -> list[Metadata]:
@@ -257,16 +398,33 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             m_l.append(metadat_obj)
         return m_l
 
-    def to_keywords_entries(self) -> list[Keywords]:
-        """Generate all associate Keywords entries"""
+    def to_keywords_entries(
+            self,
+            **keywords_ver: KeywordVersion
+    ) -> list[tuple[KeywordVersion, Keywords]]:
+        """Generate all associate Keywords entries
+
+        use keyword=KeywordVersion to ensure that generated Keywords entries
+        uses the correct KeywordVersion
+        """
         k_l = []
         for keyword, occurrence in self.keywords.items():
+            if keyword in keywords_ver:
+                version_obj = keywords_ver[keyword]
+            else:
+                version_obj = KeywordVersion(
+                    version=-1,
+                    keyword=keyword
+                )
+
             key_obj = Keywords(
                 url=self.url,
                 keyword=keyword,
+                version = version_obj.version,
                 occurrence=occurrence if occurrence != -1 else None,
             )
-            k_l.append(key_obj)
+            k_l.append((version_obj, key_obj))
+
         return k_l
 
     def to_time_stamps_entries(self) -> list[TimeStamps]:
@@ -301,9 +459,14 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         return d_l
 
     @classmethod
-    def _sql_batch_export(cls, session: Session, *jobs: "ScrapperSQLightCore"):
+    def _sql_batch_export(
+            cls,
+            session: Session,
+            *jobs: "ScrapperSQLightCore",
+            keywords_ver: dict[str, KeywordVersion] | None = None
+    ):
         for job in jobs:
-            job.sql_export(session)
+            job.sql_export(session, keywords_ver=keywords_ver)
 
     @classmethod
     def sql_batch_export(
@@ -311,77 +474,298 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         *jobs: "ScrapperSQLightCore",
         database_name: str | None = None,
         workdir: None | str = None,
+        keywords_ver: dict[str, KeywordVersion] | None = None
     ):
         """
         Export an array of jobs in the selected database
         :param jobs: A number of ScrapperObjectCore
         :param database_name: The targeted database (see  cls.get_available_databases())
         :param workdir: A directory where the database will be written.
+        :param keywords_ver: A dictionary {keyword=KeywordVersion}
+                to ensure that Keywords entries generated by <to_keywords_entries>
+                uses the correct KeywordVersion
         """
 
         with cls.get_sql_session(workdir=workdir, database_name=database_name) as session:
             cls.logger.debug("Exporting %s job offers...", len(jobs))
-            cls._sql_batch_export(session, *jobs)
+            cls._sql_batch_export(session, *jobs, keywords_ver=keywords_ver)
             cls.logger.debug("%s job offer exported !", len(jobs))
 
     # --- --- Exports --- ---
     # --- --- Imports --- ---
     @classmethod
     def sql_import_jobs(
-        cls: Type[ScrapperSQLightCoreOrSubclass],
+        cls,
         session: Session,
-        request: Query | None = None,
-    ) -> list[ScrapperSQLightCoreOrSubclass]:
+        request: Query[Jobs] | None = None,
+        use_db_init_time_stamp: bool = True,
+    ) -> Iterator[Self]:
         """
         Generate a list of ScrapperSQLightCore (or current subclass) from a query.
         If this query is None Jobs.get_all(session) is used.
         """
         if not request:
             request = Jobs.get_all(session)
-        loaded_jobs = []
 
-        for job_entry in request.all():
-            new_jobs = cls(
-                contract_type=job_entry.contract,
-                field=job_entry.field,
-                localisation=job_entry.localisation,
-                title=job_entry.title,
-                url=job_entry.url,
+        for job_entry in request:
+            cls.logger.debug(f"Loading {job_entry.url}...")
+
+            yield cls.load_from_db(url=job_entry.url, session=session, use_db_init_time_stamp=use_db_init_time_stamp)
+
+    @classmethod
+    def load_from_db(
+            cls,
+            url: str,
+            session: Session,
+            use_db_init_time_stamp: bool = True,
+    ):
+        return cls(
+            url=url,
+            force_session=session,
+
+            load_job_entry=True,
+            load_keywords=True,
+            load_distances=True,
+            load_metadata=True,
+            load_time_stamps=True,
+
+            overwrite_job_entry=True,
+            overwrite_keywords=True,
+            overwrite_distances=True,
+            overwrite_metadata=True,
+            overwrite_time_stamps=True,
+
+            use_db_init_time_stamp=use_db_init_time_stamp,
+        )
+
+
+    def load_job_entry_from_db(self, session: Session, overwrite: set[str] | bool = False):
+        entries = session.query(Jobs).where(Jobs.url == self.url).all()
+        if not entries:
+            return
+
+        self.load_job_entry(entries[0], overwrite=overwrite)
+
+    def load_job_entry(
+            self,
+            job_entry: Jobs,
+            overwrite: set[str] | bool = False,
+            safe: bool = True
+    ):
+        if safe and job_entry.url != self.url:
+            raise KeyError(
+                "Can not load 'job_entry' ({job_entry}) since job_entry.url != self.url and safe=True. \n"
+                "('{job_entry.url}' != '{self.url}')."
             )
 
-            for time_stamp_entry in TimeStamps.get_for_job(
-                session, new_jobs.url
-            ):
-                new_jobs.add_time_stamps(
-                    time_stamp_entry.label,
-                    time_stamp_entry.time_stamp.timetuple(),
+        if (overwrite is True or "title" in overwrite) or self.title in ("",):
+            self.title = job_entry.title
+
+        if (overwrite is True or "localisation" in overwrite) or self.localisation in ("", Jobs.DEFAULT_LOCALISATION):
+            self.localisation = job_entry.localisation
+
+        if (overwrite is True or "contract_type" in overwrite) or self.contract_type in ("",):
+            self.contract_type = job_entry.contract
+
+        if (overwrite is True or "field" in overwrite) or self.field in ("",):
+            self.field = job_entry.field
+
+    def load_time_stamps_from_db(
+            self,
+            session: Session,
+            overwrite: set[str] | bool = False,
+            use_db_init_time_stamp: bool = False,
+    ):
+        for time_stamp_entry in TimeStamps.get_for_job(
+            session, self.url
+        ):
+            self.load_time_stamp_entry(time_stamp_entry, overwrite, use_db_init_time_stamp=use_db_init_time_stamp)
+
+    def load_time_stamp_entry(
+            self,
+            time_stamp_entry: TimeStamps,
+            overwrite: set[str] | bool = False,
+            use_db_init_time_stamp: bool = False,
+    ):
+        # If self.time_stamps_exist then we might overwrite it. Can we ?
+        if (overwrite is False or (isinstance(overwrite, set) and time_stamp_entry.label not in overwrite)) and self.time_stamps_exist(time_stamp_entry.label):
+            return
+
+        if self.init_time_stamp_name == time_stamp_entry.label and not use_db_init_time_stamp:
+            # This entry should not be overwritten.
+            return
+
+        self.add_time_stamps(
+            time_stamp_entry.label,
+            time_stamp_entry.time_stamp.timetuple(),
+        )
+
+    def load_keywords_from_db(self, session: Session, overwrite: set[str] | bool = False,):
+        for keywords_entry in Keywords.get_for_job(session, self.url):
+            self.load_keyword_entry(keywords_entry, overwrite)
+
+    def load_keyword_entry(self, keywords_entry: Keywords, overwrite: set[str] | bool = False,):
+        if (
+                (overwrite is False or (isinstance(overwrite, set) and keywords_entry.keyword not in overwrite))
+                and self.keyword_exist(keywords_entry.keyword)
+        ):
+            return
+
+        occurrence = keywords_entry.occurrence
+        if occurrence is None:
+            occurrence = -1
+
+        self.add_keyword_count(keywords_entry.keyword, occurrence)
+
+    def load_distances_from_db(self, session: Session, overwrite: set[str] | bool = False,):
+        for distances_entry in Distances.get_job_associated_distances(
+            session, self.localisation
+        ):
+            self.load_distance_entry(distances_entry, overwrite)
+
+    def load_distance_entry(self, distances_entry: Distances, overwrite: set[str] | bool = False,):
+        label = distances_entry.reference_localisation
+        if (overwrite is False or (isinstance(overwrite, set) and not label in overwrite)) and self.distance_to_exist(label):
+            return
+
+        distance = distances_entry.distance
+        if distance is None:
+            distance = -1
+        self.add_distance_to(
+            label, distance
+        )
+
+    def load_metadata_from_db(self, session: Session, overwrite: set[str] | bool = False,):
+        for metadata_entry in Metadata.get_for_job(session, self.url):
+            self.load_metadata_entry(metadata_entry, overwrite)
+
+    def load_metadata_entry(self, metadata_entry: Metadata, overwrite: set[str] | bool = False,):
+        if (overwrite is False or (isinstance(overwrite, set) and metadata_entry.key not in overwrite)) and self.metadata_exist(metadata_entry.key):
+            return
+        self.add_metadata(metadata_entry.key, metadata_entry.value)
+
+    def get_keywords_version_in_database(self, session: Session) -> dict[str, int]:
+        vers = {}
+        for keywords in self.keywords:
+            keyword_entry = session.query(
+                Keywords
+            ).where(
+                and_(
+                    Keywords.keyword == keywords,
+                    Keywords.url == self.url,
                 )
+            ).first()
 
-            for keywords_entry in Keywords.get_for_job(session, new_jobs.url):
-                occurrence = keywords_entry.occurrence
-                if occurrence is None:
-                    occurrence = -1
+            vers[keywords] = keyword_entry.version_entry.version
+        return vers
 
-                new_jobs.add_keyword_count(keywords_entry.keyword, occurrence)
 
-            for distances_entry in Distances.get_job_associated_distances(
-                session, new_jobs.localisation
-            ):
-                distance = distances_entry.distance
-                if distance is None:
-                    distance = -1
+    # --- --- Remove from db --- ---
+    def self_delete_from_db(self, session: Session):
+        # This expects that Jobs have delete cascade on
+        # TimeStamps, keywords, metadata ...
+        session.delete(self.to_job_entry())
 
-                new_jobs.add_distance_to(
-                    distances_entry.reference_localisation, distance
-                )
+    def synchronise_init_ts_with_archive_last_sighting(
+            self,
+            database_with_time_stamp_entries: Session,
+            database_with_archive_entries: Session,
+    ):
+        """
+        Synchronize self init_time_stamp with init time stamp in database_with_time_stamp_entries
+        and ArchiveJob.last_sighting.
+        This retrieve ArchiveJob.last_sighting from database_with_archive_entries,
+        retrieve TimesTamps.time_stamp (url=self.url and label=self.init_time_stamp_name) and
+        self._time_stamps[self.init_time_stamp_name] and look for the highest value.
+        the highest value is then use to update all mentioned values.
+        """
 
-            for metadata_entry in Metadata.get_for_job(session, new_jobs.url):
-                new_jobs.add_metadata(metadata_entry.key, metadata_entry.value)
+        archive_entry = database_with_archive_entries.query(
+            ArchivedJobs
+        ).where(
+            ArchivedJobs.url == self.url,
+        ).first()
 
-            loaded_jobs.append(new_jobs)
-        return loaded_jobs
+        if not archive_entry:
+            # Nothing to work with
+            return
 
-    # --- --- Imports --- ---
+        if not archive_entry.last_sighting:
+            # Nothing to do
+            return
+
+        init_ts_entry = database_with_time_stamp_entries.query(
+            TimeStamps
+        ).where(
+            and_(
+                TimeStamps.url == self.url,
+                TimeStamps.label == self.init_time_stamp_name,
+            )
+        ).first()
+
+        if not init_ts_entry:
+            raise KeyError(f"No '{self.init_time_stamp_name}' in time stamp. This is not supposed to happen !!!")
+
+        date = max(
+            init_ts_entry.time_stamp,
+            archive_entry.last_sighting,
+            datetime.datetime.strptime(
+                self.strftime(
+                    self.retrieve_time_stamps(self.init_time_stamp_name),
+                ),
+                "%Y-%m-%d %H:%M:%S"
+            )
+        )
+
+        self.add_time_stamps(
+            self.init_time_stamp_name,
+            date.utctimetuple()
+        )
+        init_ts_entry.time_stamp = date
+        archive_entry.last_sighting = date
+
+
+    def archive(
+        self,
+        initial_session: Session,
+        target_session: Session,
+        ignore_archive_init_ts_sync: bool = False,
+
+    ):
+        """
+        /!\ It's mandatory that self has been exported
+        to initial_session !
+
+         Displace this offer from .initial_session to target_session
+        :param initial_session: Session opened on the first database
+        :param target_session: Session opened on the second database
+        :param bool ignore_archive_init_ts_sync: Does
+            synchronise_init_ts_with_archive_last_sighting should
+            be ran before offer displacement.
+        """
+        if not self.to_job_entry().exists(
+                initial_session,
+                include_database=True,
+                include_session=True
+        ):
+            raise ValueError(
+                f"Can not proceed with archive operations. "
+                f"{self} is not inside `initial_session` ({initial_session}). "
+            )
+
+        if not ignore_archive_init_ts_sync:
+            self.synchronise_init_ts_with_archive_last_sighting(
+                initial_session,
+                target_session,
+            )
+
+        self.to_job_entry().archive(
+            initial_database=initial_session,
+            target_database=target_session,
+        )
+
+
+    # --- --- Remove from db --- ---
     # --- --- Utils --- ---
     @classmethod
     def column_name_normaliser(cls, string: str) -> str:
@@ -409,5 +793,9 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         if string2:
             return string2
         return ""
+
+    @classmethod
+    def place_column_name_normaliser(cls, string: str) -> str:
+        return Places.format_localisation(cls.clean_string(string))
 
     # --- --- Utils --- ---

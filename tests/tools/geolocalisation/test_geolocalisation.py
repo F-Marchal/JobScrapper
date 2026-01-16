@@ -1,0 +1,167 @@
+from job_scrapper.tools.geolocalisation import Geolocalisation, Places
+
+from .base_test_geolocalisation import BaseGeoTest
+import pytest
+
+class TestGeolocalisation(BaseGeoTest):
+    """Test Geolocalisation functions that does not require access to internet."""
+
+    def test_get_localisation_from_database(self):
+        """Test get_localisation_from_database"""
+        with Places.get_session(
+            self.get_db_path(), logger=self.icl.logger
+        ) as session:
+            result = Geolocalisation.get_localisation_from_database(
+                session, "Paris, France"
+            )
+            assert result is None  # The database should be empty
+
+        self.make_small_db()
+
+        with Places.get_session(
+            self.get_db_path(), logger=self.icl.logger
+        ) as session:
+            result = Geolocalisation.get_localisation_from_database(
+                session, "Paris, France"
+            )
+            assert result is not None  # The database should be empty
+            assert 2 < result.long < 2.8
+            assert 48.2 < result.lat < 49.3
+
+    def test_get_distances_from_database(self):
+        """Test get_localisation_from_database"""
+        with Places.get_session(
+            self.get_db_path(), logger=self.icl.logger
+        ) as session:
+            result = Geolocalisation.get_distances_from_database(
+                session, "Paris, France", "Knokke-le-Zoute, Belgium"
+            )
+            assert result is None  # The database should be empty
+
+        self.make_small_db()
+
+        with Places.get_session(
+            self.get_db_path(), logger=self.icl.logger
+        ) as session:
+            result = Geolocalisation.get_distances_from_database(
+                session, "Paris, France", "Knokke-le-Zoute, Belgium"
+            )
+            assert result is not None  # The database should be empty
+            assert 300 < result.distance < 330
+
+    @pytest.mark.parametrize(
+        "entry1, entry2",
+        [
+            (
+                Places(localisation="Alpha", longitude=0, latitude=None),
+                Places(localisation="Beta", longitude=0, latitude=0),
+            ),
+            (
+                Places(localisation="Alpha", longitude=None, latitude=0),
+                Places(localisation="Beta", longitude=0, latitude=0),
+            ),
+            (
+                Places(localisation="Alpha", longitude=0, latitude=0),
+                Places(localisation="Beta", longitude=None, latitude=0),
+            ),
+            (
+                Places(localisation="Alpha", longitude=0, latitude=0),
+                Places(localisation="Beta", longitude=0, latitude=None),
+            ),
+            (
+                Places(localisation="Alpha", longitude=None, latitude=None),
+                Places(localisation="Beta", longitude=0, latitude=0),
+            ),
+            (
+                Places(localisation="Alpha", longitude=0, latitude=0),
+                Places(localisation="Beta", longitude=None, latitude=None),
+            ),
+        ],
+    )
+    def test_compute_distance__invalid_place_obj(
+        self, entry1: Places, entry2: Places
+    ):
+        """Ensure that compute_distance returns None in certain situations"""
+        geo = self.make_geo()
+        l1 = entry1.localisation
+        l2 = entry2.localisation
+
+        self.screen_var("l1", entry1)
+        self.screen_var("l2", entry2)
+
+        with Places.get_session(
+            self.get_db_path(), logger=self.icl.logger
+        ) as session:
+            session.add(entry1)
+            session.add(entry2)
+
+        with Places.get_session(
+            self.get_db_path(), logger=self.icl.logger
+        ) as session:
+            result = geo.compute_distance(
+                session,
+                l1,
+                l2,
+            )
+
+        assert result is None
+
+    def test_compute_distance__valid_place_obj(self):
+        """Ensure that compute distance works with a valid database."""
+        geo = self.make_geo()
+        self.make_small_db()
+
+        with Places.get_session(
+            self.get_db_path(), logger=self.icl.logger
+        ) as session:
+            result = geo.compute_distance(
+                session,
+                "Paris, France",
+                "Knokke-le-Zoute, Belgium",
+            )
+
+        assert 300 < result < 330
+
+
+
+    @pytest.mark.parametrize( # AI Generated
+        "input_text, expected",
+        [
+            ("St Etienne", "saint Etienne"),
+            ("st martin d'heres", "saint martin d'heres"),
+            ("Ste Marie", "sainte Marie"),
+            ("ste Anne", "sainte Anne"),
+            ("Saint Denis", "Saint Denis"),  # déjà complet → inchangé
+            ("St", "saint"),  # seul
+        ]
+    )
+    def test_expand_abbreviations(self, input_text, expected):
+        assert Geolocalisation.expand_abbreviations(input_text.lower()) == expected.lower()
+
+
+    @pytest.mark.parametrize( # AI Generated
+        "input_text, expected",
+        [
+            ("Paris Cedex 16", "Paris"),
+            ("Roscoff Cedex", "Roscoff"),
+            ("Marseille Cedex 13", "Marseille"),
+            ("Vandoeuvre Les Nancy Cedex", "Vandoeuvre Les Nancy"),
+            ("Nice", "Nice"),
+        ]
+    )
+    def test_remove_cedex(self, input_text, expected):
+        assert Geolocalisation.remove_cedex(input_text.lower()) == expected.lower()
+
+    @pytest.mark.parametrize( # AI Generated
+        "input_text, expected",
+        [
+            ("Lyon 7", "Lyon 7e arrondissement, France"),
+            ("Lyon 07", "Lyon 7e arrondissement, France"),
+            ("Paris 16", "Paris 16e arrondissement, France"),
+            ("Marseille 13", "Marseille 13e arrondissement, France"),
+            ("Nice", "Nice"),
+            ("Lille 1", "Lille 1"),
+        ]
+    )
+    def test_format_arrondissement(self, input_text, expected):
+        assert Geolocalisation.format_arrondissement(input_text) == expected

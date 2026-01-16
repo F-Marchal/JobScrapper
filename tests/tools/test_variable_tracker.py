@@ -1,6 +1,7 @@
 import typing
 
 import pytest
+
 from tests.conftest import BaseTest
 
 
@@ -77,6 +78,7 @@ class TestVariableTracker(BaseTest):
 
         class CustomClass:
             """Test class"""
+
             cls_arg = 775
 
             def __init__(self):

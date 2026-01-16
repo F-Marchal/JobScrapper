@@ -4,10 +4,11 @@ from datetime import datetime
 import pytest
 from sqlalchemy import Column, DateTime, Float, Integer, String
 
-from sql.tables import BaseTable
+from job_scrapper.sql.tables import BaseTable
 from tests.conftest import BaseTest
-from tools.logger_core import CoreLogger
+from job_scrapper.tools.logger_core import CoreLogger
 
+NOW = datetime.now()
 
 # pylint: disable=R0904
 # We use many public method to do many tests
@@ -66,7 +67,7 @@ class TestBaseTable(BaseTest):
     @pytest.mark.js_tables_pyt
     def test_to_dict(self):
         """Ensure that to_dict returns the correct content with correct types."""
-        obj, now = self.make_one_entry()
+        obj = self.make_one_entry()
         to_dict = obj.to_dict()
         self.screen_var("to_dict", to_dict)
 
@@ -78,12 +79,12 @@ class TestBaseTable(BaseTest):
         assert to_dict["string_id"] == "AnId"
         assert to_dict["integer_id"] == 42
         assert to_dict["value"] == 63.45
-        assert to_dict["time_stamp"] == now
+        assert to_dict["time_stamp"] == NOW
 
     @pytest.mark.js_tables_pyt
     def test_to_pk_dict(self):
         """Ensure that to_pk_dict returns the correct content with correct types."""
-        obj, _ = self.make_one_entry()
+        obj = self.make_one_entry()
         to_dict = obj.to_pk_dict()
         self.screen_var("to_pk_dict", to_dict)
 
@@ -95,12 +96,12 @@ class TestBaseTable(BaseTest):
         assert to_dict["string_id"] == "AnId"
         assert to_dict["integer_id"] == 42
         # assert to_dict["value"] == 63.45
-        # assert to_dict["time_stamp"] == now
+        # assert to_dict["time_stamp"] == NOW
 
     @pytest.mark.js_tables_pyt
     def test_to_non_pk_dict(self):
         """Ensure that to_non_pk_dict returns the correct content with correct types."""
-        obj, now = self.make_one_entry()
+        obj = self.make_one_entry()
         to_dict = obj.to_non_pk_dict()
         self.screen_var("to_non_pk_dict", to_dict)
 
@@ -112,7 +113,7 @@ class TestBaseTable(BaseTest):
         # assert to_dict["string_id"] == "AnId"
         # assert to_dict["integer_id"] == 42
         assert to_dict["value"] == 63.45
-        assert to_dict["time_stamp"] == now
+        assert to_dict["time_stamp"] == NOW
 
     # --- flat ---
     @pytest.mark.js_tables_pyt
@@ -120,7 +121,7 @@ class TestBaseTable(BaseTest):
         """Ensure that test_flat returns a string correctly formated.
         Those strings should be equals for each entry with the same cols and col's value
         """
-        obj1, obj2, _ = self.make_two_equ_entry()
+        obj1, obj2 = self.make_two_identical_entries()
 
         assert obj1.to_dict() == obj1.to_dict()
         assert obj2.flat() == obj1.flat()
@@ -130,17 +131,17 @@ class TestBaseTable(BaseTest):
         """Ensure that test_flat returns a string correctly formated.
         Those strings should be equals for each entry with the same cols and col's value
         """
-        obj1, obj2, _ = self.make_two_equ_entry()
+        obj1, obj2 = self.make_two_equ_entries()
 
-        assert obj1.to_dict() == obj1.to_dict()
-        assert obj2.flat() == obj1.flat()
+        assert obj1.to_pk_dict() == obj1.to_pk_dict()
+        assert obj2.flat_pk() == obj1.flat_pk()
 
     @pytest.mark.js_tables_pyt
     def test_flat_non_pk(self):
         """Ensure that test_flat returns a string correctly formated.
         Those strings should be equals for each entry with the same cols and col's value
         """
-        obj1, obj2, _ = self.make_two_equ_entry()
+        obj1, obj2 = self.make_two_identical_entries()
 
         assert obj1.to_dict() == obj1.to_dict()
         assert obj2.to_non_pk_dict() == obj1.to_non_pk_dict()
@@ -150,35 +151,37 @@ class TestBaseTable(BaseTest):
     @pytest.mark.js_tables_pyt
     def test__eq__(self):
         """Ensure that BaseTableForJobScrapper comparisons are correctly done"""
-        e1, e2, _ = self.make_two_equ_entry()
-        assert e1 == e2
+        e1, e2 = self.make_two_equ_entries()
+        e3, e4 = self.make_two_identical_entries()
+        assert e1 != e2
+        assert e3 == e4
 
     def test_are_equivalent(self):
         """Ensure that BaseTableForJobScrapper comparisons are correctly done"""
-        e1, e2, _ = self.make_two_equ_entry()
-        assert BaseTable.are_equivalent(e1, e2)
+        e1, e2 = self.make_two_identical_entries()
+        assert BaseTable.are_equivalent(e1, e2, strict=False)
         assert BaseTable.are_equivalent(e1, e2, strict=True)
 
         # e1 and e2 are equivalents but not equals
         e1.value += 45
-        assert BaseTable.are_equivalent(e1, e2)
+        assert BaseTable.are_equivalent(e1, e2, strict=False)
         assert not BaseTable.are_equivalent(e1, e2, strict=True)
 
         # e1 and e2 are not equivalents anymore
         e1.integer_id += 45
-        assert not BaseTable.are_equivalent(e1, e2)
+        assert not BaseTable.are_equivalent(e1, e2, strict=False)
         assert not BaseTable.are_equivalent(e1, e2, strict=True)
 
     @pytest.mark.js_tables_pyt
     def test_equivalent_to(self):
         """Ensure that BaseTableForJobScrapper comparisons are correctly done"""
-        e1, e2, _ = self.make_two_equ_entry()
+        e1, e2 = self.make_two_identical_entries()
 
         # e1 and e2 are fully equals
-        assert e1.is_equivalent_to(e1)
-        assert e1.is_equivalent_to(e2)
-        assert e2.is_equivalent_to(e1)
-        assert e2.is_equivalent_to(e2)
+        assert e1.is_equivalent_to(e1, strict=True)
+        assert e1.is_equivalent_to(e2, strict=True)
+        assert e2.is_equivalent_to(e1, strict=True)
+        assert e2.is_equivalent_to(e2, strict=True)
 
         assert e1.is_equivalent_to(e1, strict=True)
         assert e1.is_equivalent_to(e2, strict=True)
@@ -188,22 +191,22 @@ class TestBaseTable(BaseTest):
         # e1 and e2 are equivalents but not equals
         e1.value += 45
 
-        assert e1.is_equivalent_to(e2)
+        assert e1.is_equivalent_to(e2, strict=False)
         assert not e1.is_equivalent_to(e2, strict=True)
-        assert e2.is_equivalent_to(e1)
+        assert e2.is_equivalent_to(e1, strict=False)
         assert not e2.is_equivalent_to(e1, strict=True)
 
         # e1 and e2 are not equivalents anymore
         e1.integer_id += 45
-        assert not e1.is_equivalent_to(e2)
+        assert not e1.is_equivalent_to(e2, strict=False)
         assert not e1.is_equivalent_to(e2, strict=True)
-        assert not e2.is_equivalent_to(e1)
+        assert not e2.is_equivalent_to(e1, strict=False)
         assert not e2.is_equivalent_to(e1, strict=True)
 
     @pytest.mark.js_tables_pyt
     def test___copy__(self):
         """Ensure that __copy__ and copy works as intended"""
-        e1, _ = self.make_one_entry()
+        e1 = self.make_one_entry()
         e2 = e1.copy()
         self.screen_var("copy", e2)
 
@@ -219,9 +222,9 @@ class TestBaseTable(BaseTest):
         # pylint: disable=R0915:
         # We are at 51/50, I do not have time to breack this function appart
 
-        e1, e2, _ = self.make_two_equ_entry()
+        e1, e2 = self.make_two_identical_entries()
         # e3 and e4 might have different datetime.
-        e3, e4, _ = self.make_two_equ_entry()
+        e3, e4 = self.make_two_identical_entries()
         e3.integer_id += 1
         e4.value += 1
         db1 = f"{self.test_folder}/database1.db"
@@ -351,8 +354,8 @@ class TestBaseTable(BaseTest):
     def test_exists(self):
         """.exist is mostly based on <test_get_existing_self>. I assume that if test_get_existing_self pass,
         we do not need extensive test here."""
-        e1, e2, _ = self.make_two_equ_entry()
-        e3, e4, _ = self.make_two_equ_entry()
+        e1, e2 = self.make_two_identical_entries()
+        e3, e4 = self.make_two_identical_entries()
         e3.integer_id += 1
         e4.value += 1
 
@@ -494,7 +497,7 @@ class TestBaseTable(BaseTest):
     def test_get_session(self):
         """
         Test the get_session command (and all sub commands)
-        - get_known_databases
+        - get_kNOWn_databases
         - _get_engine
         - get_session
         - _sanitise_and_commit (empty content)
@@ -618,15 +621,15 @@ class TestBaseTable(BaseTest):
         self.screen_var("j1_c_2", j1_c_2)
 
         # Correctly added ?
-        # The first (j1_a / j1_c_1) one should be the one on the database
+        # The second one (j1_b / j1_c_2) should be  the one on the database
         with BaseTable.get_session(db1) as session:
             assert j1_c_1.exists(session)
             assert j1_c_2.exists(session)
             j1_d = j1_c_2.get_existing_self(session)
             self.screen_var("j1_d", j1_d)
 
-            assert j1_d.to_dict() == j1_c_1.to_dict()
-            assert j1_d.to_dict() != j1_c_2.to_dict()
+            assert j1_d.to_dict() != j1_c_1.to_dict()
+            assert j1_d.to_dict() == j1_c_2.to_dict()
 
     @pytest.mark.js_tables_sql
     def test_sanitise_and_commit__added_twice_no_update_case(self):
@@ -724,12 +727,49 @@ class TestBaseTable(BaseTest):
             )
             assert j1_a_has_been_selected or j1_b_has_been_selected
 
+    def test_sanitise_and_commit__insertion_update(self):
+        """Test added to ensure that updates are correctly made."""
+        tbt1 = self.TestBaseTable(
+            string_id = '0',
+            integer_id = 0,
+            value = None,
+            time_stamp =None,
+        )
+        tbt2 = self.TestBaseTable(
+            string_id = '0',
+            integer_id = 0,
+            value = 5,
+        )
+        tbt3 = self.TestBaseTable(
+            string_id = '0',
+            integer_id = 0,
+            value = 5,
+        )
+        db1 = f"{self.test_folder}/database.db"
+        self.screen_var("db", db1)
+        self.screen_multiple_vars("tbt", tbt1, tbt2)
+        self.screen_var("exist_tbt", tbt3)
+
+        with self.TestBaseTable.get_session(db1) as session:
+            session.add(tbt1)
+
+        with self.TestBaseTable.get_session(db1) as session:
+            session.add(tbt2)
+
+        with self.TestBaseTable.get_session(db1) as session:
+            result = tbt3.get_existing_self(session)
+            assert result is not None
+            assert result.string_id == "0"
+            assert result.integer_id == 0
+            assert result.value == 5
+
+
     def test_get_all(self):
         """Ensure that <get_all> returns all object with the same class as the table used."""
         db1 = f"{self.test_folder}/database.db"
 
         class SecondTestBaseTable(BaseTable):
-            """Quicly defined table class. This Class i used to ensure that <get_all> returns only
+            """Quicly defined table class. This Class is used to ensure that <get_all> returns only
             instances related to the class used."""
 
             __abstract__ = False
@@ -804,35 +844,54 @@ class TestBaseTable(BaseTest):
 
     def make_one_entry(
         self, screen_name: str = "RBRFJS-1"
-    ) -> tuple[TestBaseTable, datetime]:
+    ) -> TestBaseTable:
         """Generate one TestBaseTableForJobScrapper. Returns both the object and the datetime used as time_stamp."""
-        now = datetime.now()
         obj = self.TestBaseTable(
             string_id="AnId",
             integer_id=42,
             value=63.45,
-            time_stamp=now,
+            time_stamp=NOW,
         )
         self.screen_var(screen_name, obj)
-        return obj, now
+        return obj
 
-    def make_two_equ_entry(
-        self, screen_name: str = "Entry"
-    ) -> tuple[TestBaseTable, TestBaseTable, datetime]:
-        """ "Generate two TestBaseTableForJobScrapper. Returns the two objects and the datetime used as time_stamp."""
-        now = datetime.now()
+    def make_two_identical_entries(
+        self, screen_name: str = "==Entry"
+    ) -> tuple[TestBaseTable, TestBaseTable]:
+        """Generate two identical TestBaseTableForJobScrapper."""
         obj1 = self.TestBaseTable(
             string_id="AnId",
             integer_id=42,
             value=63.45,
-            time_stamp=now,
+            time_stamp=NOW,
         )
         obj2 = self.TestBaseTable(
             value=63.45,
-            time_stamp=now,
+            time_stamp=NOW,
             string_id="AnId",
             integer_id=42,
         )
         self.screen_var(screen_name + "1", obj1)
         self.screen_var(screen_name + "2", obj2)
-        return obj1, obj2, now
+        return obj1, obj2
+
+
+    def make_two_equ_entries(
+        self, screen_name: str = "~=Entry"
+    ) -> tuple[TestBaseTable, TestBaseTable]:
+        """Generate two equivalent TestBaseTableForJobScrapper."""
+        obj1 = self.TestBaseTable(
+            string_id="AnId",
+            integer_id=42,
+            value=63.45,
+            time_stamp=NOW,
+        )
+        obj2 = self.TestBaseTable(
+            value=75,
+            time_stamp=NOW,
+            string_id="AnId",
+            integer_id=42,
+        )
+        self.screen_var(screen_name + "1", obj1)
+        self.screen_var(screen_name + "2", obj2)
+        return obj1, obj2

@@ -9,12 +9,12 @@ The main goal is to gain hands-on experience with subjects such as:
 - **Poetry**
 - **Development tools** like *Black*, *isort*, and *Pylint*
 - **pytest**
-- And soon, **Newtflox**
+- And soon, **Nextflox** or **Snakemake**
 
 Most of the documentation has been written primarily for 
 **personal reference**.  The project currently **lacks complete
 documentation, tests and some functionalities** as 
-it is still under active development.
+it is still under somewhat active development.
 
 As I am the sole developer, GitHub Issues are mainly used as 
 a personal reminder system to keep track of ideas, features and improvements.

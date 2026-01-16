@@ -1,9 +1,6 @@
-from cli.cli_centraliser import cli
-
-def main():
-    """Start Application's Command Line Interface"""
-    cli()
+#!/usr/bin/python3
+from job_scrapper.main import main
 
 
 if __name__ == "__main__":
-    cli()
+    main()

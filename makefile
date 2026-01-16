@@ -38,21 +38,18 @@ cleantestcode:
 	poetry run mypy  ./tests/  # statick typing
 	poetry run pylint  ./tests/  # Coding Standard
 
-example_cmd = 	poetry run job-scrapper database request \
-		-a $(YESTERDAY) \
-		-c origin -c contract -c title -c url\
-		-d 'Montpellier, France<150' \
-		-cb '%CHERCHEUR%' -cb '%STAGE%' -cb '%DOCTOR%' -cb '%POSTDOC%' -cb "%THÈSE%" \
-		--file "last_request.tsv" \
-		-o "Montpellier_France_km" -o "Bioinformatic_occurence" -o "Bioinformatic_enhanced_occurence" -o contract \
-		-k "Bioinformatic" -k "Bioinformatic_enhanced>0"
 
-
+example_cmd = poetry run job-scrapper database request \
+        -c url -c localisation -c contract -c title -c origin \
+        -d 'Montpellier, france' -d 'Lyon, france' \
+        -k Bioinformatic -k Bioinformatic_enhanced -k Informatic \
+        -o Bioinformatic -o Bioinformatic_enhanced -o Informatic -o contract -o localisation -o 'Montpellier, france' -o 'Lyon, france' \
 
 my_request:
 	$(example_cmd)
 
-my_request_new_results:
-	$(example_cmd) -t 'first_sighting>$(YESTERDAY)'
+my_request_alive:
+	$(example_cmd) -t "last sighting::>::$(YESTERDAY)"
 
-scrap_and_my_request: full_scraping my_request_new_results
+my_request_new:
+	$(example_cmd) -t "first sighting::>::$(YESTERDAY)"

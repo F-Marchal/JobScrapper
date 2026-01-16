@@ -2,9 +2,12 @@ import os
 import time
 import pytest
 
-from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore
+from job_scrapper.scrapper_skeleton.sql_core import ScrapperSQLightCore, KeywordVersion
 from tests.job_scrapper.js_base_test import JobScrapperBaseTestClass
 NOW = ScrapperSQLightCore.now()
+
+#TODO: test __init__: load_job_entry, load_keywords ...
+#TODO: load_job_entry_from_db, load_keywords_from_db, ...
 
 class TestScrapperSQLightCore(JobScrapperBaseTestClass):
     """Test ScrapperSQLightCore main functionalities."""
@@ -24,7 +27,7 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
         assert entry.localisation == ssc.localisation
         assert entry.contract == ssc.contract_type
         assert entry.field == ssc.field
-        assert entry.origin == ssc.get_class_name()
+        assert entry.origin == ssc.get_standardised_class_name()
 
     def test_to_metadata_entries(self):
         """Test the generation of Metadata entries from
@@ -36,20 +39,48 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
         entry_d = {ent.key: ent.value for ent in entries}
         assert entry_d == ssc.metadata
 
-    def test_to_keywords_entries(
+    def test_to_keywords_entries__no_ver(
         self,
-    ):  # IA generated from test_to_metadata_entries
+    ):
         """Test the generation of Keywords entries from
         an object"""
         ssc = self._generate_a_test_ssc()
-        entries = ssc.to_keywords_entries()
+        key_ver_entries = ssc.to_keywords_entries()
 
-        self.screen_multiple_vars("entry", *entries)
-        entry_d = {
-            ent.keyword: (ent.occurrence if ent.occurrence is not None else -1)
-            for ent in entries
+        self.screen_multiple_vars("key_ver_entries", *key_ver_entries)
+        restructured_keyword_dict = {
+
         }
-        assert entry_d == ssc.keywords
+        for (ver, keyw) in key_ver_entries:
+            assert ver.version == keyw.version
+            assert ver.keyword == keyw.keyword
+            restructured_keyword_dict[keyw.keyword] = keyw.occurrence if keyw.occurrence is not None else -1
+        self.screen_var("restructured_keyword_dict", restructured_keyword_dict)
+        assert restructured_keyword_dict == ssc.keywords
+
+    def test_to_keywords_entries__with_ver(
+        self,
+    ):
+        """Test the generation of Keywords entries from
+        an object and a keywords_ver"""
+        ssc = self._generate_a_test_ssc()
+
+        # Version entry
+        inf_version = KeywordVersion(keyword="Informatics", version=42)
+        ver_dict = {
+            inf_version.keyword: inf_version
+        }
+        self.screen_multiple_vars("inf_version", inf_version)
+
+        # Keywords entries
+        key_ver_entries = ssc.to_keywords_entries(**ver_dict)
+        self.screen_multiple_vars("key_ver_entries", *key_ver_entries)
+        keyword_ver_entries,  keyword_entries = zip(*key_ver_entries)
+        self.screen_var("keyword_ver_entries", keyword_ver_entries)
+        self.screen_var("keyword_entries", keyword_entries)
+
+        # Test keywords entries
+        assert inf_version in keyword_ver_entries
 
     def test_to_time_stamps_entries(
         self,
@@ -182,7 +213,14 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
         )
 
         with ScrapperSQLightCore.get_sql_session() as session:
-            reloaded_ssc = ScrapperSQLightCore.sql_import_jobs(session)
+            reloaded_ssc = sorted(
+                ScrapperSQLightCore.sql_import_jobs(session),
+                key=lambda j: {
+                    "https://SSC1-A.fr": 1,
+                    "https://SSC2-A.fr": 2,
+                    "": 3
+                }[j.url]
+            )
 
         assert len(reloaded_ssc) == 3
         # pylint: disable=w0632
@@ -205,7 +243,7 @@ class TestScrapperSQLightCore(JobScrapperBaseTestClass):
 
     def test_job_requester(self):
         """job_requester is tested inside its own file :
-        tests/sql/tables/request_helpers/test_job_request.py"""
+        tests/sql/tables/helpers/test_job_request.py"""
 
     def _generate_a_test_ssc(
         self, instance_name: str = "SSC",

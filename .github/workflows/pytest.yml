@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python 3.10
       uses: actions/setup-python@v3
       with:
-        python-version: "3.10"
+        python-version: "3.11"
 
     - name: Install Poetry
       run: |
@@ -31,9 +31,26 @@ jobs:
       run: |
         poetry install --no-interaction --no-root
 
-    - name: Run tests with pytest
+    - name: Run pytest (No network required)
       run: |
-        poetry run pytest tests/ --maxfail=1
+        poetry run pytest tests/ \
+          --maxfail=1 \
+          --user-agent="${{ github.server_url }}/${{ github.repository }} (${{ github.actor }})" \
+          -m "not offline_simulation and not online_simulation"
+
+    - name: Run pytest (Network online)
+      run: |
+        poetry run pytest tests/ \
+          --maxfail=1 \
+          --user-agent="${{ github.server_url }}/${{ github.repository }} (${{ github.actor }})" \
+          -m "online_simulation"
+
+    - name: Run pytest (Network offline)
+      run: |
+        poetry run pytest tests/ \
+          --maxfail=1 \
+          --user-agent="${{ github.server_url }}/${{ github.repository }} (${{ github.actor }})" \
+          -m "not offline_simulation"
 
     - name: Collect pytest logs
       if: always()

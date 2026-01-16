@@ -206,7 +206,7 @@ class TestScrapperObjectCore(JobScrapperBaseTestClass):
         self.tracker.screen("soc_to_dic", dict_)
 
         assert dict_["#Time_Stamp"] == soc.strftime(now)
-        assert dict_["Origin"] == soc.get_class_name()
+        assert dict_["Origin"] == soc.get_standardised_class_name()
         assert dict_["Localisation"] == soc.localisation
         assert dict_["Field"] == soc.field
         assert dict_["Contract"] == soc.contract_type
@@ -321,7 +321,7 @@ class TestScrapperObjectCore(JobScrapperBaseTestClass):
 
         self.tracker.re_screen_all()
 
-        ScrapperObjectCore.export_to_flat_file([soc3_a, soc1_a, soc2_a], None)
+        ScrapperObjectCore.batch_export_to_flat_file([soc3_a, soc1_a, soc2_a], None)
 
         result = list(ScrapperObjectCore.import_from_flat_file())
 

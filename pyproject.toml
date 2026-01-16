@@ -1,24 +1,30 @@
-[tool.poetry]
-name = "JobScrapper"
-version="0.5.0"
+[project]
+name = "job-scrapper"
+version="0.6.0"
 description = "A simple library that dowload job offers from several instituts."
-authors = ["Marhal Florent <marchal.florent.pro@gmail.com>"]
+authors = [
+    {name="Marhal Florent", email="<marchal.florent.pro@gmail.com>"}
+]
 readme = "README.md"
 license = "CC BY-SA 4.0"
-packages = [{ include = "job_scrapper" }]
 
-[tool.poetry.scripts]
-job-scrapper = "main:cli"
+packages = [
+  { include = "job_scrapper" }
+]
+
+[project.scripts]
+job-scrapper = "job_scrapper.main:main"
 
 [tool.poetry.dependencies]
-python = ">=3.10.12,<3.11"
+python = ">=3.11,<3.12"
 selenium = "^4.35.0"
 bs4 = "^0.0.2"
 geopy = "^2.4.1"
-pypdf2 = "^3.0.1"
 click-option-group = "^0.5.7"
 cloup = "^3.0.8"
 sqlalchemy = "^2.0.44"
+pdfplumber = "^0.11.8"
+unidecode = "^1.4.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
@@ -27,6 +33,8 @@ mypy = "^1.17.1"
 pylint = "^3.3.8"
 pytest = "^8.4.2"
 commitizen = "^4.9.1"
+dill = "^0.4.0"
+pytest-cov = "^7.0.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -35,7 +43,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.black]
 include = 'py$'
 line-length = 80
-target-version = ["py310"]
+target-version = ["py311"]
 
 [tool.isort]
 profile = "black"
@@ -44,7 +52,7 @@ known_first_party = ["job_scrapper"]
 known_third_party = ["sqlalchemy"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 
 # ignore_missing_imports = true
 # disallow_untyped_defs = true
@@ -60,9 +68,14 @@ max-line-length = 120
 
 [tool.pytest.ini_options]
 markers = [
+    "unautomatedTest: Tests that can not be runs in an automated environement due to the request of certains webservices",
+
     "logs: Test logging functions.",
     "testModules: Test module only used during test runs.",
     "jobScrapper: Test module only used during test runs.",
+    "mandatory_user_agent: Test that require the use of --user_agent",
+    "offline_simulation: Test that test functions that require connexion when internet conexion is offline",
+    "online_simulation: Test that test functions that require internet connewion",
 
     # Wrappers
     "sqlalchemy_wrappers: Test classes that wraps SQLAclhemy functionalities",
