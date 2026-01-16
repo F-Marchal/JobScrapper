@@ -8,6 +8,9 @@ def main():
     ctx_obj = {}
     try:
         cli(standalone_mode=False, obj=ctx_obj)
+    except click.exceptions.Abort and KeyboardInterrupt as e:
+        ctx_obj["logger"].logger.critical("Process interrupted by user : %s",  e.__class__.__name__)
+
     except click.ClickException as e:
         # Capture output in a string
         e.show()
@@ -22,8 +25,6 @@ def main():
             )
         raise SystemExit(e.exit_code)
 
-    except KeyboardInterrupt as e:
-        ctx_obj["logger"].logger.critical("Process interrupted by user : %s",  e.__class__.__name__)
     except Exception as e:
         # Display a less ugly error message
         ctx_obj["logger"].logger.critical(traceback.format_exc())
