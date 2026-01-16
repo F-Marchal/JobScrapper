@@ -4,6 +4,7 @@ from job_scrapper.tools.logger_core import CoreLogger
 import time
 import os
 from job_scrapper.tools.get_unique_path import get_unique_path
+from job_scrapper import JobScrapperSkeleton
 
 @cloup.group()
 @cloup.option(
@@ -48,6 +49,7 @@ def cli(ctx, verbosity="INFO", workdir="./Workdir", no_log_file: bool = False):
         os.mkdir(workdir)
 
     ctx.obj["workdir"] = workdir
+    JobScrapperSkeleton.set_workdir(workdir)
 
     # --- Logging file ---
     ctx.obj["log_file"] = None

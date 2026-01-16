@@ -644,6 +644,22 @@ class ScrapperSQLightCore(ScrapperObjectCore):
             return
         self.add_metadata(metadata_entry.key, metadata_entry.value)
 
+    def get_keywords_version_in_database(self, session: Session) -> dict[str, int]:
+        vers = {}
+        for keywords in self.keywords:
+            keyword_entry = session.query(
+                Keywords
+            ).where(
+                and_(
+                    Keywords.keyword == keywords,
+                    Keywords.url == self.url,
+                )
+            ).first()
+
+            vers[keywords] = keyword_entry.version_entry.version
+        return vers
+
+
     # --- --- Remove from db --- ---
     def self_delete_from_db(self, session: Session):
         # This expects that Jobs have delete cascade on

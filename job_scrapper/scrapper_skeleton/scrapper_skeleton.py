@@ -367,6 +367,13 @@ class JobScrapperSkeleton(ScrapperRequestCore):
 
         return offer_to_text, offer_list
 
+    def keyword_ver_is_up_to_date(self, manager: KeywordManager) -> bool:
+        with self.get_maindb_session() as session:
+            vers = self.get_keywords_version_in_database(session)
+            expected_vers = {k: v.version for k, v in manager.versions(session).items()}
+
+        return vers == expected_vers
+
 
     @classmethod
     def _apply_time_stamp_constraint(
@@ -389,8 +396,9 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         msg = []
 
         if keywords_to_search is not None and offer.timestamp_is_too_old(offer.URLInspectionTimeStamp.KEYWORD, threshold):
-            keywords_to_search = None
-            msg.append("Keyword research.'")
+            if offer.keyword_ver_is_up_to_date(keywords_to_search):
+                keywords_to_search = None
+                msg.append("Keyword research.'")
 
         if page_exporter is not None and offer.timestamp_is_too_old(offer.URLInspectionTimeStamp.DOWNLOAD, threshold):
             page_exporter = None
