@@ -8,6 +8,11 @@ from job_scrapper.cli.configure.cli_contact import ask_contact, CONTACT_OPTION
 
 @cloup.command()
 @cloup.pass_context
+@click.option(
+    "-u", "--url",
+    help='An url to archive. Equivalent to `-c "url::==::[YOUR URL]"`',
+    multiple = True,
+)
 @REQUEST_BUILDER_OPT
 @ALL_COMMON_FILTER_OPTS
 @cloup.option(
@@ -23,6 +28,7 @@ from job_scrapper.cli.configure.cli_contact import ask_contact, CONTACT_OPTION
 @CONTACT_OPTION
 def archive(
         ctx,
+        url: tuple[str],
         quiet,
         reverse: bool = False,
         contact: str | None = None,
@@ -31,13 +37,13 @@ def archive(
     """
     Removes offers from the main database and transfer them to the
     archive database. If you want to archive a specific offer,
-    you can use `-c "url::==::[YOUR URL]"`
+    you can use
     """
 
     if not contact:
         contact = ask_contact(ctx.obj["workdir"])
 
-    config = make_configuration(ctx, **kwargs)
+    config = make_configuration(ctx, urls=url, **kwargs)
     JobScrapperSkeleton.get_geolocator(contact=contact)
 
     # ENSURE THAT URL FIELD IS REQUESTED.
@@ -131,12 +137,13 @@ def _archive(ctx, target_session, initial_session, result, quiet, reverse):
     else:
         print(len(archived), "offers archived.")
 
-    print()
-    print("To reverse your actions :")
-    r_flag = "" if reverse else "--reverse"
+    if archived:
+        print()
+        print("To reverse your actions :")
+        r_flag = "" if reverse else "--reverse"
 
-    for archive_url in archived:
-        print("job-scrapper", "offers", "archive", r_flag, "--quiet", "-c", f'"url::==::{archive_url}"')
+        for archive_url in archived:
+            print("job-scrapper", "offers", "archive", r_flag, "--quiet", "--url", f'"{archive_url}"')
 
 
 

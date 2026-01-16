@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship, validates, Session
 
 from .base_table import BaseTable
 from .archived import ArchivedJobs
+import datetime
 
 class Jobs(BaseTable):
     """
@@ -121,12 +122,12 @@ class Jobs(BaseTable):
     ):
         self.transfer_to_another_database(
             initial_database,
-            target_database
+            target_database,
         )
 
         # Save that 'self' has been archived :
         initial_database.add(
-            ArchivedJobs(url=self.url)
+            ArchivedJobs(url=self.url, when=datetime.datetime.now())
         )
 
         # Remove potential archive mentions the target database

@@ -6,6 +6,7 @@ from typing import Any, ContextManager, Generator, Protocol, Type, Self, Iterato
 
 # pylint: disable=E0611
 from sqlalchemy.orm import Query, Session
+from sqlalchemy.sql.operators import and_
 
 from job_scrapper.scrapper_skeleton.object_core import ScrapperObjectCore
 from job_scrapper.sql.tables import (
@@ -18,6 +19,7 @@ from job_scrapper.sql.tables import (
     Metadata,
     TimeStamps,
     Places,
+    ArchivedJobs,
 )
 from job_scrapper.sql.tables.helpers.job_request import JobRequest
 from job_scrapper.sql.tables.helpers.keyword_manager import KeywordManager
@@ -48,6 +50,8 @@ class ScrapperSQLightCore(ScrapperObjectCore):
 
         Distances.__tablename__: Distances,
         Places.__tablename__: Places,
+
+        ArchivedJobs.__tablename__: ArchivedJobs,
 
     }
     first_sighting_time_stamp_name = "First sighting"
@@ -646,15 +650,100 @@ class ScrapperSQLightCore(ScrapperObjectCore):
         # TimeStamps, keywords, metadata ...
         session.delete(self.to_job_entry())
 
+    def synchronise_init_ts_with_archive_last_sighting(
+            self,
+            database_with_time_stamp_entries: Session,
+            database_with_archive_entries: Session,
+    ):
+        """
+        Synchronize self init_time_stamp with init time stamp in database_with_time_stamp_entries
+        and ArchiveJob.last_sighting.
+        This retrieve ArchiveJob.last_sighting from database_with_archive_entries,
+        retrieve TimesTamps.time_stamp (url=self.url and label=self.init_time_stamp_name) and
+        self._time_stamps[self.init_time_stamp_name] and look for the highest value.
+        the highest value is then use to update all mentioned values.
+        """
+
+        archive_entry = database_with_archive_entries.query(
+            ArchivedJobs
+        ).where(
+            ArchivedJobs.url == self.url,
+        ).first()
+
+        if not archive_entry:
+            # Nothing to work with
+            return
+
+        if not archive_entry.last_sighting:
+            # Nothing to do
+            return
+
+        init_ts_entry = database_with_time_stamp_entries.query(
+            TimeStamps
+        ).where(
+            and_(
+                TimeStamps.url == self.url,
+                TimeStamps.label == self.init_time_stamp_name,
+            )
+        ).first()
+
+        if not init_ts_entry:
+            raise KeyError(f"No '{self.init_time_stamp_name}' in time stamp. This is not supposed to happen !!!")
+
+        date = max(
+            init_ts_entry.time_stamp,
+            archive_entry.last_sighting,
+            datetime.datetime.strptime(
+                self.strftime(
+                    self.retrieve_time_stamps(self.init_time_stamp_name),
+                ),
+                "%Y-%m-%d %H:%M:%S"
+            )
+        )
+
+        self.add_time_stamps(
+            self.init_time_stamp_name,
+            date.utctimetuple()
+        )
+        init_ts_entry.time_stamp = date
+        archive_entry.last_sighting = date
+
 
     def archive(
         self,
         initial_session: Session,
         target_session: Session,
-
+        ignore_archive_init_ts_sync: bool = False,
 
     ):
-       self.to_job_entry().archive(
+        """
+        /!\ It's mandatory that self has been exported
+        to initial_session !
+
+         Displace this offer from .initial_session to target_session
+        :param initial_session: Session opened on the first database
+        :param target_session: Session opened on the second database
+        :param bool ignore_archive_init_ts_sync: Does
+            synchronise_init_ts_with_archive_last_sighting should
+            be ran before offer displacement.
+        """
+        if not self.to_job_entry().exists(
+                initial_session,
+                include_database=True,
+                include_session=True
+        ):
+            raise ValueError(
+                f"Can not proceed with archive operations. "
+                f"{self} is not inside `initial_session` ({initial_session}). "
+            )
+
+        if not ignore_archive_init_ts_sync:
+            self.synchronise_init_ts_with_archive_last_sighting(
+                initial_session,
+                target_session,
+            )
+
+        self.to_job_entry().archive(
             initial_database=initial_session,
             target_database=target_session,
         )
