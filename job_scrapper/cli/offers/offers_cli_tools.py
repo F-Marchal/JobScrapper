@@ -13,6 +13,11 @@ TIMESTAMP = JobScrapperSkeleton.get_table("timestamps")
 DISTANCES = JobScrapperSkeleton.get_table("distances")
 JOB_REQUESTER = JobScrapperSkeleton.get_job_requester()
 
+URL_OPT = cloup.option(
+    "-u", "--url",
+    help='An url to archive. Equivalent to `-c "url::==::[YOUR URL]"`',
+    multiple = True,
+)
 COLUMN_OPT = cloup.option(
     "-c",
     "--columns",
@@ -163,6 +168,7 @@ REQUEST_BUILDER_OPT = cloup.option_group(
 ALL_COMMON_FILTER_OPTS = cloup.option_group(
     "Filtering options",
     COLUMN_OPT,
+    URL_OPT,
     DISTANCE_OPT,
     KEYWORD_OPT,
     METADATA_OPT,
@@ -270,6 +276,7 @@ def flat_configuration(
 def make_configuration(
         ctx,
 
+        urls: tuple[str] | list[str] | None = None,
         configuration_file: str | None = None,
 
         columns=None,
@@ -285,6 +292,13 @@ def make_configuration(
 
         **_
 ):
+    if urls:
+        if not columns:
+            columns = []
+        columns = [
+            *[f"|::url::==::{url}"  for url in urls],
+            *columns]
+
     raw_config = make_list_configuration(
         configuration_file=configuration_file,
 

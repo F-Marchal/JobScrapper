@@ -8,11 +8,6 @@ from job_scrapper.cli.configure.cli_contact import ask_contact, CONTACT_OPTION
 
 @cloup.command()
 @cloup.pass_context
-@click.option(
-    "-u", "--url",
-    help='An url to archive. Equivalent to `-c "url::==::[YOUR URL]"`',
-    multiple = True,
-)
 @REQUEST_BUILDER_OPT
 @ALL_COMMON_FILTER_OPTS
 @cloup.option(
