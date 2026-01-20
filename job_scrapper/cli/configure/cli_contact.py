@@ -16,11 +16,11 @@ CONTACT_OPTION = cloup.option(
 @cloup.command()
 @cloup.pass_context
 def configure_contact(ctx):
-    """Runs the contact information configuration tool."""
+    """Saves contact information inside the workdir for later use."""
     print()
-    ask_contact(ctx.obj["workdir"], can_load=False)
+    ask_contact(ctx.obj["workdir"], can_load=False, force_writing=True)
 
-def ask_contact(workdir: str, can_load: bool =True):
+def ask_contact(workdir: str, can_load: bool =True, force_writing: bool = False) -> str:
     contact_file = os.path.abspath(os.path.join(workdir, "contact.txt"))
     if can_load and os.path.exists(contact_file):
         with open(contact_file, "r") as f:
@@ -45,9 +45,15 @@ def ask_contact(workdir: str, can_load: bool =True):
             continue
 
         print()
-        print("Do you want to save your contact for future runs ?")
-        print(f"If 'Y', it will be saved in {contact_file}")
-        conf = input("Y / N : ")
+        if force_writing:
+            conf = "y"
+
+        else:
+            print("Do you want to save your contact for future runs ?")
+            print(f"If 'Y', it will be saved in {contact_file}")
+            conf = input("Y / N : ")
+
+
         if conf.lower() in ("yes", "y"):
             with open(contact_file, "w") as f:
                 f.write(email)
