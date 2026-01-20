@@ -66,9 +66,9 @@ class JobScrapperSkeleton(ScrapperRequestCore):
         # Keyword management
         with cls.get_sql_session(workdir=workdir, database_name=database_name) as session:
             if keywords_to_search is None:
-                cls.logger.info("Using default keywords to search configuration : Loading database...")
+                cls.logger.info("Using previously selected keywords : Loading database...")
                 keywords_to_search = KeywordManager(logger=cls.logger)
-                keywords_to_search.load_all(session)
+                keywords_to_search.load_all_selected_keywords(session)
 
             else:
                 # Ensure that all keywords version exist in database.
