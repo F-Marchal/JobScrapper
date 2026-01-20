@@ -18,13 +18,15 @@ class KeywordRegex(BaseTable):
     __table_args__ = (
         ForeignKeyConstraint(
             ["keyword", "version"],
-            ["keyword_version.keyword", "keyword_version.version"]
+            ["keyword_version.keyword", "keyword_version.version"],
+            ondelete="CASCADE",
         ),
     )
 
     version_entry = relationship(
         "KeywordVersion",
         back_populates="regex_entries",
+        passive_deletes=True,
     )
 
     @validates("regex")

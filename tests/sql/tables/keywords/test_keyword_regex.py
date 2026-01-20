@@ -98,3 +98,31 @@ class TestKeywordRegex(BaseTest):
             for kr_entry_from_database in [kr1_bis_from_db, kr2_bis_from_db]:
                 assert kr_entry_from_database.version_entry == ver1_bis
 
+    def test_deleted_with_version(self):
+        db = os.path.join(self.test_folder, "db1.db")
+        ver1 = KeywordVersion(
+            keyword="Alpha",
+            version=1,
+        )
+
+        self.screen_multiple_vars("ver{count}", ver1)
+
+        kw1 = KeywordRegex(
+            keyword="Alpha",
+            version=1,
+            regex="A"
+
+        )
+        self.screen_var("kw1", kw1)
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            session.add_all([ver1, kw1])
+            session.add(kw1)
+
+        # Delete version element
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            session.query(KeywordVersion).delete()
+
+        # The Only keyword should have been deleted
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            assert len(session.query(KeywordRegex).all()) == 0
