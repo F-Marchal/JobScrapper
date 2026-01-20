@@ -196,3 +196,90 @@ class TestKeywordManager(BaseTest):
 
             assert alpha_ver2_regexes == {".*A.*"}
 
+    def test_retrieve_set_delete_selected_version(self):
+        db = os.path.join(self.test_folder, "db1.db")
+        km = KeywordManager(logger=self.icl.logger)
+        self.screen_var("km", km)
+        km.add_regex("Alpha", ".*Alpha.*")
+        km.add_regex("Alpha", ".*A.*")
+        km.add_regex("Beta", ".*Beta.*")
+        self.re_screen_var("km")
+
+        self.tracker.write("Commit km")
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            # Add newly added keyword to database
+            km.commit(session)
+
+        km.add_regex("Alpha", ".*Alphabet.*")
+        self.tracker.write("Commit KM V2")
+        self.re_screen_var("km")
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            # Add newly added regex to database
+            km.commit(session)
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            # Ensure that we really have to versions to work with
+            assert len(session.query(KeywordVersion).filter(KeywordVersion.keyword == "Alpha").all()) == 2
+            km.set_selected_keyword_version(session, keyword="Alpha", version=1)
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            rskv = km.retrieve_selected_keyword_selected_version(session, keyword="Alpha")
+            self.screen_var("rskv1", rskv)
+            assert rskv.version == 1
+            assert rskv.keyword == "Alpha"
+            km.set_selected_keyword_version(session, keyword="Alpha", version=2)
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            rskv2 = km.retrieve_selected_keyword_selected_version(session, keyword="Alpha")
+            self.screen_var("rskv2", rskv2)
+            assert rskv2.version == 2
+            assert rskv2.keyword == "Alpha"
+
+            km.delete_selected_keyword_version(session, keyword="Alpha")
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            rskv3 = km.set_selected_keyword_version(session, keyword="Alpha", version=2)
+            self.screen_var("rskv3", rskv3)
+            assert rskv3 is None
+
+    def test_load_selected_kw_ver(self):
+        db = os.path.join(self.test_folder, "db1.db")
+        km = KeywordManager(logger=self.icl.logger)
+        self.screen_var("km", km)
+        km.add_regex("Alpha", ".*Alpha.*")
+        km.add_regex("Alpha", ".*A.*")
+        km.add_regex("Beta", ".*Beta.*")
+        self.re_screen_var("km")
+
+        self.tracker.write("Commit km")
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            # Add newly added keyword to database
+            km.commit(session)
+        expected_beta = km.regexes("Beta")
+        expected_alpha = km.regexes("Alpha")
+
+        km.add_regex("Alpha", ".*Alphabet.*")
+        self.tracker.write("Commit KM V2")
+        self.re_screen_var("km")
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            # Add newly added regex to database
+            km.commit(session)
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            # Ensure that we really have to versions to work with
+            assert len(session.query(KeywordVersion).filter(KeywordVersion.keyword == "Alpha").all()) == 2
+            km.set_selected_keyword_version(session, keyword="Alpha", version=1)
+            km.set_selected_keyword_version(session, keyword="Beta", version=1)
+
+        with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
+            km2 = KeywordManager(logger=self.icl.logger)
+            km2.load_all_selected_keywords(session)
+            self.re_screen_var("km")
+            self.screen_var("km2", km2)
+
+            self.screen_var("expected_beta", expected_beta)
+            self.screen_var("expected_alpha", expected_alpha)
+            assert km2.keywords == {
+                "Beta" : expected_beta,
+                "Alpha": expected_alpha,
+            }
