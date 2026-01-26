@@ -223,14 +223,14 @@ class TestKeywordManager(BaseTest):
             km.set_selected_keyword_version(session, keyword="Alpha", version=1)
 
         with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
-            rskv = km.retrieve_selected_keyword_selected_version(session, keyword="Alpha")
+            rskv = km.retrieve_selected_keyword_version(session, keyword="Alpha")
             self.screen_var("rskv1", rskv)
             assert rskv.version == 1
             assert rskv.keyword == "Alpha"
             km.set_selected_keyword_version(session, keyword="Alpha", version=2)
 
         with KeywordRegex.get_session(db, logger=self.icl.logger) as session:
-            rskv2 = km.retrieve_selected_keyword_selected_version(session, keyword="Alpha")
+            rskv2 = km.retrieve_selected_keyword_version(session, keyword="Alpha")
             self.screen_var("rskv2", rskv2)
             assert rskv2.version == 2
             assert rskv2.keyword == "Alpha"
