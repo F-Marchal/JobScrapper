@@ -22,7 +22,8 @@ from job_scrapper import SCRAPER_REGISTRY, JobScrapperSkeleton
     type=int,
     default=14,
     help="Number of days to wait before reopening the web page containing an offer. "
-        "This prevents repeatedly accessing the same offer too frequently."
+        "This prevents repeatedly accessing the same offer too frequently.",
+    show_default=True,
 )
 @cloup.option(
     "-t",
@@ -39,6 +40,7 @@ from job_scrapper import SCRAPER_REGISTRY, JobScrapperSkeleton
     default=20,
     help="Group offer exportation to TSV / the database to limit how many time tsv file / database are opened."
          "Use `-b 0` to disable batch exportation.",
+    show_default=True,
 )
 @cloup.option(
     "-f",
@@ -46,6 +48,7 @@ from job_scrapper import SCRAPER_REGISTRY, JobScrapperSkeleton
     type=int,
     default=2,
     help="How many time the scrapper can retry to fetch an url.",
+    show_default=True,
 )
 @cloup.option(
     "-q",
@@ -53,16 +56,18 @@ from job_scrapper import SCRAPER_REGISTRY, JobScrapperSkeleton
     type=float,
     default=2,
     help="How long (in seconds) the scrapper should wait before retrying to fetch an url. (Minimum=0.25 seconds)",
+    show_default=True,
 )
 @cloup.option(
     "-d",
     "--download",
     type=click.Choice([s.value for s in JobScrapperSkeleton.SaveTypes]),
-    default=None,
+    default=JobScrapperSkeleton.SaveTypes.MHTML,
     help="Will trigger offer download. Offers will be downloads in [Workdir]/[Scrapper Name]/. "
          "Text : Only store text extracted from the offer ; HTML : Store full HTML page or the file that contains the "
          "offer (.pdf...) ; MHTML : Full page storage with images and more. You might need Google Chrome to "
          "open this format of file.",
+    show_default=True,
 )
 @cloup.option(
     "--compress-download",

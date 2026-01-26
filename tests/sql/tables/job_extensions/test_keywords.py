@@ -153,3 +153,33 @@ class TestKeywords(TestJobExtraBase):
             assert newest_ver.keyword == kw1_bis.keyword
             assert newest_ver == ver2_bis
 
+    def test_deleted_with_version(self):
+        db = self.standard_db_path()
+        ver1 = KeywordVersion(
+            keyword="Alpha",
+            version=1,
+        )
+        self.screen_multiple_vars("ver{count}", ver1)
+        pl = Places(localisation=Jobs.DEFAULT_LOCALISATION)
+        j1 = Jobs(
+            url="TMP1",
+        )
+        kw1 = Keywords(
+            url="TMP1",
+            keyword="Alpha",
+            version=1,
+            occurrence=33
+        )
+        self.screen_var("kw1", kw1)
+
+        with Keywords.get_session(db, logger=self.icl.logger) as session:
+            session.add_all([ver1, pl, j1, kw1])
+            session.add(kw1)
+
+        # Delete version element
+        with Keywords.get_session(db, logger=self.icl.logger) as session:
+            session.query(KeywordVersion).delete()
+
+        # The Only keyword should have been deleted
+        with Keywords.get_session(db, logger=self.icl.logger) as session:
+            assert len(session.query(Keywords).all()) == 0

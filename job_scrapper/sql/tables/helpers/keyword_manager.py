@@ -1,9 +1,11 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, Query
+from typing import Iterator
 
 from job_scrapper.tools.secondary_logger_user import SecondaryLoggerUser
 from logging import Logger
 from job_scrapper.sql.tables.keywords.keyword_regex import KeywordRegex
 from job_scrapper.sql.tables.keywords.keyword_version import KeywordVersion
+from job_scrapper.sql.tables.keywords.selected_keyword_version import SelectedKeywordVersion
 from sqlalchemy import and_
 import re
 
@@ -101,9 +103,18 @@ class KeywordManager(SecondaryLoggerUser):
             self._keywords[key] |= regex
 
     def load_all(self, session: Session):
-        for keyword in session.query(KeywordVersion.keyword).distinct().all():
-            version = self.get_latest_version(session=session, keyword=keyword.keyword)
+        for keyword in self.find_all_keywords(session):
+            version = self.get_latest_version(session=session, keyword=keyword)
             self.load(session=session, keyword_version=version)
+
+    @classmethod
+    def find_all_keywords(cls, session: Session) -> Iterator[str]:
+        for k in session.query(KeywordVersion.keyword).distinct():
+            yield k[0]
+
+    @classmethod
+    def find_all_versions(cls, session: Session) -> Query[KeywordVersion]:
+        return session.query(KeywordVersion)
 
 
     @staticmethod
@@ -134,10 +145,12 @@ class KeywordManager(SecondaryLoggerUser):
 
         return KeywordVersion(keyword=keyword, version=new_ver)
 
-    def commit(self, session: Session) -> None:
+    def commit(self, session: Session) -> dict[str, KeywordVersion]:
         """Commit regex modification to database. A new Version will be added to database when needed."""
+        result = {}
         for keywords, regexes in self._keywords.items():
             new_ver_entry = self.get_keyword_version(session=session, keyword=keywords)
+            result[keywords] = new_ver_entry
 
             regexes = [
                 KeywordRegex(
@@ -149,5 +162,77 @@ class KeywordManager(SecondaryLoggerUser):
 
             session.add(new_ver_entry)
             session.add_all(regexes)
+        return result
 
-            
+    @classmethod
+    def set_selected_keyword_version(cls, session: Session, keyword: str, version: int):
+        if not KeywordVersion(keyword=keyword, version=version).exists(session):
+            raise KeyError(
+                "Can not select keyword={keyword} and version={version}. Since this couple"
+                "does not exist in the database."
+            )
+        session.add(
+            SelectedKeywordVersion(keyword=keyword, version=version)
+        )
+
+    @classmethod
+    def delete_selected_keyword_version(cls, session: Session, keyword: str) -> bool:
+        """
+        Remove the SelectedKeywordVersion attached to `keyword` from the database
+        TO BE FOUND, SelectedKeywordVersion REQUIRE THAT THE SESSION HAS BEEN COMMITTED.
+        """
+        entry = cls.retrieve_selected_keyword_version(session, keyword=keyword)
+
+        if not entry:
+            return False
+
+        session.delete(entry)
+        return True
+
+    @classmethod
+    def retrieve_selected_keyword_version(cls, session: Session, keyword: str) -> SelectedKeywordVersion | None:
+        """
+        Retrieves the selected keyword version if it exists.
+        TO BE FOUND, SelectedKeywordVersion REQUIRE THAT THE SESSION HAS BEEN COMMITTED.
+        :param session: Session
+        :param keyword: The requested keyword.
+        :return: None if there is no SelectedKeywordVersion attached to this keyword, the version otherwise.
+        """
+        entry = session.query(
+            SelectedKeywordVersion
+        ).where(
+            SelectedKeywordVersion.keyword == keyword
+        ).first()
+
+        if not entry:
+            return None
+
+        return entry
+
+    @classmethod
+    def retrieve_all_selected_keywords(cls, session: Session) -> Query[SelectedKeywordVersion]:
+        """
+        Retrieves all SelectedKeywordVersion entries from the database.
+        TO BE FOUND, SelectedKeywordVersion REQUIRE THAT THE SESSION HAS BEEN COMMITTED.
+        :param session: Session
+        """
+        return session.query(SelectedKeywordVersion)
+
+    def load_all_selected_keywords(self, session: Session):
+        """Load all keywords regexes that have a SelectedKeywordVersion in the database inside this manager.
+         TO BE FOUND, SelectedKeywordVersion REQUIRE THAT THE SESSION HAS BEEN COMMITTED."""
+        for entry in self.retrieve_all_selected_keywords(session=session):
+            self.load(session=session, keyword_version=entry.version_entry)
+
+    @classmethod
+    def is_selected(cls, session: Session, version: KeywordVersion) -> bool:
+        """Says if a KeywordVersion is selected.
+         TO BE FOUND, SelectedKeywordVersion REQUIRE THAT THE SESSION HAS BEEN COMMITTED."""
+        entry = session.query(SelectedKeywordVersion).where(
+            and_(
+                SelectedKeywordVersion.keyword == version.keyword,
+                SelectedKeywordVersion.version == version.version,
+            )
+        ).first()
+        return entry is not None
+

@@ -19,7 +19,8 @@ class Keywords(JobExtraBase):
     __table_args__ = (
         ForeignKeyConstraint(
             ["keyword", "version"],
-            ["keyword_version.keyword", "keyword_version.version"]
+            ["keyword_version.keyword", "keyword_version.version"],
+            ondelete="CASCADE",
         ),
     )
     main_entry = relationship(
@@ -28,6 +29,7 @@ class Keywords(JobExtraBase):
     version_entry = relationship(
         "KeywordVersion",
         back_populates="keyword_entries",
+        passive_deletes=True,
     )
 
     @classmethod

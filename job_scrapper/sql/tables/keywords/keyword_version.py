@@ -14,11 +14,21 @@ class KeywordVersion(BaseTable):
     regex_entries = relationship(
         "KeywordRegex",
         back_populates="version_entry",
+        cascade="all, delete-orphan",
     )
+
     keyword_entries = relationship(
         "Keywords",
         back_populates="version_entry",
+        cascade="all, delete-orphan",
     )
+
+    selected_entry = relationship(
+        "SelectedKeywordVersion",
+        back_populates="version_entry",
+        cascade="all, delete-orphan",
+    )
+
 
     @classmethod
     def get_available_versions(cls, session: Session, keyword: str) -> Query:

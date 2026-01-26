@@ -86,6 +86,7 @@ class BaseTest:
             test_abs_parent_folder, test_dir_name_in_progress
         )
         os.makedirs(self.test_folder, exist_ok=True)
+        # os.chmod(self.test_folder, 0o777)
         os.chdir(self.test_folder)
 
         # ---- Generate logs ----

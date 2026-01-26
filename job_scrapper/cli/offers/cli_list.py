@@ -1,20 +1,12 @@
 import click
 import cloup
 from job_scrapper import JobScrapperSkeleton
-from .offers_cli_tools import request_builder, REQUEST_BUILDER_OPT, ALL_COMMON_FILTER_OPTS, make_configuration, JOB_REQUESTER
+from .offers_cli_tools import request_builder, REQUEST_BUILDER_OPT, ALL_COMMON_FILTER_OPTS, make_configuration, JOB_REQUESTER, DB_OPT
 
 
 
 @cloup.command()
-@cloup.option(
-    "--db",
-    type=click.Choice(
-        list(JobScrapperSkeleton.get_available_databases().keys()),
-        case_sensitive=True,
-    ),
-    default="maindb",
-    help="Select the targeted database.",
-)
+@DB_OPT
 @REQUEST_BUILDER_OPT
 @ALL_COMMON_FILTER_OPTS
 @cloup.pass_context

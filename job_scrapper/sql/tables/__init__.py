@@ -5,6 +5,7 @@ from job_scrapper.sql.tables.places.distances import Distances
 from job_scrapper.sql.tables.places.places import Places
 from job_scrapper.sql.tables.keywords.keyword_version import KeywordVersion
 from job_scrapper.sql.tables.keywords.keyword_regex import KeywordRegex
+from job_scrapper.sql.tables.keywords.selected_keyword_version import SelectedKeywordVersion
 
 from .base_table import BaseTable
 from .jobs import Jobs

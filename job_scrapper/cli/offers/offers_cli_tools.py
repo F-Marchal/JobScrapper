@@ -15,7 +15,7 @@ JOB_REQUESTER = JobScrapperSkeleton.get_job_requester()
 
 URL_OPT = cloup.option(
     "-u", "--url",
-    help='An url to archive. Equivalent to `-c "url::==::[YOUR URL]"`',
+    help='Request only offers with a specific url. Equivalent to `-c "url::==::[YOUR URL]"`.',
     multiple = True,
 )
 COLUMN_OPT = cloup.option(
@@ -33,7 +33,7 @@ DISTANCE_OPT = cloup.option(
     "--distances-from",
     multiple=True,
     help=(
-        "Add columns that contains distances from reference places. "
+        "Add columns that contains distances between offer localisation and another known places."
         f"e.g. `-d Paris, france` -> add a column named 'Paris, France{JobScrapperSkeleton.distance_suffix}' "
         f"that contains the distance from each job to `Paris, France`. "
         "See `request-format-help` to known how to filter results. "
@@ -179,6 +179,15 @@ ALL_COMMON_FILTER_OPTS = cloup.option_group(
     LASTLY_SEEN_AFTER_OPT,
     LASTLY_SEEN_BEFORE_OPT,
     CONFIGURATION_FILE_OPT,
+)
+DB_OPT = cloup.option(
+    "--db",
+    type=cloup.Choice(
+        list(JobScrapperSkeleton.get_available_databases().keys()),
+        case_sensitive=True,
+    ),
+    default="maindb",
+    help="Select the targeted database.",
 )
 
 
