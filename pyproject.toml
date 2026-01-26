@@ -1,6 +1,6 @@
 [project]
 name = "job-scrapper"
-version="0.6.0"
+version="0.6.1"
 description = "A simple library that dowload job offers from several instituts."
 authors = [
     {name="Marhal Florent", email="<marchal.florent.pro@gmail.com>"}
@@ -89,6 +89,11 @@ addopts = "-s"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.2.0"
+version = "0.6.1"
 tag_format = "v$version"
 update_changelog_on_bump = true
+
+version_files = [
+  "pyproject.toml:project.version",
+  "pyproject.toml:tool.commitizen.version"
+]
