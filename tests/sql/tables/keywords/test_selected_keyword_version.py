@@ -18,6 +18,7 @@ class TestKeywordRegex(BaseTest):
     def test_foreign_key(self):
         """Ensure foreign keys works as expected"""
         db = os.path.join(self.test_folder, "db1.db")
+        self.screen_var("db", db)
         ver1 = KeywordVersion(
             keyword="Alpha",
             version=1,
@@ -34,15 +35,18 @@ class TestKeywordRegex(BaseTest):
             keyword = "Beta",
             version = 14,
         )
-        self.screen_var("kr3", kr3)
+        self.screen_multiple_vars("kr", kr1, kr2, kr3)
+        self.screen_var("ver1", ver1)
 
         # Standard adding
+        self.tracker.write("Adding to database")
         with SelectedKeywordVersion.get_session(db, logger=self.icl.logger) as session:
             session.add(ver1)
             session.add(kr1)
             session.add(kr2)
 
         # Add a KeywordRegex without any KeywordVersion
+        self.tracker.write("Testing Integrity")
         with pytest.raises(IntegrityError):
             with SelectedKeywordVersion.get_session(db, logger=self.icl.logger) as session:
                     session.add(kr3)
